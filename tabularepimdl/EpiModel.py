@@ -110,6 +110,7 @@ class EpiModel:
         @param dt the time step
         @param ret_nw_state should we return the new state at the end."""
 
+
         # interate through the rule sets updating the current state (except for time) after
         #each set of rules to be fed into the next one.
         
@@ -144,9 +145,10 @@ class EpiModel:
             #print(gp_cols)
      
 
-            #now collapse..only if we have groups
+            #now collapse..only if we have groups. This causes problems 
             if gp_cols:
-                nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()
+                nw_state = nw_state.groupby(gp_cols,observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
+                #nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()
 
             #print("***")
             #print(nw_state)
@@ -155,6 +157,13 @@ class EpiModel:
   
 
             self.cur_state = nw_state
+
+    
+        # print("----")
+        # print(self.cur_state)
+        # print(max(self.cur_state['T']))
+        # print(dt)
+        # print("++++")
   
         self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) ##max deals with new states.
 

@@ -54,7 +54,7 @@ class SimpleObservationProcess(Rule):
 
     def to_yaml(self):
         rc = {
-            'tabularepi.SimpleObservationProcess': {
+            'tabularepimdl.SimpleObservationProcess': {
                 'source_col': self.source_col,
                 'source_state': self.source_state,
                 'rate': self.rate,

@@ -65,7 +65,7 @@ class SimpleInfection(Rule):
         
     def to_yaml(self):
         rc = {
-            'tabularepi.SimpleInfection': {
+            'tabularepimdl.SimpleInfection': {
                 'beta': self.beta,
                 'column': self.column,
                 's_st': self.s_st,

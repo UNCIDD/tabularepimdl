@@ -127,7 +127,7 @@ class MultiStrainInfectiousProcess(Rule):
 
     def to_yaml(self):
         rc = {
-            'tabularepi.MultiStrainInfectiousProcess': {
+            'tabularepimdl.MultiStrainInfectiousProcess': {
                 'betas': self.betas,
                 'columns': self.columns,
                 'cross_protect': self.cross_protect,

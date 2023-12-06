@@ -4,4 +4,6 @@ from .SimpleInfection import SimpleInfection
 from .SimpleObservationProcess import SimpleObservationProcess
 from .MultiStrainInfectiousProcess import MultiStrainInfectiousProcess
 from .SharedTraitInfection import SharedTraitInfection
+from .BirthProcess import BirthProcess
+from .StateBasedDeathProcess import StateBasedDeathProcess
 from .EpiModel import EpiModel

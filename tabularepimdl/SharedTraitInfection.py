@@ -58,7 +58,7 @@ class SharedTraitInfection(Rule):
     
     def to_yaml(self):
         rc = {
-            'tabularepi.SimpleObservationProcess': {
+            'tabularepimdl.SimpleObservationProcess': {
                 "in_beta": self.in_beta,
                 "out_beta": self.out_beta,
                 "inf_col": self.inf_col,

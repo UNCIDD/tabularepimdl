@@ -53,7 +53,7 @@ class SimpleTransition(Rule):
     
     def to_yaml(self):
         rc = {
-            'tabularepi.SimpleTransition': {
+            'tabularepimdl.SimpleTransition': {
                 'column': self.column,
                 'from_st': self.from_st,
                 'to_st': self.to_st,
