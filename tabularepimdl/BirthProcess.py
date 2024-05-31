@@ -26,7 +26,7 @@ class BirthProcess(Rule):
         self.start_state_sig = start_state_sig
         self.stochastic = stochastic
 
-    def get_deltas(self, current_state, dt, stochastic =None):
+    def get_deltas(self, current_state, dt = 1.0, stochastic =None):
         if stochastic is None:
             stochastic = self.stochastic
         

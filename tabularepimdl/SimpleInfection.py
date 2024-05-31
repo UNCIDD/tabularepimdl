@@ -12,7 +12,7 @@ class SimpleInfection(Rule):
         Initialize with the columns. 
 
         @param beta the transmission parameter. 
-        @param s_col the column for this infectious process
+        @param column the column for this infectious process
         @param s_st the state for susceptibles, assumed to be S
         @param i_st the state for infectious, assumed to be I
         @param inf_to the state infectious folks go to, assumed to be I
