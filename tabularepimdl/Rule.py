@@ -1,15 +1,16 @@
 ## Define a class that represents a transition rule. It its simplest form a rule just takes in the current state,
 ## and returns as set of deltas that will be applied to the appropriate parts of the current state. These deltas
 ## should specify the full row signature. 
-from abc import ABC, abstractclassmethod
+from abc import ABC, abstractmethod  #abstractclassmethod, the class "abstractclassmethod" is deprecated, use classmethod with abstractmethod()
 import inspect
 import importlib
 
 class Rule(ABC):
 
     stochastic: bool
-
-    @abstractclassmethod
+    
+        
+    @abstractmethod
     def get_deltas(self, current_state, dt:float, stochastic):
         """! Method should take in current state and return a 
         series of deltas to that state
@@ -38,15 +39,15 @@ class Rule(ABC):
         else:
             #this ends up being a bit tricky. We need to transverse all
             #parent frames until we find the key.
-            rule_cls = inspect.currentframe().f_globals.get(key)
+            rule_cls = inspect.currentframe().f_locals.get(key) #change f_globals to f_locals
             if rule_cls is None:
                 frames = inspect.getouterframes(inspect.currentframe())
                 for frameinf in frames:
-                    if frameinf.frame.f_globals.get(key) is not None:
-                        rule_cls = frameinf.frame.f_globals[key]
+                    if frameinf.frame.f_locals.get(key) is not None: #change f_globals to f_locals
+                        rule_cls = frameinf.frame.f_locals[key] #change f_globals to f_locals
                         break
 
-        return(rule_cls.from_yaml_def(rule_yml[key]))
+        return(rule_cls.from_yaml_def(rule_yml[key]))#key's values are included in class rule_cls and this class is instantiated and returned
     
     @classmethod
     def from_yaml_def(cls, definition):
@@ -57,7 +58,7 @@ class Rule(ABC):
         
         return(cls(**definition))
 
-    @abstractclassmethod
+    @abstractmethod
     def to_yaml(self):
         '''! This method should return dictionary object appropriate for inclusion in a yaml 
         definition of an epi. Should be a dictionary with the class name (in form module.classname)

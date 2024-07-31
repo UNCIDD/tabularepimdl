@@ -19,11 +19,16 @@ class BirthProcess(Rule):
         super().__init__()
         self.rate = rate
 
-        #is their a better way to do this?
+        #is their a better way to do this? #yl: what is the input of start_state_sig and what better is expected?
         if isinstance(start_state_sig, dict):
-            start_state_sig = pd.DataFrame(start_state_sig,index=[0])
-           
-        self.start_state_sig = start_state_sig
+            #start_state_sig = pd.DataFrame(start_state_sig,index=[0])
+            self.start_state_sig = pd.DataFrame([start_state_sig]) #put dict to a list to keep index = 0 condition i.e. single row
+        elif isinstance(start_state_sig, pd.DataFrame):
+            self.start_state_sig = start_state_sig.copy()
+        else:
+            raise ValueError ("start_state_sig must be either a dictionary or a pandas DataFrame")
+
+        #self.start_state_sig = start_state_sig
         self.stochastic = stochastic
 
     def get_deltas(self, current_state, dt = 1.0, stochastic =None):
@@ -33,11 +38,11 @@ class BirthProcess(Rule):
         ##Just returns a delta with the start
         ##state signature and the right number of
         ##births.
-        N = current_state['N'].sum()
-        if not stochastic:
+        N = current_state['N'].sum() #yl:what is the input data format of current_state?
+        if not stochastic: #False condition: deterministic process
             births = self.start_state_sig.assign(N=N*(1-np.exp(-dt*self.rate)))
-        else:
-            births = self.start_state_sig.assign(N=np.random.poisson(N*(1-np.exp(-dt*self.rate))))
+        else: #True condition: stochastic process
+            births = self.start_state_sig.assign(N=np.random.poisson(N*(1-np.exp(-dt*self.rate))))  #get a random single outcome value by using poisson distribution
         return births
         
     def to_yaml(self):

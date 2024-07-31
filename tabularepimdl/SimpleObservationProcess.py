@@ -12,7 +12,7 @@ class SimpleObservationProcess(Rule):
         self.source_state = source_state
         self.obs_col = obs_col
         self.rate = rate
-        self.unobs_state = unobs_state
+        self.unobs_state = unobs_state #U, I and P for observation states might confuse with infection state, would it be helpful to expand the acronyms?
         self.incobs_state = incobs_state
         self.prevobs_state = prevobs_state
         self.stochastic = stochastic
@@ -50,7 +50,13 @@ class SimpleObservationProcess(Rule):
         tmp2 = delta_toprev.assign(N=-delta_toprev.N)
         delta_toprev[self.obs_col] = self.prevobs_state
 
-        return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]))
+        return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2])) #YL question: why include tmp2 since the comment says "move folks out of the incident state"?
+        
+        #if keeping tmp2, then the above approach is needed. if tmp2 is not needed, can adopt the following approach
+        #delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
+        #delta_toprev[self.obs_col]=self.prevobs_state
+        #return (pd.concat([delta_incobs, tmp, delta_toprev]))
+
 
     def to_yaml(self):
         rc = {
