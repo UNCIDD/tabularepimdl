@@ -13,13 +13,25 @@ class MultiStrainInfectiousProcess(Rule):
         Initialize with the columns. 
 
         @param betas a beta for each strain
-        @param columns the colums for the infection process. Should be same length and order as betas
-        @param cross_protect a N(strain)XN(strain) matrix of cross protections.
+        @param columns the columns for the infection process. Should be same length and order as betas
+        @param cross_protect a N(strain)*N(strain) matrix of cross protections.
         @param s_st the state for susceptibles, assumed to be S
         @param i_st the state for infectious, assumed to be I
         @param r_st the state for immune/recovered, assumed to be R
         @param inf_to the state infectious folks go to, assumed to be I
+        @param stochastic, is this rule stochastic process
+        @param freq_dep is this a frequency dependent model
         """
+        # Check that columns and betas have the same length
+        if len(columns) != len(betas):
+            raise ValueError(f"The length of 'columns' ({len(columns)}) must be equal to the length of 'betas' ({len(betas)}).")
+
+        # Check that cross_protect is a square matrix with dimensions equal to the length of betas
+        if cross_protect.shape[0] != cross_protect.shape[1] or cross_protect.shape[0] != len(betas):
+            raise ValueError(f"'cross_protect' must be a square matrix with dimensions equal to the length of 'betas'. "
+                             f"Expected {len(betas)}x{len(betas)}, got {cross_protect.shape}.")
+
+        # If all checks pass, proceed with initialization
         super().__init__() 
         self.betas = betas
         self.columns = columns
@@ -28,10 +40,14 @@ class MultiStrainInfectiousProcess(Rule):
         self.i_st = i_st
         self.r_st = r_st
         self.inf_to = inf_to
-        self.freq_dep = freq_dep,
+        self.freq_dep = freq_dep
         self.stochastic = stochastic
 
     def get_deltas(self, current_state, dt = 1.0, stochastic = False):
+        """
+        @param current_state, a data frame (at the moment) w/ the current epidemic state
+        @param dt, the size of the timestep
+        """
 
         if stochastic is None:
             stochastic = self.stochastic
@@ -41,14 +57,14 @@ class MultiStrainInfectiousProcess(Rule):
         else:
             betas = self.betas
         
-        ##gat number infectious of each type
+        ##get number infectious of each type
         infectious = ((current_state[self.columns] == self.i_st).multiply(current_state.N, axis=0)).sum(axis=0)
         infectious = np.array(infectious)
 
         if sum(infectious)==0:
             return None
         
-        ##calculate the strain specific FOI for each row for each strain.
+        ##calculate the strain specific FOI (force of infection) for each row for each strain.
 
         #first get the cross protections
         row_beta_mult = 1-current_state[self.columns].apply(
@@ -98,11 +114,11 @@ class MultiStrainInfectiousProcess(Rule):
                     tmp2
                 ])
                 
-            deltas = pd.concat([deltas, tmp])
+            deltas = pd.concat([deltas, tmp]).reset_index(drop=True) #need to reset index
             
         else:
 
-            Nind = deltas.columns.get_loc('N')
+            N_index = deltas.columns.get_loc('N')
             #multinomial draw for each delta and create the appropriate deltas.
             for i in range(prI.shape[0]):
                 #print("here")
@@ -110,14 +126,14 @@ class MultiStrainInfectiousProcess(Rule):
                 #print(deltas)
                 tmp = np.random.multinomial(deltas['N'].iloc[i], np.append(prI.iloc[i].values,[0]))
                 #print("here2")
-                deltas.iloc[i,Nind] = -tmp[:-1].sum()
+                deltas.iloc[i,N_index] = -tmp[:-1].sum()
                 ##do the additions
                 for j in range(prI.shape[1]):
                     toadd = deltas.iloc[[i]]
                     toadd = toadd.assign(N=tmp[j])
                     toadd[self.columns[j]] = self.inf_to
                     deltas = pd.concat([deltas, toadd])
-                
+            deltas = deltas.reset_index(drop=True) #need to reset index of dataframe  
 
         
         deltas = deltas[deltas['N']!=0]
