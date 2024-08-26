@@ -13,10 +13,12 @@ class SharedTraitInfection(Rule):
         @param out_beta transmission risk if trait not shared
         @param inf_col the column designating infection state
         @param trait_col the column designaing the trait
-        @param s_st the suseptible state
-        @param i_st the infectoius state
-        @param inf_to the state to move infectous folks to
-        @param stochastic is this rule stochastic if not forced by the epi model.'''
+        @param s_st the state for susceptibles, assumed to be S
+        @param i_st the state for infectious, assumed to be I
+        @param inf_to the state infectious folks go to, assumed to be I
+        @param stochastic is this rule stochastic if not forced by the epi model.
+        '''
+        super().__init__()
         self.in_beta = in_beta
         self.out_beta = out_beta
         self.inf_col = inf_col
@@ -28,8 +30,14 @@ class SharedTraitInfection(Rule):
         
 
     def get_deltas(self, current_state, dt = 1.0, stochastic=None):
+        """
+        @param current_state, a data frame (at the moment) w/ the current epidemic state
+        @param dt, the size of the timestep
+        """
         if stochastic is None:
             stochastic = self.stochastic
+
+        current_state['N'] = current_state['N'].astype(np.float64) #converting column N to float type
 
         ##first let's get folks who are susceptible. These are the states we will actually
         ##see deltas from.
@@ -38,27 +46,45 @@ class SharedTraitInfection(Rule):
 
         #Now loop over folks in this state. 
         #There might be faster ways to do this.
-        for ind, row in deltas.iterrows():
-            inI = current_state.loc[(current_state[self.trait_col]==row[self.trait_col]) & (current_state[self.inf_col]==self.i_st)].N.sum()
-            outI = current_state.loc[(current_state[self.trait_col]!=row[self.trait_col]) & (current_state[self.inf_col]==self.i_st)].N.sum()
-            prI = 1-np.power(np.exp(-dt*self.in_beta),inI)*np.power(np.exp(-dt*self.out_beta),outI)
+        #for ind, row in deltas.iterrows():
+        #    inI = current_state.loc[(current_state[self.trait_col]==row[self.trait_col]) & (current_state[self.inf_col]==self.i_st)].N.sum()
+        #    outI = current_state.loc[(current_state[self.trait_col]!=row[self.trait_col]) & (current_state[self.inf_col]==self.i_st)].N.sum()
+        #    prI = 1-np.power(np.exp(-dt*self.in_beta),inI)*np.power(np.exp(-dt*self.out_beta),outI)
 
-            if not stochastic:
-                row['N'] = row['N']*prI
-            else:
-                row['N'] = np.random.binomial(row['N'],prI)
-            deltas.at[ind,'N'] = -row['N']
-            deltas_add.at[ind,'N'] = row['N']
+        #A faster way to get inI, outI and prI values that deltas needs
+        # Precompute inI and outI using groupby and sum
+        inI  = current_state[current_state[self.inf_col] == self.i_st].groupby(self.trait_col)['N'].sum() #filter all records where infection state is I and sum individuals based on their trait groups
+        outI = current_state[current_state[self.inf_col] == self.i_st].groupby(self.trait_col)['N'].sum().sum() - inI #sum all infected individuals regardless of trait groups, then minus individuals in inI to get individuals that are not in each inI's trait groups
+
+        # Map inI and outI values to the deltas DataFrame
+        deltas['inI']  = deltas[self.trait_col].map(inI).fillna(0) #map inI's each trait group's value to each correponding deltas' trait group, fill NA values with 0
+        deltas['outI'] = deltas[self.trait_col].map(outI).fillna(0) #map outI's each trait group's value to each correponding deltas' trait group, fill NA values with 0
+
+        # Vectorized calculation of prI
+        deltas['prI'] = 1 - np.power(np.exp(-dt*self.in_beta), deltas['inI']) * np.power(np.exp(-dt*self.out_beta), deltas['outI'])
+            
+        # Update N values based on prI
+        if not stochastic:
+            deltas['N'] = deltas['N'] * deltas['prI']    
+        else:
+            deltas['N'] = np.random.binomial(deltas['N'],deltas['prI'])
+        
+        #drop temporary columns inI, outI and prI
+        deltas.drop(['inI', 'outI', 'prI'], axis=1, inplace=True)
+
+        # Update deltas and deltas_add DataFrames
+        deltas['N'] = -deltas['N']
+        deltas_add['N'] = -deltas['N']
         
         deltas_add[self.inf_col] = self.inf_to
 
         rc = pd.concat([deltas,deltas_add])
 
-        return rc.loc[rc.N!=0]
+        return rc.loc[rc.N!=0].reset_index(drop=True) #reset index for the new dataframe
     
     def to_yaml(self):
         rc = {
-            'tabularepimdl.SimpleObservationProcess': {
+            'tabularepimdl.SharedTraitInfection': {
                 "in_beta": self.in_beta,
                 "out_beta": self.out_beta,
                 "inf_col": self.inf_col,
