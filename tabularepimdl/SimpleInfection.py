@@ -29,6 +29,10 @@ class SimpleInfection(Rule):
         self.stochastic = stochastic
 
     def get_deltas(self, current_state, dt = 1.0, stochastic = None):
+        """
+        @param current_state, a data frame (at the moment) w/ the current epidemic state
+        @param dt, the size of the timestep
+        """
         
         if stochastic is None:
             stochastic = self.stochastic
