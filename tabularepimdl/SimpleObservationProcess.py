@@ -7,18 +7,31 @@ class SimpleObservationProcess(Rule):
     observed to move into another state at some constant rate.'''
 
     def __init__(self, source_col, source_state, obs_col, rate:float,  unobs_state="U", incobs_state="I", prevobs_state="P", stochastic = False) -> None:
+        """
+        @param source_col, the source column for this observation process
+        @param source_state, the state individuals start
+        @param obs_col, the column that contains each observation's state
+        @param rate, the number of people move from a particular state into another state per unit time
+        @param unobs_state, un-observed state
+        @param incobs_state, incident-observed state
+        @param prevobs_state, previously-observed state
+        @param stochastic, is this rule stochastic process
+        """
         super().__init__()
         self.source_col = source_col
         self.source_state = source_state
         self.obs_col = obs_col
         self.rate = rate
-        self.unobs_state = unobs_state #U, I and P for observation states might confuse with infection state, would it be helpful to expand the acronyms?
+        self.unobs_state = unobs_state #value U, I and P for observation states might confuse with infection state, would it be helpful to expand the acronyms?
         self.incobs_state = incobs_state
         self.prevobs_state = prevobs_state
         self.stochastic = stochastic
 
     def get_deltas(self, current_state, dt = 1.0, stochastic = None):
-
+        """
+        @param current_state, a data frame (at the moment) w/ the current epidemic state
+        @param dt, the size of the timestep
+        """
         if stochastic is None:
             stochastic = self.stochastic
 
