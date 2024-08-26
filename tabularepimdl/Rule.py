@@ -1,14 +1,16 @@
 ## Define a class that represents a transition rule. It its simplest form a rule just takes in the current state,
 ## and returns as set of deltas that will be applied to the appropriate parts of the current state. These deltas
 ## should specify the full row signature. 
-from abc import ABC, abstractmethod  #abstractclassmethod, the class "abstractclassmethod" is deprecated, use classmethod with abstractmethod()
+from abc import ABC, abstractmethod  #the class "abstractclassmethod" is deprecated, use classmethod with abstractmethod()
 import inspect
 import importlib
 
 class Rule(ABC):
 
     stochastic: bool
-    
+    """
+    @param stochastic, is a rule stochastic process
+    """
         
     @abstractmethod
     def get_deltas(self, current_state, dt:float, stochastic):
@@ -24,13 +26,13 @@ class Rule(ABC):
         pass
 
     @classmethod
-    def from_yaml(cls, rule_yml):
+    def from_yaml(cls, rule_yaml):
         '''! This method loads a rule from its full yaml definition. Should not be overridden.
         
-        @param rule_yml a dictionary defining the class read from yaml
+        @param rule_yaml a dictionary defining the class(es) read from yaml file
         
         @raturn a version of the class'''
-        key = list(rule_yml.keys())[0]
+        key = list(rule_yaml.keys())[0]
 
         if '.' in key:
             mod_nm, cls_nm = key.split('.')
@@ -47,7 +49,7 @@ class Rule(ABC):
                         rule_cls = frameinf.frame.f_locals[key] #change f_globals to f_locals
                         break
 
-        return(rule_cls.from_yaml_def(rule_yml[key]))#key's values are included in class rule_cls and this class is instantiated and returned
+        return(rule_cls.from_yaml_def(rule_yaml[key]))#key's values are included in class rule_cls and this class is instantiated and returned
     
     @classmethod
     def from_yaml_def(cls, definition):
@@ -61,7 +63,7 @@ class Rule(ABC):
     @abstractmethod
     def to_yaml(self):
         '''! This method should return dictionary object appropriate for inclusion in a yaml 
-        definition of an epi. Should be a dictionary with the class name (in form module.classname)
+        definition of an epidemic. Should be a dictionary with the class name (in form module.classname)
         being the outer key containing information needed for the class to run "from_yaml"
         
         @return a dictionary representation of this object appropriate to read in by from_yaml'''
