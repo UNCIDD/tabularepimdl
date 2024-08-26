@@ -31,16 +31,21 @@ class WAIFWTransmission(Rule):
         self.stochastic = stochastic
 
     def get_deltas(self, current_state, dt = 1.0, stochastic = None):
+        """
+        @param current_state, a data frame (at the moment) w/ the current epidemic state
+        @param dt, the size of the timestep
+        """
         if stochastic is None:
             stochastic = self.stochastic
 
         ##create an array of the number of infections in each group.
-        inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col).sum(numeric_only=True)['N'].values
+        inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col)['N'].sum(numeric_only=True).values #moved ['N'] position 
 
-        print(pd.api.types.is_categorical_dtype(current_state[self.group_col]))
-        print(current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col).sum(numeric_only=True))
-        print("))))")
-        print(inf_array)
+        #print(pd.api.types.is_categorical_dtype(current_state[self.group_col])) #YL: it this for debugging/displaying purpose?
+        print(isinstance(current_state[self.group_col].dtype, pd.CategoricalDtype)) #is_categorical_dtype is deprecated, replaced with the isinstance function
+        print(current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col).sum(numeric_only=True)) #YL: it this for debugging/displaying purpose?
+        print("))))") #YL: it this for debugging/displaying purpose?
+        print(inf_array) #YL: it this for debugging/displaying purpose?
 
         #get the probability of being infected in each group
         prI = np.power(np.exp(-dt*self.waifw_matrix),inf_array)
@@ -59,7 +64,7 @@ class WAIFWTransmission(Rule):
         deltas_add[self.inf_col] = self.inf_to
 
         rc = pd.concat([deltas,deltas_add])
-        return rc.loc[rc.N!=0]
+        return rc.loc[rc.N!=0].reset_index(drop=True) #reset index for the new dataframe
     
     def to_yaml(self):
         rc = {
@@ -70,9 +75,11 @@ class WAIFWTransmission(Rule):
                 's_st': self.s_st,
                 'i_st': self.i_st,
                 'inf_to': self.inf_to,
-                'stochstic': self.stochastic
+                'stochastic': self.stochastic
             }
         }
+        
+        return rc #added return operation
 
 
 
