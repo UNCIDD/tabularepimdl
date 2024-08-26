@@ -24,14 +24,24 @@ class StateBasedDeathProcess(Rule):
 
     
     def get_deltas(self, current_state, dt = 1.0, stochastic=None):
+        """
+        @param current_state, a data frame (at the moment) w/ the current epidemic state
+        @param dt, the size of the timestep
+        """
         if stochastic is None:
             stochastic = self.stochastic
 
         ##first let's reduce to just the columns we need.
-        deltas = current_state
+        deltas_temp = current_state
+        #for column, state in zip(self.columns, self.states):
+        #    deltas = deltas.loc[deltas[column]==state]
+        #YL: It seems that the above code only keeps one row of record in deltas after for loop, is it on purpose? If want to keep all records, than adopt the following code.
+        # Assuming all satisfied records are wanted based on column and state value, the following code could be used
+        deltas = pd.DataFrame()
         for column, state in zip(self.columns, self.states):
-            deltas = deltas.loc[deltas[column]==state]
-        
+            filtered_deltas = deltas_temp.loc[deltas_temp[column]==state]
+            deltas = pd.concat([deltas, filtered_deltas])
+
         if not stochastic:
             deltas = deltas.assign(N=-deltas['N']*(1-np.exp(-dt*self.rate)))
         else:
@@ -49,3 +59,4 @@ class StateBasedDeathProcess(Rule):
             }
         }
         
+        return rc #add return operation
