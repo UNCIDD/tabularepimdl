@@ -6,7 +6,11 @@ from tabularepimdl.Rule import Rule
 class EpiModel:
     """! Class that that applies a list of rules to a changing current state through 
     some number of time steps to produce an epidemic. It has attributes representing the current
-    state and the full epidemic thus far"""
+    state and the full epidemic thus far
+
+    @param cur_state, a data frame (at the moment) w/ the current epidemic state
+    @param full_epi, full epidemic history
+    """
 
     init_state: pd.DataFrame
     cur_state: pd.DataFrame
@@ -27,6 +31,10 @@ class EpiModel:
         @param stoch_policy how should stochasticity be determined. If "rule_based" we
            revert to the rule, if "deterministic" we force deterministic and if 
            "stochastic" we force stochastic"""
+        #check if init_state is a DataFrame
+        if not isinstance(init_state, pd.DataFrame):
+            raise TypeError(f"Expected a DataFrame, but got {type(init_state).__name__} instead.")
+
         self.init_state = init_state #for the TBI reset function
         self.cur_state = init_state
         self.full_epi = init_state #the full epidemic is just the current state
@@ -41,9 +49,10 @@ class EpiModel:
 
     def reset(self):
         '''! Resets the class state to have the initial state, etc. 
-             note that this will lose all of the information on the epi run so far'''
-        self.cur_state = self.init_state
-        self.full_epi = self.init_state
+             note that this will lose all of the information on the epidemic run so far'''
+        self.cur_state = self.init_state.copy()
+        self.full_epi = self.init_state.copy()
+        return(self.cur_state, self.full_epi)
 
     @classmethod
     def from_yaml(cls, epi_yaml):
@@ -134,21 +143,22 @@ class EpiModel:
             all_deltas = all_deltas.assign(T=0)
 
             #append all deltas
-            nw_state = pd.concat([self.cur_state, all_deltas])
+            nw_state = pd.concat([self.cur_state, all_deltas]).reset_index(drop=True)
 
             # Get grouping columns
             tbr = {'N','T'}
             gp_cols = [item for item in all_deltas.columns if item not in tbr]
 
             #print("XXX")
+            
             #print(nw_state)
             #print(gp_cols)
      
 
             #now collapse..only if we have groups. This causes problems 
             if gp_cols:
-                nw_state = nw_state.groupby(gp_cols,observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
-                #nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()
+                nw_state = nw_state.groupby(gp_cols, dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index() #yl, question: do we want to use dropna=False option in groupby()?
+                #nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()       #yl, question: T column values are always assigned with 0, why do we search the max value of T?
 
             #print("***")
             #print(nw_state)
@@ -168,8 +178,8 @@ class EpiModel:
         self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) ##max deals with new states.
 
         # append the new current state to the epidemic history.
-        self.full_epi = pd.concat([self.full_epi, self.cur_state])
+        self.full_epi = pd.concat([self.full_epi, self.cur_state]).reset_index(drop=True)
         
         if ret_nw_state:
             return self.cur_state
-
+            
