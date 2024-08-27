@@ -47,7 +47,7 @@ class StateBasedDeathProcess(Rule):
         else:
             deltas = deltas.assign(N=-np.random.binomial(deltas['N'],1-np.exp(-dt*self.rate)))
         
-        return deltas
+        return deltas.reset_index(drop=True)
 
     def to_yaml(self):
         rc = {
