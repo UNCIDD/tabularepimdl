@@ -64,7 +64,7 @@ class SimpleInfection(Rule):
 
         tmp[self.column] = self.inf_to
 
-        return pd.concat([deltas, tmp])
+        return pd.concat([deltas, tmp]).reset_index(drop=True)
         
         
     def to_yaml(self):
