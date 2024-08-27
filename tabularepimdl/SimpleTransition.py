@@ -13,6 +13,8 @@ class SimpleTransition(Rule):
         @param column the name of the column this should be applied to.
         @param from_st the state that column should have if this is going to be applied.
         @param to_st the state folks should move to
+        @param rate, the number of people move from a particular state into another state per unit time
+        @param stochastic, is this rule stochastic process
         """
 
         super().__init__()
@@ -23,7 +25,10 @@ class SimpleTransition(Rule):
         self.stochastic = stochastic
 
     def get_deltas(self, current_state,dt=1.0, stochastic = None):
-
+        """
+        @param current_state, a data frame (at the moment) w/ the current epidemic state
+        @param dt, the size of the timestep
+        """
         if stochastic is None:
             stochastic = self.stochastic
 
@@ -46,7 +51,7 @@ class SimpleTransition(Rule):
 
         tmp[self.column] = self.to_st
 
-        return pd.concat([deltas, tmp])
+        return pd.concat([deltas, tmp]).reset_index(drop=True)
     
     def __str__(self) -> str:
         return "{} --> {} at rate {}".format(self.from_st, self.to_st, self.rate)
