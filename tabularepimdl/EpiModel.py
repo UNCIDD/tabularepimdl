@@ -183,3 +183,26 @@ class EpiModel:
         if ret_nw_state:
             return self.cur_state
             
+    ##Echo TODO: decide if we want to make it possible to add rules dynamically
+    ##add a method to add rules. This allows new rules to be added to the model at any time, even after the model has been initialized. 
+    def add_rule(self, new_rule):
+        """! Adds a new rule or a list of rules to the model.
+        
+        @param new_rule, a single rule object or a list of rule objects to be added."""
+        
+        # If the new rule is a single Rule object, wrap it in a list
+        if isinstance(new_rule, Rule):
+            new_rule = [new_rule]
+
+        # Add the new rule(s) as a new rule set
+        if isinstance(new_rule, list): # If the new rule is a list or wrapped in a list
+            # If the first element of new_rule is a list, assume it's a rule set and append it directly to the existing rules
+            if isinstance(new_rule[0], list):
+                self.rules.extend(new_rule)
+            else:
+                # Otherwise, append the new_rule list as a new rule set to the existing rules
+                self.rules.append(new_rule)
+        else:
+            raise ValueError("new_rule must be a Rule object or a list of Rule objects")
+        
+        return(self.rules)
