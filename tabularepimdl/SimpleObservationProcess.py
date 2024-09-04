@@ -63,7 +63,7 @@ class SimpleObservationProcess(Rule):
         tmp2 = delta_toprev.assign(N=-delta_toprev.N)
         delta_toprev[self.obs_col] = self.prevobs_state
 
-        return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) #YL question: why include tmp2 since the comment says "move folks out of the incident state"?
+        return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) #question: why include tmp2 since the comment says "move folks out of the incident state"?
         
         #if keeping tmp2, then the above approach is needed. if tmp2 is not needed, can adopt the following approach
         #delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
