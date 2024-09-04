@@ -321,8 +321,8 @@ def test_do_timestep_rule_based(epimodel, dt, instantiated_rules, cur_state, sto
 
         if gp_cols:
             nw_state = nw_state.groupby(gp_cols, dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index() #group by the filtered columns and make aggregation on N and T
-            #yl, question: do we want to use dropna=False option to keep data iterating through the for loop?
-            #yl, question: T column values are always assigned with 0, why do we search the max value of T?
+            #question: do we want to use dropna=False option to keep data iterating through the for loop?
+            #question: T column values are always assigned with 0, why do we search the max value of T?
     
         nw_state = nw_state[nw_state['N']!=0]
         cur_state = nw_state
