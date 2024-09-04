@@ -21,7 +21,7 @@ class SimpleTransition(Rule):
         self.column = column
         self.from_st = from_st
         self.to_st = to_st
-        self.rate = rate #question, in SimpleInfection, the transmission parameter is defined with name beta. Is this rate the same concept? Should it be called beta as well?
+        self.rate = rate #the transition rate of from_st to to_st, e.g. aging transition rate
         self.stochastic = stochastic
 
     def get_deltas(self, current_state,dt=1.0, stochastic = None):
