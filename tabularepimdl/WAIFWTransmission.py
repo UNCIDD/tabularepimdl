@@ -41,11 +41,11 @@ class WAIFWTransmission(Rule):
         ##create an array of the number of infections in each group.
         inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col)['N'].sum(numeric_only=True).values #moved ['N'] position 
 
-        #print(pd.api.types.is_categorical_dtype(current_state[self.group_col])) #YL: it this for debugging/displaying purpose?
+        #print(pd.api.types.is_categorical_dtype(current_state[self.group_col])) #question: it this for debugging/displaying purpose?
         print(isinstance(current_state[self.group_col].dtype, pd.CategoricalDtype)) #is_categorical_dtype is deprecated, replaced with the isinstance function
-        print(current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col).sum(numeric_only=True)) #YL: it this for debugging/displaying purpose?
-        print("))))") #YL: it this for debugging/displaying purpose?
-        print(inf_array) #YL: it this for debugging/displaying purpose?
+        print(current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col).sum(numeric_only=True)) #question: it this for debugging/displaying purpose?
+        print("))))") #question: it this for debugging/displaying purpose?
+        print(inf_array) #question: it this for debugging/displaying purpose?
 
         #get the probability of being infected in each group
         prI = np.power(np.exp(-dt*self.waifw_matrix),inf_array)
