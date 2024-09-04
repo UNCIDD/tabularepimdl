@@ -72,6 +72,10 @@ def test_inf_array_slicing(waifw_transmission, dummy_state):
     assert (inf_array == expected_inf_array).all()
 
 def test_categorical_type(waifw_transmission, dummy_state):
+    """
+    Test the parameter data type defined in current_state.
+    Args: waifw_transmission object and dummy dataframe.
+    """
     assert isinstance(dummy_state[waifw_transmission.group_col].dtype, pd.CategoricalDtype)
 
 
@@ -152,7 +156,7 @@ def test_get_deltas_deterministic(waifw_transmission, dummy_state, dummy_waifw_m
     """
     The expected_rc should be 
     {
-        'N': [-x, -y, x, y],
+        'N': [-x, -y, x, y], #x, y are numerical values
         'Infection_State': ['S', 'S', 'I', 'I'],
         'Age_Group': pd.Categorical(['youth', 'adult', 'youth', 'adult'])
     }
