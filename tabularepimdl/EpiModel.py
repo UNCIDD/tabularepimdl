@@ -157,8 +157,8 @@ class EpiModel:
 
             #now collapse..only if we have groups. This causes problems 
             if gp_cols:
-                nw_state = nw_state.groupby(gp_cols, dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index() #yl, question: do we want to use dropna=False option in groupby()?
-                #nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()       #yl, question: T column values are always assigned with 0, why do we search the max value of T?
+                nw_state = nw_state.groupby(gp_cols, dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index() #question: do we want to use dropna=False option in groupby()?
+                #nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()       #question: T column values are always assigned with 0, why do we search the max value of T?
 
             #print("***")
             #print(nw_state)
