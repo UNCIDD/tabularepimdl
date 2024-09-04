@@ -28,7 +28,7 @@ def init_state():
     Returns: DataFrame containing population counts, their infection states and age groups.
     """
     init_state = {
-    'T': [0, 0],
+    'T': [0, 0], #column T might not be needed in initial state setup, it will be added in do_timestep method
     'N': [100, 200],
     'Infection_State': ['S', 'I'],
     'Age_Group': pd.Categorical(['youth', 'adult'], categories=['youth', 'adult']) #links to group_col of WAIFWTransmission, need to designate the order of categories
