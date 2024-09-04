@@ -140,7 +140,7 @@ class EpiModel:
             # (i.e., no duplicates) we should just be able to append all deltas
             # to the currents state, group by everything besides N and T and 
             # sum. Need to make sure the T for all deltas is 0 first.
-            all_deltas = all_deltas.assign(T=0)
+            all_deltas = all_deltas.assign(T=0) #add a new column T with initial value 0
 
             #append all deltas
             nw_state = pd.concat([self.cur_state, all_deltas]).reset_index(drop=True)
