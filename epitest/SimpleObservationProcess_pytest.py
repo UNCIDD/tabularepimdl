@@ -35,6 +35,7 @@ def simple_observation():
     Initialize the SimpleObservationProcess object with specified parameters.
     Returns: Initialized SimpleObservationProcess object/instance.
     """
+    #this initialization prepares the rule with infected individuals and they will be unobserved people for the following use.
     return(SimpleObservationProcess(source_col='Infection_State', source_state='I', obs_col='Hosp', rate=0.05))
 
 def test_initialization(simple_observation):
@@ -56,6 +57,7 @@ def test_deltas_calculation(simple_observation, dummy_state):
     Test the number of incident observations (deltas).
     Args: simple_observation object and dummy dataframe.
     """
+    #infected but unobserved individuals
     delta_incobs = dummy_state.loc[(dummy_state[simple_observation.source_col]==simple_observation.source_state) & (dummy_state[simple_observation.obs_col]==simple_observation.unobs_state)]
 
     expected_delta = pd.DataFrame({
