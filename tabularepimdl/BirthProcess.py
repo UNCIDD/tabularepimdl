@@ -43,7 +43,7 @@ class BirthProcess(Rule):
         ##Just returns a delta with the start
         ##state signature and the right number of
         ##births.
-        N = current_state['N'].sum() #question: what is the input data format of current_state?
+        N = current_state['N'].sum() #check AgingPopulation module for format of current_state.
         if not stochastic: #False condition: deterministic process
             births = self.start_state_sig.assign(N=N*(1-np.exp(-dt*self.rate)))
         else: #True condition: stochastic process
