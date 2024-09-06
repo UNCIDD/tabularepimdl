@@ -63,7 +63,7 @@ class SimpleObservationProcess(Rule):
         tmp2 = delta_toprev.assign(N=-delta_toprev.N) #negative incident-observed individuals
         delta_toprev[self.obs_col] = self.prevobs_state #positive incident-observed individuals become positive previously-observed individuals
 
-        #combine initial positive un-observed, positive delta incident-observed, positive previously-observed, negative incident-observed individuals
+        #combine positive un-observed, positive delta incident-observed, positive previously-observed, negative incident-observed individuals
         return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) #question: why include tmp2 since it reprents all the incident-observed people in negative number?
                                                                                           #question: should tmp's N value a negative number so incident-obs can be removed? Right now it is positive number.
         
