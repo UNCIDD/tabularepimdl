@@ -22,7 +22,7 @@ class SimpleObservationProcess(Rule):
         self.source_state = source_state
         self.obs_col = obs_col
         self.rate = rate
-        self.unobs_state = unobs_state #value U, I and P for observation states might confuse with infection state, would it be helpful to expand the acronyms?
+        self.unobs_state = unobs_state #question: value U, I and P for observation states might confuse with infection state, would it be helpful to expand the acronyms?
         self.incobs_state = incobs_state
         self.prevobs_state = prevobs_state
         self.stochastic = stochastic
