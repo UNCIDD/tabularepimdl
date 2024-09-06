@@ -59,11 +59,11 @@ class SimpleObservationProcess(Rule):
 
         #move folks out of the incident state
         ##this seems alittle dubm
-        delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy() #incident-observed individuals
-        tmp2 = delta_toprev.assign(N=-delta_toprev.N) #put incident-observed individuals to negative number
-        delta_toprev[self.obs_col] = self.prevobs_state #negative incident-observed individuals become negative previously-observed individuals
+        delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy() #positive incident-observed individuals
+        tmp2 = delta_toprev.assign(N=-delta_toprev.N) #negative incident-observed individuals
+        delta_toprev[self.obs_col] = self.prevobs_state #positive incident-observed individuals become positive previously-observed individuals
 
-        #combine initial positive un-observed, positive delta incident-observed, negative previously-observed, negative incident-observed individuals
+        #combine initial positive un-observed, positive delta incident-observed, positive previously-observed, negative incident-observed individuals
         return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) #question: why include tmp2 since it reprents all the incident-observed people in negative number?
                                                                                           #question: should tmp's N value a negative number so incident-obs can be removed? Right now it is positive number.
         
