@@ -36,7 +36,7 @@ class SimpleObservationProcess(Rule):
             stochastic = self.stochastic
 
         ##first get the states that produce incident observations
-        delta_incobs = current_state.loc[(current_state[self.source_col]==self.source_state) & (current_state[self.obs_col]==self.unobs_state)]
+        delta_incobs = current_state.loc[(current_state[self.source_col]==self.source_state) & (current_state[self.obs_col]==self.unobs_state)] #un-observed individuals
 
         if not stochastic:
             #subtractions
@@ -55,15 +55,17 @@ class SimpleObservationProcess(Rule):
             N=-delta_incobs.N
         )
 
-        tmp[self.obs_col] = self.incobs_state
+        tmp[self.obs_col] = self.incobs_state #un-observed delta individuals changed to incident-observed positive delta individuals
 
         #move folks out of the incident state
         ##this seems alittle dubm
-        delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
-        tmp2 = delta_toprev.assign(N=-delta_toprev.N)
-        delta_toprev[self.obs_col] = self.prevobs_state
+        delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy() #incident-observed individuals
+        tmp2 = delta_toprev.assign(N=-delta_toprev.N) #put incident-observed individuals to negative number
+        delta_toprev[self.obs_col] = self.prevobs_state #negative incident-observed individuals become negative previously-observed individuals
 
-        return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) #question: why include tmp2 since the comment says "move folks out of the incident state"?
+        #combine initial positive un-observed, positive delta incident-observed, negative previously-observed, negative incident-observed individuals
+        return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) #question: why include tmp2 since it reprents all the incident-observed people in negative number?
+                                                                                          #question: should tmp's N value a negative number so incident-obs can be removed? Right now it is positive number.
         
         #if keeping tmp2, then the above approach is needed. if tmp2 is not needed, can adopt the following approach
         #delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
