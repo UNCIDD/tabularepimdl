@@ -33,10 +33,8 @@ class StateBasedDeathProcess(Rule):
 
         ##first let's reduce to just the columns we need.
         deltas_temp = current_state
-        #for column, state in zip(self.columns, self.states):
-        #    deltas = deltas.loc[deltas[column]==state]
-        #question: It seems that the above code only keeps one row of record in deltas after for loop, is it on purpose? If want to keep all records, than adopt the following code.
-        # Assuming all satisfied records are wanted based on column and state value, the following code could be used
+        
+        #all satisfied records are wanted based on column and state values
         deltas = pd.DataFrame()
         for column, state in zip(self.columns, self.states):
             filtered_deltas = deltas_temp.loc[deltas_temp[column]==state]
