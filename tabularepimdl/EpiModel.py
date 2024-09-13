@@ -141,7 +141,9 @@ class EpiModel:
             # to the currents state, group by everything besides N and T and 
             # sum. Need to make sure the T for all deltas is 0 first.
             all_deltas = all_deltas.assign(T=0) #add a new column T with initial value 0
-
+            #question: if the initial cur_state does not have column T, then assign(T=0) will add new column T with value 0. However if cur_state has column T, then this will reset T's original value.
+            #so should we add a if-else to check column T existence first, then assign T=0 depending on the checked result?
+            
             #append all deltas
             nw_state = pd.concat([self.cur_state, all_deltas]).reset_index(drop=True)
 
@@ -176,10 +178,13 @@ class EpiModel:
         # print("++++")
   
         self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) ##max deals with new states.
-
+        #print(self.cur_state) #debug
+        #print('----')
         # append the new current state to the epidemic history.
         self.full_epi = pd.concat([self.full_epi, self.cur_state]).reset_index(drop=True)
-        
+        #print(self.full_epi)#debug
+        #print('----') #debug
+
         if ret_nw_state:
             return self.cur_state
             
