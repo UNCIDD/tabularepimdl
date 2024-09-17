@@ -57,7 +57,7 @@ class SimpleObservationProcess(Rule):
 
         tmp[self.obs_col] = self.incobs_state #un-observed delta individuals changed to incident-observed positive delta individuals
 
-        #move folks out of the incident state
+        #move folks out of the incident state and into the previous state
         ##this seems alittle dubm
         delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy() #positive incident-observed individuals
         tmp2 = delta_toprev.assign(N=-delta_toprev.N) #negative incident-observed individuals
