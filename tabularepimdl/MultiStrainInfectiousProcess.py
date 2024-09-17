@@ -5,7 +5,7 @@ import pandas as pd
 
 class MultiStrainInfectiousProcess(Rule):
     """! Simple multi strain infectious process. Takes a cross protection matrix, a list of infection state 
-    columns and an array of betas."""
+    columns and an array of betas. Does not allow co-infections"""
     
     def __init__(self, betas: np.array, columns, cross_protect:np.array, s_st="S", i_st="I",  
                  r_st="R", inf_to="I", stochastic=False, freq_dep=True) -> None:
@@ -84,6 +84,7 @@ class MultiStrainInfectiousProcess(Rule):
         
         # This makes the probablity of infectoin 0 when folks are infected with a different strain...
         # i.e., no coinfections!
+        # Maybe slightly problematic given the strong assumption of only being infected with 1 strain...max better?
         row_beta = row_beta.multiply(
                 1-(current_state[self.columns] == self.i_st).sum(axis=1), axis=0
             )
