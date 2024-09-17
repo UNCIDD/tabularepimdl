@@ -55,23 +55,16 @@ class SimpleObservationProcess(Rule):
             N=-delta_incobs.N
         )
 
-        tmp[self.obs_col] = self.incobs_state #un-observed delta individuals changed to incident-observed positive delta individuals
+        tmp[self.obs_col] = self.incobs_state #un-observed delta individuals changed to incident-observed positive delta individuals, move folks into incident-observed
 
-        #move folks out of the incident state
+        #move folks out of the incident state and into the previous state
         ##this seems alittle dubm
         delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy() #positive incident-observed individuals
-        tmp2 = delta_toprev.assign(N=-delta_toprev.N) #negative incident-observed individuals
+        tmp2 = delta_toprev.assign(N=-delta_toprev.N) #negative incident-observed individuals, move folks out of the incident state
         delta_toprev[self.obs_col] = self.prevobs_state #positive incident-observed individuals become positive previously-observed individuals
 
         #combine positive un-observed, positive delta incident-observed, positive previously-observed, negative incident-observed individuals
-        return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) #question: why include tmp2 since it reprents all the incident-observed people in negative number?
-                                                                                          #question: should tmp's N value a negative number so incident-obs can be removed? Right now it is positive number.
-        
-        #if keeping tmp2, then the above approach is needed. if tmp2 is not needed, can adopt the following approach
-        #delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
-        #delta_toprev[self.obs_col]=self.prevobs_state
-        #return (pd.concat([delta_incobs, tmp, delta_toprev]))
-
+        return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) 
 
     def to_yaml(self):
         rc = {
