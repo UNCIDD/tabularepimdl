@@ -86,7 +86,7 @@ class MultiStrainInfectiousProcess(Rule):
         # i.e., no coinfections!
         # Maybe slightly problematic given the strong assumption of only being infected with 1 strain...max better?
         row_beta = row_beta.multiply(
-                1-(current_state[self.columns] == self.i_st).sum(axis=1), axis=0
+                1-(current_state[self.columns] == self.i_st).max(axis=1), axis=0 #changed sum() to max() to make sure only one strain stands out
             )
         prI = 1-(np.exp(-dt*row_beta)).apply(lambda x: np.power(x, infectious), axis=1)
 
