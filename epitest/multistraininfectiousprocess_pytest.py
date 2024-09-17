@@ -183,12 +183,12 @@ def test_no_coinfections(multistrain_infectiousprocess, dummy_state, columns, cr
                                                         )
     returned_row_beta = (returned_row_beta_mult * expected_betas * (dummy_state[columns]==multistrain_infectiousprocess.s_st).values)
 
-    returned_row_beta = returned_row_beta.multiply(1-(dummy_state[columns] == multistrain_infectiousprocess.i_st).sum(axis=1), axis=0)
+    returned_row_beta = returned_row_beta.multiply(1-(dummy_state[columns] == multistrain_infectiousprocess.i_st).max(axis=1), axis=0)
     returned_prI = 1-(np.exp(-1.0*returned_row_beta)).apply(lambda x: np.power(x, returned_infectious), axis=1)
     
     #expected values use known calculated data
     expected_infectious = np.array([200, 150])
-    expected_co_infection = 1 - pd.DataFrame({'Strain1': [False, True, False], 'Strain2': [False, False, True]}).sum(axis=1)
+    expected_co_infection = 1 - pd.DataFrame({'Strain1': [False, True, False], 'Strain2': [False, False, True]}).max(axis=1)
     expected_row_beta = pd.DataFrame({0:[1.0, 1.0, 0.0], 1:[1.0, 1.0, 0.5]})*expected_betas*np.array([[ True, True], [False, True], [False, False]])
     expected_row_beta = expected_row_beta.multiply(expected_co_infection, axis=0)
     expected_prI = 1-(np.exp(-1.0*expected_row_beta)).apply(lambda x: np.power(x, expected_infectious), axis=1)
