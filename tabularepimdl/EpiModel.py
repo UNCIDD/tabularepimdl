@@ -129,10 +129,15 @@ class EpiModel:
             for rule in ruleset:
                 if self.stoch_policy == "rule_based":
                     nw_deltas = rule.get_deltas(self.cur_state, dt=dt)
+                    #print('nw_delta is\n', nw_deltas) #debug
                 else:
                     nw_deltas = rule.get_deltas(self.cur_state, dt=dt, stochastic=self.stoch_policy=="stochastic")
-
+                    #print('nw_delta is', nw_deltas) #debug
                 all_deltas = pd.concat([all_deltas, nw_deltas])
+                #print('all_deltas is\n', all_deltas) #debug
+                #if rule is not ruleset[-1]: #debug
+                #    print('---next rule---') #debug
+                #else: print('moving on') #debug
                 
             if all_deltas.shape[0]==0:
                 continue
@@ -140,12 +145,17 @@ class EpiModel:
             # (i.e., no duplicates) we should just be able to append all deltas
             # to the currents state, group by everything besides N and T and 
             # sum. Need to make sure the T for all deltas is 0 first.
-            all_deltas = all_deltas.assign(T=0) #add a new column T with initial value 0
-            #question: if the initial cur_state does not have column T, then assign(T=0) will add new column T with value 0. However if cur_state has column T, then this will reset T's original value.
-            #so should we add a if-else to check column T existence first, then assign T=0 depending on the checked result?
+            if 'T' in self.cur_state.columns:
+                pass #if column T exists in the initial cur_state dataframe, do nothing
+            else:
+                all_deltas = all_deltas.assign(T=0.0) #add a new column T with initial value 0 to all_deltas
+                self.full_epi = self.full_epi.assign(T=0.0) #add a new column T with initial value 0 to  full epi before concatenating cur_state
+            #question: the original logic shows if the initial cur_state does not have column T, then assign(T=0) will add new column T with value 0. However if cur_state has column T, then this will reset T's original value.
+            #so adding a if-else to check column T existence first, then assign T=0 depending on the checked result
             
             #append all deltas
             nw_state = pd.concat([self.cur_state, all_deltas]).reset_index(drop=True)
+            #print('nw_state is\n', nw_state) #debug
 
             # Get grouping columns
             tbr = {'N','T'}
@@ -159,8 +169,8 @@ class EpiModel:
 
             #now collapse..only if we have groups. This causes problems 
             if gp_cols:
-                nw_state = nw_state.groupby(gp_cols, dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index() #question: do we want to use dropna=False option in groupby()?
-                #nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()       #question: T column values are always assigned with 0, why do we search the max value of T?
+                nw_state = nw_state.groupby(gp_cols, dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index() #question: add dropna=False option in case combined dataset nw_state has NaN so groupby() can handle them.
+                #nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()
 
             #print("***")
             #print(nw_state)
@@ -169,7 +179,9 @@ class EpiModel:
   
 
             self.cur_state = nw_state
-
+            #if ruleset is not self.rules[-1]: #debug
+            #    print('-------next ruleset--------') #debug
+            #else: print('for loop ends') #debug
     
         # print("----")
         # print(self.cur_state)
@@ -178,11 +190,11 @@ class EpiModel:
         # print("++++")
   
         self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) ##max deals with new states.
-        #print(self.cur_state) #debug
+        #print('current_state is\n', self.cur_state) #debug
         #print('----')
         # append the new current state to the epidemic history.
         self.full_epi = pd.concat([self.full_epi, self.cur_state]).reset_index(drop=True)
-        #print(self.full_epi)#debug
+        #print('full epi is\n', self.full_epi)#debug
         #print('----') #debug
 
         if ret_nw_state:
