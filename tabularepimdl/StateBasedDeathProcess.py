@@ -32,7 +32,7 @@ class StateBasedDeathProcess(Rule):
             stochastic = self.stochastic
 
         ##first let's reduce to just the columns we need.
-        deltas_temp = current_state
+        deltas_temp = current_state.copy()
         
         #all satisfied records are wanted based on column and state values
         deltas = pd.DataFrame()
