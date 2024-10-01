@@ -60,6 +60,21 @@ def test_initialization(waifw_transmission):
     assert waifw_transmission.inf_to == 'I'
     assert waifw_transmission.stochastic == False
 
+def test_len_of_categories_match_len_of_waifw(waifw_transmission):
+    """
+    Test the number of unique categories in current_state's group_col match the waifw matrix's length.
+    Args: waifw_transmission object.
+    """
+    state_with_more_categories = pd.DataFrame(
+        {
+        'N': [50, 5, 40, 10],
+        'Infection_State': ['S', 'I', 'S', 'I'], #links to inf_col
+        #'Age_Group': ['youth', 'child', 'senior', 'adult'] #links to group_col, reserved to test error handling in get_deltas() method
+        'Age_Group': ['youth', 'youth', 'adult', 'adult']
+        }
+    )
+    waifw_transmission.get_deltas(state_with_more_categories, stochastic=True) #if this test fails, a ValueError from the source code will pop up.
+
 def test_inf_array_slicing(waifw_transmission, dummy_state):
     """
     Test slicing and aggregation of current_state.
