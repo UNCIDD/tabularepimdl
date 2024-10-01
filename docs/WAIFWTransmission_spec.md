@@ -47,6 +47,7 @@ Description: The 'WAIFWTransmission' class models a transmission process based o
 
 ### Example Tests:
 * test_intialization: Verifies that the rule is correctly initialized with the setup above.
+* test_len_of_categories_match_len_of_waifw: Test the number of unique categories in current_state's group_col matches the waifw matrix's length.
 * test_inf_array_slicing: Test slicing and aggregation of current state.
 * test_categorical_type: Test the parameter data type defined in dummy dataframe.
 * test_probablity_of_infection_calculation: Test infection probability for individuals from filtered groups.
