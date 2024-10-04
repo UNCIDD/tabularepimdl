@@ -8,9 +8,9 @@ class SimpleObservationProcess(Rule):
 
     def __init__(self, source_col, source_state, obs_col, rate:float,  unobs_state="U", incobs_state="I", prevobs_state="P", stochastic = False) -> None:
         """
-        @param source_col, the source column for this observation process
+        @param source_col, the column containing source_state for the observation process
         @param source_state, the state individuals start
-        @param obs_col, the column that contains each observation's state
+        @param obs_col, the column that contains each group of individuals' observed state
         @param rate, the number of people move from a particular state into another state per unit time
         @param unobs_state, un-observed state
         @param incobs_state, incident-observed state
@@ -36,7 +36,7 @@ class SimpleObservationProcess(Rule):
             stochastic = self.stochastic
 
         ##first get the states that produce incident observations
-        delta_incobs = current_state.loc[(current_state[self.source_col]==self.source_state) & (current_state[self.obs_col]==self.unobs_state)] #un-observed individuals
+        delta_incobs = current_state.loc[(current_state[self.source_col]==self.source_state) & (current_state[self.obs_col]==self.unobs_state)] #un-observed individuals with source_state
 
         if not stochastic:
             #subtractions
@@ -55,15 +55,14 @@ class SimpleObservationProcess(Rule):
             N=-delta_incobs.N
         )
 
-        tmp[self.obs_col] = self.incobs_state #un-observed delta individuals changed to incident-observed positive delta individuals, move folks into incident-observed
+        tmp[self.obs_col] = self.incobs_state #un-observed delta individuals change to positive incident-observed individuals, i.e. move folks from un-observed into incident-observed
 
         #move folks out of the incident state and into the previous state
-        ##this seems alittle dubm
         delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy() #positive incident-observed individuals
         tmp2 = delta_toprev.assign(N=-delta_toprev.N) #negative incident-observed individuals, move folks out of the incident state
-        delta_toprev[self.obs_col] = self.prevobs_state #positive incident-observed individuals become positive previously-observed individuals
+        delta_toprev[self.obs_col] = self.prevobs_state #positive incident-observed individuals change to positive previously-observed individuals, move folks from incident-observed to previously-observed
 
-        #combine positive un-observed, positive delta incident-observed, positive previously-observed, negative incident-observed individuals
+        #combine positive un-observed, positive incident-observed, positive previously-observed, negative incident-observed individuals
         return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) 
 
     def to_yaml(self):
