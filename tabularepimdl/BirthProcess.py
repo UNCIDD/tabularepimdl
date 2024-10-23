@@ -22,8 +22,7 @@ class BirthProcess(Rule):
 
         #is their a better way to do this?
         if isinstance(start_state_sig, dict):
-            #start_state_sig = pd.DataFrame(start_state_sig,index=[0])
-            self.start_state_sig = pd.DataFrame([start_state_sig]) #put dict to a list to keep index = 0 condition i.e. single row
+            self.start_state_sig = pd.DataFrame([start_state_sig]) #convert a dict to a dataframe
         elif isinstance(start_state_sig, pd.DataFrame):
             self.start_state_sig = start_state_sig.copy()
         else:
