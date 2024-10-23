@@ -130,9 +130,11 @@ class EpiModel:
                 if self.stoch_policy == "rule_based":
                     nw_deltas = rule.get_deltas(self.cur_state, dt=dt)
                     #print('nw_delta is\n', nw_deltas) #debug
+                    
                 else:
-                    nw_deltas = rule.get_deltas(self.cur_state, dt=dt, stochastic=self.stoch_policy=="stochastic")
+                    nw_deltas = rule.get_deltas(self.cur_state, dt=dt, stochastic= (self.stoch_policy=="stochastic"))
                     #print('nw_delta is', nw_deltas) #debug
+                    
                 all_deltas = pd.concat([all_deltas, nw_deltas])
                 #print('all_deltas is\n', all_deltas) #debug
                 #if rule is not ruleset[-1]: #debug
