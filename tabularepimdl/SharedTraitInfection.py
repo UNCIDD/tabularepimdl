@@ -41,8 +41,14 @@ class SharedTraitInfection(Rule):
 
         ##first let's get folks who are susceptible. These are the states we will actually
         ##see deltas from.
-        deltas = current_state.loc[current_state[self.inf_col]==self.s_st].copy()
-        deltas_add = deltas.copy()
+        deltas = current_state.loc[current_state[self.inf_col]==self.s_st].copy(deep=True) #extract S folks only
+        deltas_add = deltas.copy(deep=True)
+
+        infect_only = current_state.loc[current_state[self.inf_col]==self.i_st].copy(deep=True) #extract I folks only
+        
+        total_infect = infect_only['N'].sum() #sum all the infected people no matter what trait it is
+        
+        trait_N_map = infect_only.set_index(self.trait_col)['N'] #set trait value as index, N remains to be the value for each trait
 
         #Now loop over folks in this state. 
         #There might be faster ways to do this.
@@ -52,13 +58,9 @@ class SharedTraitInfection(Rule):
         #    prI = 1-np.power(np.exp(-dt*self.in_beta),inI)*np.power(np.exp(-dt*self.out_beta),outI)
 
         #A faster way to get inI, outI and prI values that deltas needs
-        # Precompute inI and outI using groupby and sum
-        inI  = current_state[current_state[self.inf_col] == self.i_st].groupby(self.trait_col)['N'].sum() #filter all records where infection state is I and sum individuals based on their trait groups
-        outI = current_state[current_state[self.inf_col] == self.i_st].groupby(self.trait_col)['N'].sum().sum() - inI #sum all infected individuals regardless of trait groups, then minus individuals in inI to get individuals that are not in each inI's trait groups
-
-        # Map inI and outI values to the deltas DataFrame
-        deltas['inI']  = deltas[self.trait_col].map(inI).fillna(0) #map inI's each trait group's value to each correponding deltas' trait group, fill NA values with 0
-        deltas['outI'] = deltas[self.trait_col].map(outI).fillna(0) #map outI's each trait group's value to each correponding deltas' trait group, fill NA values with 0
+        # Map the number of infected folks of each trait to the correponding trait in deltas
+        deltas['inI']  = deltas[self.trait_col].map(trait_N_map).fillna(0) #the number of infected folks inside each trait
+        deltas['outI'] = total_infect - deltas['inI'] #the number of infected folks outside each trait
 
         # Vectorized calculation of prI
         deltas['prI'] = 1 - np.power(np.exp(-dt*self.in_beta), deltas['inI']) * np.power(np.exp(-dt*self.out_beta), deltas['outI'])
@@ -69,14 +71,14 @@ class SharedTraitInfection(Rule):
         else:
             deltas['N'] = np.random.binomial(deltas['N'],deltas['prI'])
         
-        #drop temporary columns inI, outI and prI
+        #drop temporary columns inI, outI, prI
         deltas.drop(['inI', 'outI', 'prI'], axis=1, inplace=True)
-
+        
         # Update deltas and deltas_add DataFrames
-        deltas['N'] = -deltas['N']
+        deltas['N'] = -deltas['N'] #folks out of S
         deltas_add['N'] = -deltas['N']
         
-        deltas_add[self.inf_col] = self.inf_to
+        deltas_add[self.inf_col] = self.inf_to #folks into I
 
         rc = pd.concat([deltas,deltas_add])
 

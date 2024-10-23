@@ -31,7 +31,7 @@ class SimpleTransition(Rule):
         """
         if stochastic is None:
             stochastic = self.stochastic
-
+            
         deltas = current_state.loc[current_state[self.column]==self.from_st]
         
         if not stochastic:
