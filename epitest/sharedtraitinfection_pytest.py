@@ -20,12 +20,16 @@ def dummy_state():
     Create a dummy DataFrame to simulate the state of a population.
     Returns: DataFrame containing population counts, their infection states and trait groups
     """
+    np.random.seed(3)
     data = {
-        'N':               [10,   20,   30,   40,   50,   60],
-        'Infection_State': ['I',  'I',  'S',  'S',  'I',  'S'],
-        'Trait':           ['T1', 'T2', 'T1', 'T2', 'T1', 'T2']
+    'InfState':pd.Categorical(["S"]*5+["I"]*2 +["I", "S"] +["R"],  categories=['S','I','R']),
+    'HH_Number': list(range(5))      +[3, 4]  +[3, 1]     +[3], 
+    'N': list(np.random.poisson(2,5))+[5, 5]  +[2, 3]     +[1], #lambda in poisson is 2 since avg.household size is 2, the additional 1 is for HH=499
     }
-    return (pd.DataFrame(data))
+    current_state = pd.DataFrame(data)
+    current_state['N'] = current_state['N'].astype(np.float64) #converting column N to float type
+    current_state = current_state.groupby(['HH_Number', 'InfState'], observed=True)['N'].sum().reset_index()
+    return (current_state)
 
 @pytest.fixture()
 def sharedtrait_infection():
@@ -33,17 +37,17 @@ def sharedtrait_infection():
     Initialize the SharedTraitInfection object with specified parameters.
     Returns: Initialized SharedTraitInfection object/instance.
     """
-    return(SharedTraitInfection(in_beta=0.02, out_beta=0.04, inf_col='Infection_State', trait_col='Trait'))
+    return(SharedTraitInfection(in_beta=0.2/5, out_beta=0.002/5, inf_col='InfState', trait_col='HH_Number'))
 
 def test_initialization(sharedtrait_infection):
     """
     Test the initialization of the SharedTraitInfection object.
     Args: sharedtrait_infection object.
     """
-    assert sharedtrait_infection.in_beta == 0.02
-    assert sharedtrait_infection.out_beta == 0.04
-    assert sharedtrait_infection.inf_col == 'Infection_State'
-    assert sharedtrait_infection.trait_col == 'Trait'
+    assert sharedtrait_infection.in_beta == 0.2/5
+    assert sharedtrait_infection.out_beta == 0.002/5
+    assert sharedtrait_infection.inf_col == 'InfState'
+    assert sharedtrait_infection.trait_col == 'HH_Number'
     assert sharedtrait_infection.s_st == 'S'
     assert sharedtrait_infection.i_st == 'I'
     assert sharedtrait_infection.inf_to == 'I'
@@ -57,9 +61,9 @@ def test_detlas_calculation(sharedtrait_infection, dummy_state):
     returned_deltas = dummy_state.loc[dummy_state[sharedtrait_infection.inf_col]==sharedtrait_infection.s_st].copy()
 
     expected_deltas = pd.DataFrame({
-        'N':               [30,   40,   60],
-        'Infection_State': ['S',  'S',  'S'],
-        'Trait':           ['T1', 'T2', 'T2']
+        'HH_Number': [0, 1, 2, 3, 4],
+        'InfState':  pd.Categorical(['S', 'S', 'S', 'S', 'S'], categories=['S', 'I', 'R']),
+        'N':         [2.0, 6.0, 1.0, 1.0, 2.0]
     })
 
     pd.testing.assert_frame_equal(returned_deltas.reset_index(drop=True), expected_deltas.reset_index(drop=True))
@@ -73,16 +77,19 @@ def test_inI_outI_prI_deltas(sharedtrait_infection, dummy_state):
     
     # Create deltas DataFrame for rows where Infection_State is 'S'
     deltas = dummy_state.loc[dummy_state[sharedtrait_infection.inf_col] == sharedtrait_infection.s_st].copy()
-    deltas_add = deltas.copy()
+    #deltas_add = deltas.copy()
 
-    # Precompute inI and outI using groupby and sum
-    inI  = dummy_state[dummy_state[sharedtrait_infection.inf_col] == sharedtrait_infection.i_st].groupby(sharedtrait_infection.trait_col)['N'].sum() #filter all records where infection state is I and sum individuals based on their trait groups
-    outI = dummy_state[dummy_state[sharedtrait_infection.inf_col] == sharedtrait_infection.i_st].groupby(sharedtrait_infection.trait_col)['N'].sum().sum() - inI #sum all infected individuals regardless of trait groups, then minus individuals in inI to get individuals that are not in each inI's trait groups
+    #infected people only
+    i_only = dummy_state.loc[dummy_state[sharedtrait_infection.inf_col]==sharedtrait_infection.i_st].copy(deep=True)
+    sum_i = i_only['N'].sum()
 
-    # Map inI and outI values to the deltas DataFrame
-    deltas['inI']  = deltas[sharedtrait_infection.trait_col].map(inI).fillna(0) #map inI's each trait group's value to each correponding deltas' trait group, fill NA values with 0
-    deltas['outI'] = deltas[sharedtrait_infection.trait_col].map(outI).fillna(0) #map outI's each trait group's value to each correponding deltas' trait group, fill NA values with 0
-
+    #map HH_Number between infected people only and deltas
+    hh_n_map = i_only.set_index('HH_Number')['N'] #set HH_number as index of a series, N is the value of the index
+    
+    # Precompute inI and outI
+    deltas['inI'] = deltas['HH_Number'].map(hh_n_map).fillna(0)
+    deltas['outI'] = sum_i - deltas['inI']
+    
     # Vectorized calculation of prI
     deltas['prI'] = 1 - np.power(np.exp(-1.0 * sharedtrait_infection.in_beta), deltas['inI']) * np.power(np.exp(-1.0 * sharedtrait_infection.out_beta), deltas['outI'])
 
@@ -90,17 +97,15 @@ def test_inI_outI_prI_deltas(sharedtrait_infection, dummy_state):
     deltas['N'] = deltas['N'] * deltas['prI']
 
     expected_deltas_with_inI_outI_prI = pd.DataFrame({
-        'N':               [25.939941502901636, 37.56759749499129, 56.35139624248693],
-        'Infection_State': ['S',  'S',  'S'],
-        'Trait':           ['T1', 'T2', 'T2'],
-        'inI':             [60.0,  20.0, 20.0],
-        'outI':            [20.0,  60.0, 60.0],
-        'prI':             [0.8646647167633879, 0.9391899373747822, 0.9391899373747822]
-
+        'HH_Number':       [0, 1, 2, 3, 4],
+        'InfState':        pd.Categorical(['S',  'S',  'S', 'S',  'S'], categories=['S', 'I', 'R']),
+        'N':               [0.009576996819805172, 0.028730990459415517, 0.004788498409902586, 0.24572631546691115, 0.36711697319890346],
+        'inI':             [0.0, 0.0, 0.0, 7.0, 5.0],
+        'outI':            [12.0, 12.0, 12.0, 5.0, 7.0],
+        'prI':             [0.004788498409902586, 0.004788498409902586, 0.004788498409902586, 0.24572631546691115, 0.18355848659945173]
     })
 
     pd.testing.assert_frame_equal(deltas.reset_index(drop=True), expected_deltas_with_inI_outI_prI.reset_index(drop=True))
-
 
 def test_get_deltas_deterministic(sharedtrait_infection, dummy_state):
     """
@@ -110,12 +115,12 @@ def test_get_deltas_deterministic(sharedtrait_infection, dummy_state):
     returned_rc = sharedtrait_infection.get_deltas(dummy_state)
 
     deltas_with_temp_parameters = pd.DataFrame({
-        'N':               [25.939941502901636, 37.56759749499129, 56.35139624248693],
-        'Infection_State': ['S',  'S',  'S'],
-        'Trait':           ['T1', 'T2', 'T2'],
-        'inI':             [60.0,  20.0, 20.0],
-        'outI':            [20.0,  60.0, 60.0],
-        'prI':             [0.8646647167633879, 0.9391899373747822, 0.9391899373747822]
+        'HH_Number':       [0, 1, 2, 3, 4],
+        'InfState':        pd.Categorical(['S',  'S',  'S', 'S',  'S'], categories=['S', 'I', 'R']),
+        'N':               [0.009576996819805172, 0.028730990459415517, 0.004788498409902586, 0.24572631546691115, 0.36711697319890346],
+        'inI':             [0.0, 0.0, 0.0, 7.0, 5.0],
+        'outI':            [12.0, 12.0, 12.0, 5.0, 7.0],
+        'prI':             [0.004788498409902586, 0.004788498409902586, 0.004788498409902586, 0.24572631546691115, 0.18355848659945173]
 
     })
 
@@ -126,7 +131,7 @@ def test_get_deltas_deterministic(sharedtrait_infection, dummy_state):
     deltas_add = deltas_with_temp_parameters.copy()
     deltas = deltas_with_temp_parameters.assign(N=-deltas_with_temp_parameters.N)
         
-    deltas_add['Infection_State']='I'
+    deltas_add['InfState']='I'
 
     expected_rc = pd.concat([deltas, deltas_add])
     expected_rc = expected_rc.loc[expected_rc.N!=0].reset_index(drop=True)
@@ -140,17 +145,18 @@ def test_get_deltas_stochastic(sharedtrait_infection, dummy_state):
     """
     with mock.patch("numpy.random.binomial", return_value=20):
         returned_rc = sharedtrait_infection.get_deltas(dummy_state, stochastic=True)
-            
+        returned_rc['InfState'] = returned_rc['InfState'].astype('category') #convert InfState back to category given mock method changed its initial dtype
+
         expected_deltas = pd.DataFrame({
-        'N':               [-20, -20, -20],
-        'Infection_State': ['S',  'S',  'S'],
-        'Trait':           ['T1', 'T2', 'T2'],
+        'HH_Number': [0, 1, 2, 3, 4],
+        'InfState': pd.Categorical(['S',  'S',  'S', 'S',  'S'], categories=['I', 'S']),
+        'N':        [-20, -20, -20, -20, -20]
         })
 
         expected_deltas_add = pd.DataFrame({
-        'N':               [20, 20, 20],
-        'Infection_State': ['I',  'I',  'I'],
-        'Trait':           ['T1', 'T2', 'T2'],
+        'HH_Number': [0, 1, 2, 3, 4],
+        'InfState': pd.Categorical(['I',  'I',  'I', 'I',  'I'], categories=['I', 'S']),
+        'N':        [20, 20, 20, 20, 20]
         })
 
         expected_rc = pd.concat([expected_deltas, expected_deltas_add])
@@ -167,10 +173,10 @@ def test_to_yaml(sharedtrait_infection):
 
     expected_yaml = {
             'tabularepimdl.SharedTraitInfection': {
-                'in_beta': 0.02,
-                'out_beta': 0.04,
-                'inf_col': 'Infection_State',
-                'trait_col': 'Trait',
+                'in_beta': 0.2/5,
+                'out_beta': 0.002/5,
+                'inf_col': 'InfState',
+                'trait_col': 'HH_Number',
                 's_st': 'S',
                 'i_st': 'I',
                 'inf_to':'I',
