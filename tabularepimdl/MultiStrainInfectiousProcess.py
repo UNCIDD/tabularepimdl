@@ -68,7 +68,7 @@ class MultiStrainInfectiousProcess(Rule):
 
         #first get the cross protections
         row_beta_mult = 1-current_state[self.columns].apply(
-            lambda x: ((x==self.r_st).array * self.cross_protect).max(axis=1),
+            lambda x: (np.array((x==self.r_st)) * self.cross_protect).max(axis=1),
             axis=1,
             result_type='expand'
             )
