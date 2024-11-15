@@ -33,7 +33,7 @@ class SimpleTransition(Rule):
             stochastic = self.stochastic
             
         deltas = current_state.loc[current_state[self.column]==self.from_st]
-        #print('st rule\n')#debug
+        #print('st rule\n') #debug
         #print('st\'s current_state is\n', current_state) #debug
         if not stochastic:
             #subtractions
