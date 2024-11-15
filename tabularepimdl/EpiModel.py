@@ -133,9 +133,12 @@ class EpiModel:
                     
                 else:
                     nw_deltas = rule.get_deltas(self.cur_state, dt=dt, stochastic= (self.stoch_policy=="stochastic"))
-                    #print('nw_delta is', nw_deltas) #debug
+                    #print('nw_delta is\n', nw_deltas) #debug
                     
-                all_deltas = pd.concat([all_deltas, nw_deltas])
+                if nw_deltas is None or nw_deltas.empty: #fix of question: there are cases returned nw_deltas is None or empty, adding if-else here to avoid Future warnings
+                    all_deltas = all_deltas
+                else: 
+                    all_deltas = pd.concat([all_deltas, nw_deltas])
                 #print('all_deltas is\n', all_deltas) #debug
                 #if rule is not ruleset[-1]: #debug
                 #    print('---next rule---') #debug
@@ -185,15 +188,10 @@ class EpiModel:
             #    print('-------next ruleset--------') #debug
             #else: print('for loop ends') #debug
     
-        # print("----")
-        # print(self.cur_state)
-        # print(max(self.cur_state['T']))
-        # print(dt)
-        # print("++++")
-  
+      
         self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) ##max deals with new states.
-        #print('current_state is\n', self.cur_state) #debug
-        #print('----')
+        #print('final current_state is\n', self.cur_state) #debug
+        
         # append the new current state to the epidemic history.
         self.full_epi = pd.concat([self.full_epi, self.cur_state]).reset_index(drop=True)
         #print('full epi is\n', self.full_epi)#debug
