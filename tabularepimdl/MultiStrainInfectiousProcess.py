@@ -43,12 +43,12 @@ class MultiStrainInfectiousProcess(Rule):
         self.freq_dep = freq_dep
         self.stochastic = stochastic
 
-    def get_deltas(self, current_state, dt = 1.0, stochastic = False):
+    def get_deltas(self, current_state, dt = 1.0, stochastic = None):
         """
         @param current_state, a data frame (at the moment) w/ the current epidemic state
         @param dt, the size of the timestep
         """
-
+        #print('MultiStrain rule\n') #debug
         if stochastic is None:
             stochastic = self.stochastic
 
@@ -58,10 +58,11 @@ class MultiStrainInfectiousProcess(Rule):
             betas = self.betas
         
         ##get number infectious of each type
-        infectious = ((current_state[self.columns] == self.i_st).multiply(current_state.N, axis=0)).sum(axis=0)
+        #print('Multistrain, current_state is\n', current_state)#debug
+        infectious = ((current_state[self.columns] == self.i_st).multiply(current_state.N, axis=0)).sum(axis=0) #when no value 'I' exists in columns, infectious values are all zeros
         infectious = np.array(infectious)
-
-        if sum(infectious)==0:
+        #print('infectious value: ', infectious) #debug
+        if sum(infectious)==0: #there are cases that infecious==0
             return None
         
         ##calculate the strain specific FOI (force of infection) for each row for each strain.
@@ -72,7 +73,7 @@ class MultiStrainInfectiousProcess(Rule):
             axis=1,
             result_type='expand'
             )
-        
+        #print('row beta mult is\n', row_beta_mult) #debug
         #now we turn that into a strain specific probablity of infection
 
         ## This line does a few things:
@@ -81,20 +82,20 @@ class MultiStrainInfectiousProcess(Rule):
         
         row_beta = (row_beta_mult * betas *
                      (current_state[self.columns]==self.s_st).values)
-        
+        #print('row beta is\n ', row_beta) #debug
         # This makes the probablity of infectoin 0 when folks are infected with a different strain...
         # i.e., no coinfections!
-        # Maybe slightly problematic given the strong assumption of only being infected with 1 strain...max better?
+        # Maybe slightly problematic given the strong assumption of only being infected with 1 strain...max() is better.
         row_beta = row_beta.multiply(
                 1-(current_state[self.columns] == self.i_st).max(axis=1), axis=0 #changed sum() to max() to make sure only one strain stands out
             )
         prI = 1-(np.exp(-dt*row_beta)).apply(lambda x: np.power(x, infectious), axis=1)
-
+        #print('prI is ', prI) #debug
         #deltas can only happen to rows where we have and FOI>1
         deltas =  current_state.loc[prI.sum(axis=1)>0] 
         prI = prI.loc[prI.sum(axis=1)>0] 
         prI.columns = self.columns ##Makes some later stuff easier
-        
+        #print('delta is\n', deltas) #debug
         ## now do the infectious process.
         if not stochastic:
             #first the subtractions
@@ -122,12 +123,10 @@ class MultiStrainInfectiousProcess(Rule):
             N_index = deltas.columns.get_loc('N')
             #multinomial draw for each delta and create the appropriate deltas.
             for i in range(prI.shape[0]):
-                #print("here")
-                #print(i)
-                #print(deltas)
                 tmp = np.random.multinomial(deltas['N'].iloc[i], np.append(prI.iloc[i].values,[0]))
-                #print("here2")
+                #print("tmp is\n", tmp) #debug
                 deltas.iloc[i,N_index] = -tmp[:-1].sum()
+                #print('detla is\n', deltas) #debug
                 ##do the additions
                 for j in range(prI.shape[1]):
                     toadd = deltas.iloc[[i]]
@@ -138,7 +137,7 @@ class MultiStrainInfectiousProcess(Rule):
 
         
         deltas = deltas[deltas['N']!=0]
-
+        #print('multirule delta is\n', deltas) #debug
         return deltas
 
 
