@@ -55,14 +55,17 @@ class SimpleObservationProcess(Rule):
             N=-delta_incobs.N
         )
 
-        tmp[self.obs_col] = self.incobs_state #un-observed delta individuals change to positive incident-observed individuals, i.e. move folks from un-observed into incident-observed
+        tmp[self.obs_col] = self.incobs_state
 
         #move folks out of the incident state and into the previous state
-        delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy() #positive incident-observed individuals
-        tmp2 = delta_toprev.assign(N=-delta_toprev.N) #negative incident-observed individuals, move folks out of the incident state
-        delta_toprev[self.obs_col] = self.prevobs_state #positive incident-observed individuals change to positive previously-observed individuals, move folks from incident-observed to previously-observed
-
-        #combine positive un-observed, positive incident-observed, positive previously-observed, negative incident-observed individuals
+        delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
+        tmp2 = delta_toprev.assign(N=-delta_toprev.N)
+        delta_toprev[self.obs_col] = self.prevobs_state
+        #if source_state = 'I', then following is true
+        #dela_incobs = folks moved out infected and unobserved (-)
+        #tmp = folks moved in infected and incident-observed (+)
+        #delta_toprev = folks moved in previously-observed (+)
+        #tmp2 = folks moved out incident-observed (-)
         return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) 
 
     def to_yaml(self):
