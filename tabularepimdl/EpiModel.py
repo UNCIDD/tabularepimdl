@@ -123,6 +123,7 @@ class EpiModel:
         # interate through the rule sets updating the current state (except for time) after
         #each set of rules to be fed into the next one.
         
+        #print('initial current_state of each dt is\n', self.cur_state) #debug
 
         for ruleset in self.rules:
             all_deltas = pd.DataFrame()
