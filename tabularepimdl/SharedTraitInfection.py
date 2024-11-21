@@ -15,7 +15,7 @@ class SharedTraitInfection(Rule):
         @param trait_col the column designaing the trait
         @param s_st the state for susceptibles, assumed to be S
         @param i_st the state for infectious, assumed to be I
-        @param inf_to the state infectious folks go to, assumed to be I
+        @param inf_to the state folks (not necessarily infectous people?) go to, assumed to be I
         @param stochastic is this rule stochastic if not forced by the epi model.
         '''
         super().__init__()
