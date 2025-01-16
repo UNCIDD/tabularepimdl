@@ -17,8 +17,17 @@ class StateBasedDeathProcess(Rule):
         @param stochastic is this a stochastic rule
         """
         super().__init__()
-        self.columns = columns
-        self.states = states
+        
+        if isinstance(columns, list):
+            self.columns = columns
+        else:
+            raise TypeError("Parameter 'columns' needs to be in list type, e.g. columns=['column1', 'column2'].")
+        
+        if isinstance(states, list):
+            self.states = states
+        else:
+            raise TypeError("Parameter 'states' needs to be in list type, e.g. states=['state1', 'state2'].")
+        
         self.rate = rate
         self.stochastic = stochastic
 
