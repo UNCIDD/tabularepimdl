@@ -66,6 +66,32 @@ def test_deltas_calculation(statebased_deathprocess, dummy_state):
     
     pd.testing.assert_frame_equal(returned_deltas.reset_index(drop=True), expected_deltas.reset_index(drop=True))
 
+def test_zip_function_in_get_deltas (dummy_state):
+    """
+    Test the error handling of class parameter format of columns and states so the zip() function can combine iterables such as lists into a single iterator of tuples.
+    Args: dummy dataframe.
+    """
+    #deathprocess1_for_zip is verified can trigger TypeError in StateBasedDeathProcess
+    #deathprocess1_for_zip = StateBasedDeathProcess(columns=['Infection_State'], states='S2', rate=0.05) #states' inital format is not in list type, expecting TypeError.
+
+    deathprocess2_for_zip = StateBasedDeathProcess(columns=['Infection_State'], states=['S2'], rate=0.05) #both columns and states' inital format is list type.
+    delta_inital = dummy_state.copy()
+    returned_deltas = pd.DataFrame()
+    
+    #for column, state in zip(deathprocess1_for_zip.columns, deathprocess1_for_zip.states): #reserved for verifying TypeError handling
+    #    returned_deltas = pd.concat([returned_deltas, delta_inital.loc[delta_inital[column]==state]])
+
+    for column, state in zip(deathprocess2_for_zip.columns, deathprocess2_for_zip.states):
+        returned_deltas = pd.concat([returned_deltas, delta_inital.loc[delta_inital[column]==state]])
+
+    expected_deltas = pd.DataFrame({
+        'N':               [20],
+        'Infection_State': ['S2'],
+        'Hosp':            ['I2']
+    })
+
+    pd.testing.assert_frame_equal(returned_deltas.reset_index(drop=True), expected_deltas.reset_index(drop=True))
+    
 def test_get_deltas_deterministic(statebased_deathprocess, dummy_state):
     """
     Test the get_deltas method for the deterministic scenario.
