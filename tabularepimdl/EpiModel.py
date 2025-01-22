@@ -6,7 +6,11 @@ from tabularepimdl.Rule import Rule
 class EpiModel:
     """! Class that that applies a list of rules to a changing current state through 
     some number of time steps to produce an epidemic. It has attributes representing the current
-    state and the full epidemic thus far"""
+    state and the full epidemic thus far
+
+    @param cur_state, a data frame (at the moment) w/ the current epidemic state
+    @param full_epi, full epidemic history
+    """
 
     init_state: pd.DataFrame
     cur_state: pd.DataFrame
@@ -27,6 +31,10 @@ class EpiModel:
         @param stoch_policy how should stochasticity be determined. If "rule_based" we
            revert to the rule, if "deterministic" we force deterministic and if 
            "stochastic" we force stochastic"""
+        #check if init_state is a DataFrame
+        if not isinstance(init_state, pd.DataFrame):
+            raise TypeError(f"Expected a DataFrame, but got {type(init_state).__name__} instead.")
+
         self.init_state = init_state #for the TBI reset function
         self.cur_state = init_state
         self.full_epi = init_state #the full epidemic is just the current state
@@ -41,9 +49,10 @@ class EpiModel:
 
     def reset(self):
         '''! Resets the class state to have the initial state, etc. 
-             note that this will lose all of the information on the epi run so far'''
-        self.cur_state = self.init_state
-        self.full_epi = self.init_state
+             note that this will lose all of the information on the epidemic run so far'''
+        self.cur_state = self.init_state.copy()
+        self.full_epi = self.init_state.copy()
+        return(self.cur_state, self.full_epi)
 
     @classmethod
     def from_yaml(cls, epi_yaml):
@@ -114,16 +123,27 @@ class EpiModel:
         # interate through the rule sets updating the current state (except for time) after
         #each set of rules to be fed into the next one.
         
+        #print('initial current_state of each dt is\n', self.cur_state) #debug
 
         for ruleset in self.rules:
             all_deltas = pd.DataFrame()
             for rule in ruleset:
                 if self.stoch_policy == "rule_based":
                     nw_deltas = rule.get_deltas(self.cur_state, dt=dt)
+                    #print('nw_delta is\n', nw_deltas) #debug
+                    
                 else:
-                    nw_deltas = rule.get_deltas(self.cur_state, dt=dt, stochastic=self.stoch_policy=="stochastic")
-
-                all_deltas = pd.concat([all_deltas, nw_deltas])
+                    nw_deltas = rule.get_deltas(self.cur_state, dt=dt, stochastic= (self.stoch_policy=="stochastic"))
+                    #print('nw_delta is\n', nw_deltas) #debug
+                    
+                if nw_deltas is None or nw_deltas.empty: #fix of question: there are cases returned nw_deltas is None or empty, adding if-else here to avoid Future warnings
+                    all_deltas = all_deltas
+                else: 
+                    all_deltas = pd.concat([all_deltas, nw_deltas])
+                #print('all_deltas is\n', all_deltas) #debug
+                #if rule is not ruleset[-1]: #debug
+                #    print('---next rule---') #debug
+                #else: print('moving on') #debug
                 
             if all_deltas.shape[0]==0:
                 continue
@@ -131,23 +151,31 @@ class EpiModel:
             # (i.e., no duplicates) we should just be able to append all deltas
             # to the currents state, group by everything besides N and T and 
             # sum. Need to make sure the T for all deltas is 0 first.
-            all_deltas = all_deltas.assign(T=0)
-
+            if 'T' in self.cur_state.columns:
+                pass #if column T exists in the initial cur_state dataframe, do nothing
+            else:
+                all_deltas = all_deltas.assign(T=0.0) #add a new column T with initial value 0 to all_deltas
+                self.full_epi = self.full_epi.assign(T=0.0) #add a new column T with initial value 0 to  full epi before concatenating cur_state
+            #question: the original logic shows if the initial cur_state does not have column T, then assign(T=0) will add new column T with value 0. However if cur_state has column T, then this will reset T's original value.
+            #so adding a if-else to check column T existence first, then assign T=0 depending on the checked result
+            
             #append all deltas
-            nw_state = pd.concat([self.cur_state, all_deltas])
+            nw_state = pd.concat([self.cur_state, all_deltas]).reset_index(drop=True)
+            #print('nw_state is\n', nw_state) #debug
 
             # Get grouping columns
             tbr = {'N','T'}
             gp_cols = [item for item in all_deltas.columns if item not in tbr]
 
             #print("XXX")
+            
             #print(nw_state)
             #print(gp_cols)
      
 
             #now collapse..only if we have groups. This causes problems 
             if gp_cols:
-                nw_state = nw_state.groupby(gp_cols,observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
+                nw_state = nw_state.groupby(gp_cols, dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index() #question: add dropna=False option in case combined dataset nw_state has NaN so groupby() can handle them.
                 #nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()
 
             #print("***")
@@ -157,19 +185,42 @@ class EpiModel:
   
 
             self.cur_state = nw_state
-
+            #if ruleset is not self.rules[-1]: #debug
+            #    print('-------next ruleset--------') #debug
+            #else: print('for loop ends') #debug
     
-        # print("----")
-        # print(self.cur_state)
-        # print(max(self.cur_state['T']))
-        # print(dt)
-        # print("++++")
-  
+      
         self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) ##max deals with new states.
-
-        # append the new current state to the epidemic history.
-        self.full_epi = pd.concat([self.full_epi, self.cur_state])
+        #print('final current_state is\n', self.cur_state) #debug
         
+        # append the new current state to the epidemic history.
+        self.full_epi = pd.concat([self.full_epi, self.cur_state]).reset_index(drop=True)
+        #print('full epi is\n', self.full_epi)#debug
+        #print('----') #debug
+
         if ret_nw_state:
             return self.cur_state
+            
+    ##Echo TODO: decide if we want to make it possible to add rules dynamically
+    ##add a method to add rules. This allows new rules to be added to the model at any time, even after the model has been initialized. 
+    def add_rule(self, new_rule):
+        """! Adds a new rule or a list of rules to the model.
+        
+        @param new_rule, a single rule object or a list of rule objects to be added."""
+        
+        # If the new rule is a single Rule object, wrap it in a list
+        if isinstance(new_rule, Rule):
+            new_rule = [new_rule]
 
+        # Add the new rule(s) as a new rule set
+        if isinstance(new_rule, list): # If the new rule is a list or wrapped in a list
+            # If the first element of new_rule is a list, assume it's a rule set and append it directly to the existing rules
+            if isinstance(new_rule[0], list):
+                self.rules.extend(new_rule)
+            else:
+                # Otherwise, append the new_rule list as a new rule set to the existing rules
+                self.rules.append(new_rule)
+        else:
+            raise ValueError("new_rule must be a Rule object or a list of Rule objects")
+        
+        return(self.rules)

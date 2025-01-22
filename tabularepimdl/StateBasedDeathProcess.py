@@ -17,27 +17,44 @@ class StateBasedDeathProcess(Rule):
         @param stochastic is this a stochastic rule
         """
         super().__init__()
-        self.columns = columns
-        self.states = states
+        
+        if isinstance(columns, list):
+            self.columns = columns
+        else:
+            raise TypeError("Parameter 'columns' needs to be in list type, e.g. columns=['column1', 'column2'].")
+        
+        if isinstance(states, list):
+            self.states = states
+        else:
+            raise TypeError("Parameter 'states' needs to be in list type, e.g. states=['state1', 'state2'].")
+        
         self.rate = rate
         self.stochastic = stochastic
 
     
     def get_deltas(self, current_state, dt = 1.0, stochastic=None):
+        """
+        @param current_state, a data frame (at the moment) w/ the current epidemic state
+        @param dt, the size of the timestep
+        """
         if stochastic is None:
             stochastic = self.stochastic
 
         ##first let's reduce to just the columns we need.
-        deltas = current_state
-        for column, state in zip(self.columns, self.states):
-            deltas = deltas.loc[deltas[column]==state]
+        deltas_temp = current_state.copy()
         
+        #all satisfied records are wanted based on column and state values
+        deltas = pd.DataFrame()
+        for column, state in zip(self.columns, self.states):
+            filtered_deltas = deltas_temp.loc[deltas_temp[column]==state]
+            deltas = pd.concat([deltas, filtered_deltas])
+
         if not stochastic:
             deltas = deltas.assign(N=-deltas['N']*(1-np.exp(-dt*self.rate)))
         else:
             deltas = deltas.assign(N=-np.random.binomial(deltas['N'],1-np.exp(-dt*self.rate)))
         
-        return deltas
+        return deltas.reset_index(drop=True)
 
     def to_yaml(self):
         rc = {
@@ -49,3 +66,4 @@ class StateBasedDeathProcess(Rule):
             }
         }
         
+        return rc #add return operation

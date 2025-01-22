@@ -31,35 +31,57 @@ class WAIFWTransmission(Rule):
         self.stochastic = stochastic
 
     def get_deltas(self, current_state, dt = 1.0, stochastic = None):
+        """
+        @param current_state, a data frame (at the moment) w/ the current epidemic state
+        @param dt, the size of the timestep
+        """
         if stochastic is None:
             stochastic = self.stochastic
 
-        ##create an array of the number of infections in each group.
-        inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col).sum(numeric_only=True)['N'].values
+        #question: since group_col needs to be categorical type, do we want to convert current_state[group_col] to pd.categorical in this rule? 
+        #Instead of doing the conversion in model applications such as AgingPopulation?
 
-        print(pd.api.types.is_categorical_dtype(current_state[self.group_col]))
-        print(current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col).sum(numeric_only=True))
-        print("))))")
-        print(inf_array)
+        #quesiton and fix: convert group_col to categorical type first, so groupby observed=False generate full list of array values
+        current_state[self.group_col]=pd.Categorical(current_state[self.group_col])
 
-        #get the probability of being infected in each group
+        #Check if the number of unique categories in current_state's group_col matches waifw matrix's length
+        if len(current_state[self.group_col].cat.codes.unique()) != len(self.waifw_matrix):
+            raise ValueError(f"The number of unique categoeries in 'current_state' group column should be equal to the length of 'waifw_matrix'. "
+                             f"However, the current number of unique categoeries in 'current_state' group column is ({len(current_state[self.group_col].cat.codes.unique())}), "
+                             f"'waifw_matrix' current length is ({len(self.waifw_matrix)})."
+                            )
+
+        ##create an array for the total number of infections in each unique group. Only records with i_st are sumed, other records's N are filled with 0.
+        inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col, observed=False)['N'].sum(numeric_only=True).values #moved ['N'] position 
+
+        #print('is it category?', isinstance(current_state[self.group_col].dtype, pd.CategoricalDtype)) #is_categorical_dtype is deprecated, replaced with the isinstance function
+        #print(current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col).sum(numeric_only=True)) #debug
+        #print("))))") #debug
+        #print('inf_array is', inf_array) #debug
+
+        #get the probability of being infected in each unique group
         prI = np.power(np.exp(-dt*self.waifw_matrix),inf_array)
+        #print('powered prI is', prI) #debug
         prI = 1-prI.prod(axis=1)
+        #print('1-prI prod', prI) #debug
 
-        ##get folks in susceptible states
+        ##get folks in susceptible states which link to all unique groups
         deltas = current_state.loc[current_state[self.inf_col]==self.s_st]
+        #print('deltas is', deltas, '\n') #debug
+        #print('prI codes are', prI[deltas[self.group_col].cat.codes], '\n') #debug
 
-        ##do infectious process
+        ##do infectious process, getting the number of individuals who get infected from susceptible status
         if not stochastic:
             deltas = deltas.assign(N=-deltas['N']*prI[deltas[self.group_col].cat.codes])
         else:
             deltas = deltas.assign(N=-np.random.binomial(deltas['N'],prI[deltas[self.group_col].cat.codes]))
 
+        #print('deltas after infection process:', deltas)
         deltas_add = deltas.assign(N=-deltas['N'])
         deltas_add[self.inf_col] = self.inf_to
 
         rc = pd.concat([deltas,deltas_add])
-        return rc.loc[rc.N!=0]
+        return rc.loc[rc.N!=0].reset_index(drop=True) #reset index for the new dataframe
     
     def to_yaml(self):
         rc = {
@@ -70,9 +92,11 @@ class WAIFWTransmission(Rule):
                 's_st': self.s_st,
                 'i_st': self.i_st,
                 'inf_to': self.inf_to,
-                'stochstic': self.stochastic
+                'stochastic': self.stochastic
             }
         }
+        
+        return rc #added return operation
 
 
 

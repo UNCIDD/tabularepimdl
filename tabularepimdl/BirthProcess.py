@@ -14,6 +14,7 @@ class BirthProcess(Rule):
 
         @param rate the rate at which births happen per time step (N*rate births).
         @param state_start_sig the column values that newly borne individuals should have.
+        @param stochastic, is this rule stochastic process
         """
 
         super().__init__()
@@ -21,23 +22,31 @@ class BirthProcess(Rule):
 
         #is their a better way to do this?
         if isinstance(start_state_sig, dict):
-            start_state_sig = pd.DataFrame(start_state_sig,index=[0])
-           
-        self.start_state_sig = start_state_sig
+            self.start_state_sig = pd.DataFrame([start_state_sig]) #convert a dict to a dataframe
+        elif isinstance(start_state_sig, pd.DataFrame):
+            self.start_state_sig = start_state_sig.copy()
+        else:
+            raise ValueError ("start_state_sig must be either a dictionary or a pandas DataFrame")
+
+        #self.start_state_sig = start_state_sig
         self.stochastic = stochastic
 
     def get_deltas(self, current_state, dt = 1.0, stochastic =None):
+        """
+        @param current_state, a data frame (at the moment) w/ the current epidemic state
+        @param dt, the size of the timestep
+        """
         if stochastic is None:
             stochastic = self.stochastic
         
         ##Just returns a delta with the start
         ##state signature and the right number of
         ##births.
-        N = current_state['N'].sum()
-        if not stochastic:
+        N = current_state['N'].sum() #check AgingPopulation module for format of current_state.
+        if not stochastic: #False condition: deterministic process
             births = self.start_state_sig.assign(N=N*(1-np.exp(-dt*self.rate)))
-        else:
-            births = self.start_state_sig.assign(N=np.random.poisson(N*(1-np.exp(-dt*self.rate))))
+        else: #True condition: stochastic process
+            births = self.start_state_sig.assign(N=np.random.poisson(N*(1-np.exp(-dt*self.rate))))  #get a random single outcome value by using poisson distribution
         return births
         
     def to_yaml(self):
