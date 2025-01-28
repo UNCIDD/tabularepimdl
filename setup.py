@@ -7,4 +7,13 @@ setup(
     description='A tabular approach to epidemic simulation',
     author='Justin Lessler',
     license='MIT',
+    url='https://github.com/UNCIDD/tabularepimdl/tree/tabularepimdl_unittest',
+    packages=find_packages(),
+    install_requires=[
+        "numpy",  
+        "pandas",
+        "PyYAML",
+        "plotly"
+    ],
+    python_requires=">=3.6"
 )
