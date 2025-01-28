@@ -8,7 +8,6 @@ setup(
     author='Justin Lessler',
     license='MIT',
     url='https://github.com/UNCIDD/tabularepimdl/tree/tabularepimdl_unittest',
-    packages=find_packages(),
     install_requires=[
         "numpy",  
         "pandas",
