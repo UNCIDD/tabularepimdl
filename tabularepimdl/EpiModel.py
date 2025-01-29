@@ -124,10 +124,12 @@ class EpiModel:
         #each set of rules to be fed into the next one.
         
         #print('initial current_state of each dt is\n', self.cur_state) #debug
+        #print('Epi model starts!!!') #debug
 
         for ruleset in self.rules:
             all_deltas = pd.DataFrame()
             for rule in ruleset:
+                #print('current rule is\n', rule) #debug
                 if self.stoch_policy == "rule_based":
                     nw_deltas = rule.get_deltas(self.cur_state, dt=dt)
                     #print('nw_delta is\n', nw_deltas) #debug
@@ -167,10 +169,10 @@ class EpiModel:
             tbr = {'N','T'}
             gp_cols = [item for item in all_deltas.columns if item not in tbr]
 
-            #print("XXX")
+            
             
             #print(nw_state)
-            #print(gp_cols)
+            #print('group cols are: ', gp_cols)
      
 
             #now collapse..only if we have groups. This causes problems 
@@ -179,7 +181,7 @@ class EpiModel:
                 #nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()
 
             #print("***")
-            #print(nw_state)
+            #print('new state is\n', nw_state)
      
             nw_state = nw_state[nw_state['N']!=0]
   
