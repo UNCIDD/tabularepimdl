@@ -43,9 +43,14 @@ class SharedTraitInfection(Rule):
         ##see deltas from.
         deltas = current_state.loc[current_state[self.inf_col]==self.s_st].copy(deep=True) #extract S folks only
         deltas_add = deltas.copy(deep=True)
+        #print('ST rule input deltas\n', deltas) #debug
 
         infect_only = current_state.loc[current_state[self.inf_col]==self.i_st].copy(deep=True) #extract I folks only
-        
+        #print('ST rule original input infect\n', infect_only) #debug
+
+        infect_only = infect_only.groupby([self.trait_col], dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
+        #print('ST rule grouped input infect\n', infect_only) #debug
+
         total_infect = infect_only['N'].sum() #sum all the infected people no matter what trait it is
         
         trait_N_map = infect_only.set_index(self.trait_col)['N'] #set trait value as index, N remains to be the value for each trait
@@ -57,9 +62,14 @@ class SharedTraitInfection(Rule):
         #    outI = current_state.loc[(current_state[self.trait_col]!=row[self.trait_col]) & (current_state[self.inf_col]==self.i_st)].N.sum()
         #    prI = 1-np.power(np.exp(-dt*self.in_beta),inI)*np.power(np.exp(-dt*self.out_beta),outI)
 
+        #print('train_N_map is\n', trait_N_map) #debug
+
+
         #A faster way to get inI, outI and prI values that deltas needs
         # Map the number of infected folks of each trait to the correponding trait in deltas
         deltas['inI']  = deltas[self.trait_col].map(trait_N_map).fillna(0) #the number of infected folks inside each trait
+        #print('deltas is\n', deltas) #debug
+
         deltas['outI'] = total_infect - deltas['inI'] #the number of infected folks outside each trait
 
         # Vectorized calculation of prI
@@ -81,7 +91,7 @@ class SharedTraitInfection(Rule):
         deltas_add[self.inf_col] = self.inf_to #folks into I
 
         rc = pd.concat([deltas,deltas_add])
-
+        #print('ST combined deltas are\n', rc) #debug
         return rc.loc[rc.N!=0].reset_index(drop=True) #reset index for the new dataframe
     
     def to_yaml(self):
