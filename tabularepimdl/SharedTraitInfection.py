@@ -48,6 +48,7 @@ class SharedTraitInfection(Rule):
         infect_only = current_state.loc[current_state[self.inf_col]==self.i_st].copy(deep=True) #extract I folks only
         #print('ST rule original input infect\n', infect_only) #debug
 
+        #Group records that have the same trait_col value
         infect_only = infect_only.groupby([self.trait_col], dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
         #print('ST rule grouped input infect\n', infect_only) #debug
 
