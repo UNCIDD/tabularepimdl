@@ -66,6 +66,8 @@ class SimpleObservationProcess(Rule):
         #tmp = folks moved in infected and incident-observed (+)
         #delta_toprev = folks moved in previously-observed (+)
         #tmp2 = folks moved out incident-observed (-)
+        #print('+tmp is\n', tmp)
+        #print('-tmp2 is\n', tmp2)
         return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) 
 
     def to_yaml(self):
