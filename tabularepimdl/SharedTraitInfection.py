@@ -48,14 +48,14 @@ class SharedTraitInfection(Rule):
         infect_only = current_state.loc[current_state[self.inf_col]==self.i_st].copy(deep=True) #extract I folks only
         #print('ST rule original input infect\n', infect_only) #debug
 
-        #Group records that have the same trait_col value
-        infect_only = infect_only.groupby([self.trait_col], dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
+        #Grouping records that have the same trait_col value
+        infect_only = infect_only.groupby([self.trait_col], dropna=False, observed=True).agg({'N': 'sum'}).reset_index()
         #print('ST rule grouped input infect\n', infect_only) #debug
 
         total_infect = infect_only['N'].sum() #sum all the infected people no matter what trait it is
         
         trait_N_map = infect_only.set_index(self.trait_col)['N'] #set trait value as index, N remains to be the value for each trait
-
+        
         #Now loop over folks in this state. 
         #There might be faster ways to do this.
         #for ind, row in deltas.iterrows():
