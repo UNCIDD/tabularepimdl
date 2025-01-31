@@ -163,7 +163,7 @@ class EpiModel:
             
             #append all deltas
             nw_state = pd.concat([self.cur_state, all_deltas]).reset_index(drop=True)
-            #print('nw_state is\n', nw_state) #debug
+            #print('before grouping nw_state is\n', nw_state) #debug
 
             # Get grouping columns
             tbr = {'N','T'}
@@ -181,7 +181,7 @@ class EpiModel:
                 #nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()
 
             #print("***")
-            #print('new state is\n', nw_state)
+            #print('after grouping new state is\n', nw_state)
      
             nw_state = nw_state[nw_state['N']!=0]
   
