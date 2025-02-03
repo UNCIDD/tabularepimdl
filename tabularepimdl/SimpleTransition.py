@@ -7,7 +7,7 @@ class SimpleTransition(Rule):
     such that if a column has the from specified value, it creates transitions with the to
     specified value at the given rate."""
 
-    def __init__(self, column, from_st, to_st, rate:float, stochastic=False) -> None:
+    def __init__(self, column, from_st, to_st, rate: float, stochastic=False) -> None:
         """! Initialization.
 
         @param column: Name of the column this rule applies to.
@@ -24,7 +24,7 @@ class SimpleTransition(Rule):
         self.rate = rate
         self.stochastic = stochastic
 
-    def get_deltas(self, current_state, dt=1.0, stochastic=None):
+    def get_deltas(self, current_state: pd.DataFrame, dt=1.0, stochastic=None):
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.
