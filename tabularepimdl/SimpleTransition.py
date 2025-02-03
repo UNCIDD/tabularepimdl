@@ -28,6 +28,7 @@ class SimpleTransition(Rule):
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.
+        @return: a pandas DataFrame containing changes in from_st and to_st.
         """
         required_columns = {"N"} #check if column N presents in current_state
         if not required_columns.issubset(current_state.columns):
