@@ -47,7 +47,8 @@ Description: The 'MultiStrainInfectiousProcess' class models a multi-strain infe
 * A matrix to contain protection rate for intra- and inter-groups. It should be a N(strain)* N(strain) matrix.
 
 ### Example Tests:
-* test_intialization: Verifies that the rule is correctly initialized with the setup above.
+* test_parameters_check: Test the parameters check functionality before initialization.
+* test_intialization: Verifies that the rule is correctly initialized with parameter values.
 * test_betas_on_freq_dep: Test the beta calculation based on the boolean of freq_dep.
 * test_infectious_of_strain: Test the infectious calculation of each strain type.
 * test_cross_protection_multiplier: Test beta values calculation based on cross-protect matrix.
