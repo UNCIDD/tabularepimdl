@@ -7,4 +7,5 @@ from .SharedTraitInfection import SharedTraitInfection
 from .BirthProcess import BirthProcess
 from .StateBasedDeathProcess import StateBasedDeathProcess
 from .WAIFWTransmission import WAIFWTransmission
+from .EnvironmentalTransmission import EnvironmentalTransmission
 from .EpiModel import EpiModel
