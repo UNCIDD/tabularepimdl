@@ -8,4 +8,8 @@ from .BirthProcess import BirthProcess
 from .StateBasedDeathProcess import StateBasedDeathProcess
 from .WAIFWTransmission import WAIFWTransmission
 from .EnvironmentalTransmission import EnvironmentalTransmission
+from .WithFilters import WithFilters
+from .FilteredSimpleTransition import FilteredSimpleTransition
+from .FilteredSimpleInfection import FilteredSimpleInfection
+from .EpiRunner import EpiRunner
 from .EpiModel import EpiModel
