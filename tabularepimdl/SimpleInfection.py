@@ -55,8 +55,8 @@ class SimpleInfection(Rule, BaseModel):
         else:
             deltas["N"] = -np.random.binomial(deltas["N"], 1 - np.power(np.exp(-dt*beta),infectious))
         
-        deltas_add = deltas.copy()
-        deltas_add = deltas_add.assign(**{self.column: self.inf_to, "N": -deltas["N"]})
+        #deltas_add = deltas.copy()
+        deltas_add = deltas.assign(**{self.column: self.inf_to, "N": -deltas["N"]})
         
         return pd.concat([deltas, deltas_add]).reset_index(drop=True)
         
