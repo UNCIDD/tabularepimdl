@@ -15,7 +15,7 @@ class SimpleTransition(Rule, BaseModel):
     @param from_st: the state that column transitions from.
     @param to_st: the state that column transitions to.
     @param rate: transition rate per unit time.
-    @param stochastic: whether the transition is stochastic or deterministic.
+    @param stochastic: whether the process is stochastic or deterministic.
     """
     
     column: str
