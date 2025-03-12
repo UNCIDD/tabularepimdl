@@ -105,9 +105,10 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         # This makes the probablity of infectoin 0 when folks are infected with a different strain...
         # i.e., no coinfections!
         # Maybe slightly problematic given the strong assumption of only being infected with 1 strain...max() is better.
-        row_beta = row_beta.multiply(
-            1-(current_state[self.columns] == self.i_st).max(axis=1), axis=0 #changed sum() to max() to make sure only one strain stands out
-            )
+        #row_beta = row_beta.multiply(
+        #    1-(current_state[self.columns] == self.i_st).max(axis=1), axis=0 #changed sum() to max() to make sure only one strain stands out
+        #    ) #original code
+        row_beta = row_beta * (1 - np.max((current_state[self.columns] == self.i_st).values, axis=1))[:, np.newaxis]
         #prI = 1-(np.exp(-dt*row_beta)).apply(lambda x: np.power(x, infectious), axis=1) #original code
         prI = 1 - np.power(np.exp(-dt * row_beta.values), infectious)
         prI = pd.DataFrame(prI)
@@ -121,28 +122,18 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         ## now do the infectious process.
         if not stochastic:
             #first the subtractions
-            deltas = deltas.assign(
-                N= -deltas.N*(1 - (1-prI).product(axis=1))
-            )
-
+            deltas["N"] = -deltas["N"] * (1 - (1-prI).product(axis=1))
+            
             #now allocate those cases prportional to prI
             tmp = pd.DataFrame()
             for col in self.columns:
-                tmp2 = deltas.assign(
-                        N=-deltas['N'] * (prI[col]/prI.sum(axis=1)))
-                
-                tmp2[col] = self.inf_to
-
-                tmp = pd.concat([
-                    tmp, 
-                    tmp2
-                ])
-                
-            deltas = pd.concat([deltas, tmp]).reset_index(drop=True) #need to reset index
+                tmp2 = deltas.assign(**{col: self.inf_to, "N": -deltas['N'] * (prI[col]/prI.sum(axis=1))})
+                tmp = pd.concat([tmp, tmp2])
+            deltas = pd.concat([deltas, tmp]).reset_index(drop=True)
             
         else:
 
-            N_index = deltas.columns.get_loc('N')
+            N_index = deltas.columns.get_loc("N")
             #multinomial draw for each delta and create the appropriate deltas.
             for i in range(prI.shape[0]):
                 tmp = np.random.multinomial(deltas['N'].iloc[i], np.append(prI.iloc[i].values,[0]))
@@ -151,11 +142,10 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
                 #print('detla is\n', deltas) #debug
                 ##do the additions
                 for j in range(prI.shape[1]):
-                    toadd = deltas.iloc[[i]]
-                    toadd = toadd.assign(N=tmp[j])
-                    toadd[self.columns[j]] = self.inf_to
+                    toadd = deltas.iloc[[i]] #fetch only one row to be modified
+                    toadd = toadd.assign(**{self.columns[j]: self.inf_to, "N": tmp[j]})
                     deltas = pd.concat([deltas, toadd])
-            deltas = deltas.reset_index(drop=True) #need to reset index of dataframe  
+            deltas = deltas.reset_index(drop=True)
 
         
         deltas = deltas[deltas['N']!=0]
@@ -163,19 +153,9 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         return deltas
 
 
-    def to_yaml(self):
+    def to_yaml(self) -> dict:
         rc = {
-            'tabularepimdl.MultiStrainInfectiousProcess': {
-                'betas': self.betas,
-                'columns': self.columns,
-                'cross_protect': self.cross_protect,
-                's_st': self.s_st,
-                'i_st': self.i_st,
-                'r_st': self.r_st,
-                'inf_to': self.inf_to,
-                'freq_dep':self.freq_dep,
-                'stochastic':self.stochastic
-            }
+            'tabularepimdl.MultiStrainInfectiousProcess': self.model_dump()
         }
 
         return rc    
