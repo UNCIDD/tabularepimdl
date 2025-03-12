@@ -47,8 +47,8 @@ class SimpleTransition(Rule, BaseModel):
             deltas["N"] = -np.random.binomial(deltas["N"], 1 - np.exp(-dt*self.rate))
 
         #additions
-        deltas_add = deltas.copy()
-        deltas_add = deltas_add.assign(**{self.column: self.to_st, "N": -deltas["N"]})
+        #deltas_add = deltas.copy()
+        deltas_add = deltas.assign(**{self.column: self.to_st, "N": -deltas["N"]})
         #print('st-rule delta is\n', deltas) #debug
         return pd.concat([deltas, deltas_add]).reset_index(drop=True)
     
