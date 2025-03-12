@@ -16,7 +16,7 @@ class SimpleInfection(Rule, BaseModel):
     @param i_st: the state for infectious, assumed to be I.
     @param inf_to: the state infectious folks go to, assumed to be I.
     @param freq_dep: whether this model is a frequency dependent model.
-    @param stochastic: whether the transition is stochastic or deterministic.
+    @param stochastic: whether the process is stochastic or deterministic.
     """
     beta: Annotated[int | float, Field(ge=0)]
     column: str
