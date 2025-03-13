@@ -24,9 +24,9 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
     # Pydantic Configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    betas: np.array
+    betas: np.ndarray
     columns: list[str]
-    cross_protect: np.array
+    cross_protect: np.ndarray
     s_st: str = "S"
     i_st: str = "I"
     r_st: str = "R"
@@ -43,7 +43,7 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         return array_parameters
 
     
-    @model_validator(mode="after") #after all fields are validated, validate cross fields relationship
+    @model_validator(mode="after") #after all fields are validated, check cross fields relationship
     def check_dimensions(cls, parameter_values):
         """Ensure betas and cross_protect have matching dimensions."""
         betas = parameter_values.betas
