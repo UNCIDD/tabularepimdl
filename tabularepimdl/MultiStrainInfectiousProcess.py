@@ -2,7 +2,7 @@
 from tabularepimdl.Rule import Rule
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from typing import Annotated
 
 class MultiStrainInfectiousProcess(Rule, BaseModel):
@@ -34,26 +34,32 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
     stochastic: bool = False
     freq_dep: bool = True
     
-    def _validate_parameters(self, betas: np.array, columns: list[str], cross_protect: np.array) -> None:
-        """
-        Validate input parameters.
-        @param betas: transmission rates for each strain.
-        @param columns: names of columns.
-        @param cross_protect: cross-protection matrix.
-        """
-        # Check that columns and betas have the same length
-        if len(columns) != len(betas):
-            raise ValueError(f"The length of 'columns' ({len(columns)}) must be equal to the length of 'betas' ({len(betas)}).")
+    @field_validator("betas", "cross_protect", mode="before") #validate array type
+    @classmethod
+    def validate_numpy_array(cls, array_parameters):
+        """Ensure the input is a NumPy array."""
+        if not isinstance(array_parameters, np.ndarray):
+            raise ValueError(f"{cls.__name__} expects a NumPy array for betas and cross_protect, got {type(array_parameters)}")
+        return array_parameters
 
-        # Check that cross_protect is a square matrix with dimensions equal to the length of betas
-        if cross_protect.shape[0] != cross_protect.shape[1] or cross_protect.shape[0] != len(betas):
-            raise ValueError(f"'cross_protect' must be a square matrix with dimensions equal to the length of 'betas'. "
-                             f"Expected {len(betas)}x{len(betas)}, got {cross_protect.shape}.")
-        return betas, columns, cross_protect
     
-    # Validate parameters
-    #_validate_parameters(betas, columns, cross_protect)  
+    @model_validator(mode="after") #after all fields are validated, validate cross fields relationship
+    def check_dimensions(cls, parameter_values):
+        """Ensure betas and cross_protect have matching dimensions."""
+        betas = parameter_values.betas
+        columns = parameter_values.columns
+        cross_protect = parameter_values.cross_protect
 
+        if len(columns) != len(betas):
+            raise ValueError(f"'columns' length ({len(columns)}) must match 'betas' length ({len(betas)}).")
+
+        if cross_protect.shape[0] != cross_protect.shape[1] or cross_protect.shape[0] != len(betas):
+            raise ValueError(
+                f"'cross_protect' must be a square matrix of size {len(betas)}x{len(betas)}, got {cross_protect.shape}."
+            )
+        return parameter_values
+   
+    
     def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
         """
         @param current_state, a data frame (at the moment) w/ the current epidemic state.
