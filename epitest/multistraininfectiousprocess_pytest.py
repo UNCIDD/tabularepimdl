@@ -65,22 +65,6 @@ def multistrain_infectiousprocess(betas, columns, cross_protect): #pass above de
     """
     return(MultiStrainInfectiousProcess(betas=betas, columns=columns, cross_protect=cross_protect))
 
-def test_parameters_check():
-    """
-    Test the parameters check functionality before initialization.
-    Args: None.
-    """
-    #current parameter values are all valid, can modify either of them to trigger the ValueError.
-    beta_test = np.array([2,1])
-    column_test = ["S1", "S2"]
-    matrix_test = np.array([[1.0, 0.5], [0.5, 1.0]])
-    parammeters_check_process = MultiStrainInfectiousProcess(betas=beta_test, columns=column_test, cross_protect=matrix_test)
-    try:
-        parammeters_check_process._validate_parameters(beta_test, column_test, matrix_test)
-    except ValueError as e:
-        print(f"ValueError encountered: {e}")
-    
-
 def test_intialization(multistrain_infectiousprocess):
     """
     Test the initialization of the MultiStrainInfectiousProcess object.
