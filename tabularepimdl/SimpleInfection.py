@@ -32,6 +32,9 @@ class SimpleInfection(Rule, BaseModel):
         @param dt: size of the timestep.
         @return: a pandas DataFrame containing changes in s_st and inf_to.
         """
+        required_columns = {"N"} #check if column N presents in current_state
+        if not required_columns.issubset(current_state.columns):
+            raise ValueError(f"Missing required columns in current_state: {required_columns}")
         
         if stochastic is None:
             stochastic = self.stochastic
