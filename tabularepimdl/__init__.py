@@ -12,4 +12,5 @@ from .WithFilters import WithFilters
 from .FilteredSimpleTransition import FilteredSimpleTransition
 from .FilteredSimpleInfection import FilteredSimpleInfection
 from .EpiRunner import EpiRunner
+from .SharedTraitInfectionValueFilter import SharedTraitInfectionValueFilter
 from .EpiModel import EpiModel
