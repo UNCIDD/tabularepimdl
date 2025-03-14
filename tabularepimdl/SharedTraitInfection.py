@@ -29,11 +29,16 @@ class SharedTraitInfection(Rule):
         self.stochastic = stochastic
         
 
-    def get_deltas(self, current_state, dt = 1.0, stochastic=None):
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
         """
-        @param current_state, a data frame (at the moment) w/ the current epidemic state
-        @param dt, the size of the timestep
+        @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
+        @param dt: size of the timestep.
+        @return: a pandas DataFrame containing changes in s_st and inf_to.
         """
+        required_columns = {"N"} #check if column N presents in current_state
+        if not required_columns.issubset(current_state.columns):
+            raise ValueError(f"Missing required columns in current_state: {required_columns}")
+        
         if stochastic is None:
             stochastic = self.stochastic
 
