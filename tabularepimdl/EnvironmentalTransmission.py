@@ -43,7 +43,6 @@ class EnvironmentalTransmission(Rule, BaseModel):
         ##first let's get folks who are susceptible. These are the states we will actually
         ##see deltas from.
         deltas = current_state.loc[current_state[self.inf_col]==self.s_st].copy() #extract S folks only
-        deltas_add = deltas.copy()
         #print('ST rule input deltas\n', deltas) #debug
 
        
@@ -60,10 +59,8 @@ class EnvironmentalTransmission(Rule, BaseModel):
         deltas.drop(["prI"], axis=1, inplace=True)
         
         #Update deltas_add DataFrames, folks into I
-        deltas_add = deltas_add.assign(**{self.inf_col: self.inf_to, "N": -deltas["N"]})
-        #deltas_add["N"] = -deltas["N"]
-        #deltas_add[self.inf_col] = self.inf_to 
-
+        deltas_add = deltas.assign(**{self.inf_col: self.inf_to, "N": -deltas["N"]})
+        
         rc = pd.concat([deltas,deltas_add])
         print('env combined deltas are\n', rc) #debug
         return rc.loc[rc["N"]!=0].reset_index(drop=True) #reset index for the new dataframe
