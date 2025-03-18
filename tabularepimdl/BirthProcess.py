@@ -33,7 +33,7 @@ class BirthProcess(Rule, BaseModel):
             raise ValueError ("start_state_sig must be either a dictionary or a pandas DataFrame")
         return start_state_sig
         
-    def get_deltas(self, current_state: pd.DataFrame, dt=1.0, stochastic=None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.
@@ -61,5 +61,4 @@ class BirthProcess(Rule, BaseModel):
         rc = {
             'tabularepimdl.BirthProcess' : self.model_dump()
         }
-
         return rc
