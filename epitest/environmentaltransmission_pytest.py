@@ -17,7 +17,7 @@ from tabularepimdl.EnvironmentalTransmission import EnvironmentalTransmission
 def dummy_state():
     """
     Create a dummy DataFrame to simulate the state of a population.
-    Returns: DataFrame containing population counts, their infection states and trait groups
+    Returns: DataFrame containing population counts, their infection states and trait groups.
     """
     data = {
     'InfState':pd.Categorical(["S"]*4+["I"],  categories=['S','I','R']),
