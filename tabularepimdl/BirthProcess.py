@@ -58,6 +58,9 @@ class BirthProcess(Rule, BaseModel):
         return births
         
     def to_yaml(self) -> dict:
+        """
+        return the rule's attributes to a dictionary.
+        """
         rc = {
             'tabularepimdl.BirthProcess' : self.model_dump()
         }
