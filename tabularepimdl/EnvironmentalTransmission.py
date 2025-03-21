@@ -66,6 +66,9 @@ class EnvironmentalTransmission(Rule, BaseModel):
         return rc.loc[rc["N"]!=0].reset_index(drop=True) #reset index for the new dataframe
     
     def to_yaml(self) -> dict:
+        """
+        return the rule's attributes to a dictionary.
+        """
         rc = {
             'tabularepimdl.EnvironmentalTransmission': self.model_dump()
         }
