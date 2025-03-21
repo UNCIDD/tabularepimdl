@@ -83,6 +83,17 @@ def test_intialization(multistrain_infectiousprocess):
     assert multistrain_infectiousprocess.cross_protect.shape[0] == multistrain_infectiousprocess.cross_protect.shape[1] #Check that cross_protect is a square matrix 
     assert multistrain_infectiousprocess.cross_protect.shape[0] == len(multistrain_infectiousprocess.betas) #Check that cross_protect matrix dimension equals to the length of betas
 
+def test_intialization_error_handling():
+    """
+    Test the error handling for input array parameters. Set the following parameters with incorrect values or format in the way to trigger ValueError.
+    If setting the correct values and format with commented out portion, the test will fail with message "Failed: DID NOT RAISE <class 'ValueError'>"
+    """
+    check_betas = np.array([0.1, -0.2]) #np.array([0.1, 0.05])
+    check_cross_protect = [0.3, 0.4] #np.array([[1.0, 0.5], [0.5, 1.0]])
+    check_columns = ['A', 'B', 'C'] #["Strain1", "Strain2"]
+
+    with pytest.raises(ValueError) as excinfo:
+        MultiStrainInfectiousProcess(betas=check_betas, columns=check_columns, cross_protect=check_cross_protect)
 
 def test_betas_on_freq_dep(dummy_state, betas):
     """
