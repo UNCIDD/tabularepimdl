@@ -2,8 +2,7 @@
 from tabularepimdl.Rule import Rule
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
-from typing import Annotated
+from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, ConfigDict
 
 class MultiStrainInfectiousProcess(Rule, BaseModel):
     """! Simple multi strain infectious process. Takes a cross protection matrix, a list of infection state 
@@ -36,13 +35,13 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
     
     @field_validator("betas", "cross_protect", mode="before") #validate array type and its element sign
     @classmethod
-    def validate_numpy_array(cls, array_parameters):
+    def validate_numpy_array(cls, array_parameters, field: ValidationInfo):
         """Ensure the input is a NumPy array."""
         if not isinstance(array_parameters, np.ndarray):
-            raise ValueError(f"{cls.__name__} expects a NumPy array for betas and cross_protect, got {type(array_parameters)}")
+            raise ValueError(f"{cls.__name__} expects a NumPy array for {field.field_name}, got {type(array_parameters)}")
         
         if np.any(array_parameters < 0):
-            raise ValueError(f"All elements in the arrays must be non-negative, but got {array_parameters}.")
+            raise ValueError(f"All elements in {field.field_name} must be non-negative, but got {array_parameters}.")
         return array_parameters
 
     
