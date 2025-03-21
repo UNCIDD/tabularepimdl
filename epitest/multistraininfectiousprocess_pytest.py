@@ -10,7 +10,6 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-import os
 import sys
 sys.path.append('../')
 from tabularepimdl.MultiStrainInfectiousProcess import MultiStrainInfectiousProcess
@@ -86,7 +85,7 @@ def test_intialization(multistrain_infectiousprocess):
 def test_intialization_error_handling():
     """
     Test the error handling for input array parameters. Set the following parameters with incorrect values or format in the way to trigger ValueError.
-    If setting the correct values and format with commented out portion, the test will fail with message "Failed: DID NOT RAISE <class 'ValueError'>"
+    If setting the correct values and format with commented out data, the test will fail with message "Failed: DID NOT RAISE <class 'ValueError'>"
     """
     check_betas = np.array([0.1, -0.2]) #np.array([0.1, 0.05])
     check_cross_protect = [0.3, 0.4] #np.array([[1.0, 0.5], [0.5, 1.0]])
