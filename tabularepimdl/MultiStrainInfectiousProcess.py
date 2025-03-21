@@ -162,6 +162,9 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
 
 
     def to_yaml(self) -> dict:
+        """
+        return the rule's attributes to a dictionary.
+        """
         rc = {
             'tabularepimdl.MultiStrainInfectiousProcess': self.model_dump()
         }
