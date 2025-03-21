@@ -66,6 +66,7 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         """
         @param current_state, a data frame (at the moment) w/ the current epidemic state.
         @param dt, the size of the timestep.
+        @return: a pandas DataFrame containing changes in s_st and inf_to.
         """
         #print('MultiStrain rule\n') #debug
         if stochastic is None:
