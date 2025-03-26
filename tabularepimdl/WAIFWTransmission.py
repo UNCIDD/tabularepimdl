@@ -46,8 +46,8 @@ class WAIFWTransmission(Rule):
 
         #Check if the number of unique categories in current_state's group_col matches waifw matrix's size
         if len(current_state[self.group_col].cat.categories) != len(self.waifw_matrix):
-            raise ValueError(f"The number of unique categoeries in 'current_state' group column should be equal to the size of 'waifw_matrix'. "
-                             f"However, the current number of unique categoeries in 'current_state' group column is ({len(current_state[self.group_col].cat.categories)}), "
+            raise ValueError(f"The number of unique categories in 'current_state' group column should be equal to the size of 'waifw_matrix'. "
+                             f"However, the current number of unique categories in 'current_state' group column is ({len(current_state[self.group_col].cat.categories)}), "
                              f"'waifw_matrix' current size is ({len(self.waifw_matrix)})."
                             )
 
