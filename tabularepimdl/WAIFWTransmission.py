@@ -44,11 +44,11 @@ class WAIFWTransmission(Rule):
         #quesiton and fix: convert group_col to categorical type first, so groupby observed=False generate full list of array values
         current_state[self.group_col]=pd.Categorical(current_state[self.group_col])
 
-        #Check if the number of unique categories in current_state's group_col matches waifw matrix's length
-        if len(current_state[self.group_col].cat.codes.unique()) != len(self.waifw_matrix):
-            raise ValueError(f"The number of unique categoeries in 'current_state' group column should be equal to the length of 'waifw_matrix'. "
-                             f"However, the current number of unique categoeries in 'current_state' group column is ({len(current_state[self.group_col].cat.codes.unique())}), "
-                             f"'waifw_matrix' current length is ({len(self.waifw_matrix)})."
+        #Check if the number of unique categories in current_state's group_col matches waifw matrix's size
+        if len(current_state[self.group_col].cat.categories) != len(self.waifw_matrix):
+            raise ValueError(f"The number of unique categoeries in 'current_state' group column should be equal to the size of 'waifw_matrix'. "
+                             f"However, the current number of unique categoeries in 'current_state' group column is ({len(current_state[self.group_col].cat.categories)}), "
+                             f"'waifw_matrix' current size is ({len(self.waifw_matrix)})."
                             )
 
         ##create an array for the total number of infections in each unique group. Only records with i_st are sumed, other records's N are filled with 0.
