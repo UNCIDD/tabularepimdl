@@ -69,18 +69,20 @@ def test_len_of_categories_match_len_of_waifw(waifw_transmission):
         {
         'N': [50, 5, 40, 10],
         'Infection_State': ['S', 'I', 'S', 'I'], #links to inf_col
-        #'Age_Group': ['youth', 'child', 'senior', 'adult'] #links to group_col, reserved to test error handling in get_deltas() method
-        'Age_Group': ['youth', 'youth', 'adult', 'adult']
+        'Age_Group': ['youth', 'child', 'senior', 'adult'] #links to group_col, reserved to test error handling in get_deltas() method
+        #'Age_Group': ['youth', 'youth', 'adult', 'adult'] #links to group_col, reserved to trigger ValueError in get_deltas() method
         }
     )
-    waifw_transmission.get_deltas(state_with_more_categories, stochastic=True) #if this test fails, a ValueError from the source code will pop up.
+    
+    with pytest.raises(ValueError) as excinfo:
+        waifw_transmission.get_deltas(state_with_more_categories, stochastic=True)
 
 def test_inf_array_slicing(waifw_transmission, dummy_state):
     """
     Test slicing and aggregation of current_state.
     Args: waifw_transmission object and dummy dataframe.
     """
-    inf_array = dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st].groupby(waifw_transmission.group_col)['N'].sum(numeric_only=True).values
+    inf_array = dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st].groupby(waifw_transmission.group_col, observed=False)['N'].sum(numeric_only=True).values
     
     expected_inf_array = np.array([5, 10]) #in each age group, sum the number of individuals whose infection_state is I
 
@@ -99,7 +101,7 @@ def test_probablity_of_infection_calculation(waifw_transmission, dummy_state, du
     Test infection probability for individuals from filtered groups.
     Args: waifw_transmission object, dummy dataframe and dummy waifw_matrix.
     """
-    inf_array = dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st].groupby(waifw_transmission.group_col)['N'].sum(numeric_only=True).values
+    inf_array = dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st].groupby(waifw_transmission.group_col, observed=False)['N'].sum(numeric_only=True).values
     prI = np.power(np.exp(-1.0*waifw_transmission.waifw_matrix), inf_array)
     prI = 1-prI.prod(axis=1) #axis=1 makes column-elements multiply
 
