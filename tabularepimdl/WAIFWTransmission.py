@@ -52,7 +52,8 @@ class WAIFWTransmission(Rule):
                             )
 
         ##create an array for the total number of infections in each unique group. Only records with i_st are sumed, other records's N are filled with 0.
-        inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col, observed=False)['N'].sum(numeric_only=True).values #moved ['N'] position 
+        #inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col, observed=False)['N'].sum(numeric_only=True).values #moved ['N'] position 
+        inf_array = np.bincount(current_state.loc[current_state[self.inf_col]==self.i_st, self.group_col].cat.codes, current_state.loc[current_state[self.inf_col]==self.i_st, "N"], minlength=len(current_state[self.group_col].cat.categories))
 
         #print('is it category?', isinstance(current_state[self.group_col].dtype, pd.CategoricalDtype)) #is_categorical_dtype is deprecated, replaced with the isinstance function
         #print(current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col).sum(numeric_only=True)) #debug
