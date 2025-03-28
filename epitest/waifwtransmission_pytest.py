@@ -82,11 +82,16 @@ def test_inf_array_slicing(waifw_transmission, dummy_state):
     Test slicing and aggregation of current_state.
     Args: waifw_transmission object and dummy dataframe.
     """
-    inf_array = dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st].groupby(waifw_transmission.group_col, observed=False)['N'].sum(numeric_only=True).values
-    
+    #two different approaches for calculating infection array
+    inf_array_groupby = dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st].groupby(waifw_transmission.group_col, observed=False)['N'].sum(numeric_only=True).values
+    inf_array_bincount = np.bincount(dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st, waifw_transmission.group_col].cat.codes, #array input
+                                     dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st, 'N'], #weights
+                                     minlength=len(dummy_state[waifw_transmission.group_col].cat.categories)) #minimum length
+
     expected_inf_array = np.array([5, 10]) #in each age group, sum the number of individuals whose infection_state is I
 
-    assert (inf_array == expected_inf_array).all()
+    assert (inf_array_groupby == expected_inf_array).all()
+    assert (inf_array_bincount == expected_inf_array).all()
 
 def test_categorical_type(waifw_transmission, dummy_state):
     """
