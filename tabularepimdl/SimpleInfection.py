@@ -65,8 +65,10 @@ class SimpleInfection(Rule, BaseModel):
         
         
     def to_yaml(self):
+        """
+        return the rule's attributes to a dictionary.
+        """
         rc = {
             'tabularepimdl.SimpleInfection': self.model_dump()
         }
-
         return rc        
