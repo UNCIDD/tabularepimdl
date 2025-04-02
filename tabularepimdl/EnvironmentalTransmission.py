@@ -47,7 +47,8 @@ class EnvironmentalTransmission(Rule, BaseModel):
 
        
         # Vectorized calculation of prI
-        deltas["prI"] = 1 - np.exp(-dt*self.beta)
+        exp_change_rate = np.exp(-dt*self.beta)
+        deltas["prI"] = 1 - exp_change_rate
             
         # Update N values based on prI, folks out of S
         if not stochastic:
