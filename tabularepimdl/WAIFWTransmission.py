@@ -8,17 +8,17 @@ class WAIFWTransmission(Rule):
 
     def __init__(self, waifw_matrix, inf_col, group_col, s_st="S", i_st="I", inf_to="I", stochastic=False) -> None:
         ##TODO: Add a frequency dependent flag?
-        """!
-        @param waifw_martrix the waifw matrix
-        @param inf_col the column for this infectious process
-        @param group_col the column where group is specified. Should have the same number of
+        """!Initialization.
+        @param waifw_martrix: the waifw matrix
+        @param inf_col: the column for this infectious process
+        @param group_col: the column where group is specified. Should have the same number of
             possible unique values as the beta matrix, and they should have an order (i.e., it 
             should be a pd.categorical)
-        @param s_st the state for susceptibles, assumed to be S
-        @param i_st the state for infectious, assumed to be I
-        @param inf_to the state infectious folks go to, assumed to be I
-        @param freq_dep is this a frequency dependent model
-        @param stochastic is this rule stochastic
+        @param s_st: the state for susceptibles, assumed to be S
+        @param i_st: the state for infectious, assumed to be I
+        @param inf_to: the state infectious folks go to, assumed to be I
+        @param freq_dep: is this a frequency dependent model
+        @param stochastic: is this rule stochastic
         """
 
         super().__init__()
@@ -54,33 +54,32 @@ class WAIFWTransmission(Rule):
         ##create an array for the total number of infections in each unique group. Only records with i_st are sumed, other records's N are filled with 0.
         #inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col, observed=False)['N'].sum(numeric_only=True).values #moved ['N'] position 
         inf_array = np.bincount(current_state.loc[current_state[self.inf_col]==self.i_st, self.group_col].cat.codes, current_state.loc[current_state[self.inf_col]==self.i_st, "N"], minlength=len(current_state[self.group_col].cat.categories))
-
-        #print('is it category?', isinstance(current_state[self.group_col].dtype, pd.CategoricalDtype)) #is_categorical_dtype is deprecated, replaced with the isinstance function
-        #print(current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col).sum(numeric_only=True)) #debug
-        #print("))))") #debug
-        #print('inf_array is', inf_array) #debug
+        print('inf_array is\n', inf_array) #debug
 
         #get the probability of being infected in each unique group
-        prI = np.power(np.exp(-dt*self.waifw_matrix),inf_array)
-        #print('powered prI is', prI) #debug
+        print('-dt*matrix\n', -dt*self.waifw_matrix)
+        print('exponential\n', np.exp(-dt*self.waifw_matrix))
+        
+        prI = np.power(np.exp(-dt*self.waifw_matrix), inf_array)
+        print('powered prI is\n', prI) #debug
+        
         prI = 1-prI.prod(axis=1)
-        #print('1-prI prod', prI) #debug
+        print('1-prI prod\n', prI) #debug
 
         ##get folks in susceptible states which link to all unique groups
-        deltas = current_state.loc[current_state[self.inf_col]==self.s_st]
-        #print('deltas is', deltas, '\n') #debug
-        #print('prI codes are', prI[deltas[self.group_col].cat.codes], '\n') #debug
+        deltas = current_state.loc[current_state[self.inf_col]==self.s_st].copy()
+        print('deltas is\n', deltas, '\n') #debug
+        print('prI codes are\n', prI[deltas[self.group_col].cat.codes], '\n') #debug
 
         ##do infectious process, getting the number of individuals who get infected from susceptible status
         if not stochastic:
-            deltas = deltas.assign(N=-deltas['N']*prI[deltas[self.group_col].cat.codes])
+            deltas["N"] = -deltas["N"] * prI[deltas[self.group_col].cat.codes]
         else:
-            deltas = deltas.assign(N=-np.random.binomial(deltas['N'],prI[deltas[self.group_col].cat.codes]))
+            deltas["N"] = -np.random.binomial(deltas["N"], prI[deltas[self.group_col].cat.codes])
 
-        #print('deltas after infection process:', deltas)
-        deltas_add = deltas.assign(N=-deltas['N'])
-        deltas_add[self.inf_col] = self.inf_to
-
+        print('deltas after infection process:\n', deltas)
+        deltas_add = deltas.assign(**{self.inf_col: self.inf_to, "N": -deltas["N"]})
+        
         rc = pd.concat([deltas,deltas_add])
         return rc.loc[rc.N!=0].reset_index(drop=True) #reset index for the new dataframe
     
