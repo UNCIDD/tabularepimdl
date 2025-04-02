@@ -45,15 +45,14 @@ class StateBasedDeathProcess(Rule, BaseModel):
         #deltas_temp = current_state.copy()
         
         #all satisfied records are wanted based on column and state values
-        deltas = pd.DataFrame()
-        for column, state in zip(self.columns, self.states):
-            filtered_deltas = current_state.loc[current_state[column]==state].copy()
-            deltas = pd.concat([deltas, filtered_deltas])
+        state_mask = np.logical_or.reduce([current_state[column]==state for column, state in zip(self.columns, self.states)], axis=0)
+        deltas = current_state.loc[state_mask].copy()
 
+        exp_change_rate = np.exp(-dt*self.rate)
         if not stochastic:
-            deltas["N"] = -deltas["N"] * (1 - np.exp(-dt*self.rate))
+            deltas["N"] = -deltas["N"] * (1 - exp_change_rate)
         else:
-            deltas["N"] = -np.random.binomial(deltas["N"], 1 - np.exp(-dt*self.rate))
+            deltas["N"] = -np.random.binomial(deltas["N"], 1 - exp_change_rate)
         
         return deltas.reset_index(drop=True)
 
