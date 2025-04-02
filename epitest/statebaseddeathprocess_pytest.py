@@ -47,6 +47,9 @@ def test_initialization(statebased_deathprocess):
     assert statebased_deathprocess.rate == 0.05
     assert statebased_deathprocess.stochastic == False
 
+    with pytest.raises(ValueError) as excinfo:
+        StateBasedDeathProcess(columns=('A', 'B'), state='notList', rate=0.1)
+        
 def test_deltas_calculation(statebased_deathprocess, dummy_state):
     """
     Test the number of incident observations (deltas).
@@ -100,9 +103,9 @@ def test_get_deltas_deterministic(statebased_deathprocess, dummy_state):
     returned_deltas = statebased_deathprocess.get_deltas(dummy_state)
 
     expected_deltas = pd.DataFrame({
-    'N':               [-20*(1-np.exp(-1.0*0.05)), -40*(1-np.exp(-1.0*0.05)), -30*(1-np.exp(-1.0*0.05)), -50*(1-np.exp(-1.0*0.05))],
-    'Infection_State': ['S2', 'R1', 'I1', 'R2'],
-    'Hosp':            ['I2', 'U1', 'P1', 'I3']
+    'N':               [-20*(1-np.exp(-1.0*0.05)), -30*(1-np.exp(-1.0*0.05)), -40*(1-np.exp(-1.0*0.05)), -50*(1-np.exp(-1.0*0.05))],
+    'Infection_State': ['S2', 'I1', 'R1', 'R2'],
+    'Hosp':            ['I2', 'P1', 'U1', 'I3']
     })
 
     pd.testing.assert_frame_equal(returned_deltas.reset_index(drop=True), expected_deltas.reset_index(drop=True))
@@ -117,8 +120,8 @@ def test_get_deltas_stochastic(statebased_deathprocess, dummy_state):
              
             expected_deltas = pd.DataFrame({
                  'N':               [-20, -20, -20, -20],
-                 'Infection_State': ['S2', 'R1', 'I1', 'R2'],
-                 'Hosp':            ['I2', 'U1', 'P1', 'I3']
+                 'Infection_State': ['S2', 'I1', 'R1', 'R2'],
+                 'Hosp':            ['I2', 'P1', 'U1', 'I3']
             })
 
             pd.testing.assert_frame_equal(returned_deltas.reset_index(drop=True), expected_deltas.reset_index(drop=True))
