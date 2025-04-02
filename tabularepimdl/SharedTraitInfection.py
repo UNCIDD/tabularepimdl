@@ -78,13 +78,15 @@ class SharedTraitInfection(Rule, BaseModel):
         deltas["outI"] = total_infect - deltas["inI"] #the number of infected folks outside each trait
 
         # Vectorized calculation of prI
-        deltas["prI"] = 1 - np.power(np.exp(-dt*self.in_beta), deltas["inI"]) * np.power(np.exp(-dt*self.out_beta), deltas["outI"])
+        exp_change_in_beta = np.exp(-dt*self.in_beta)
+        exp_change_out_beta = np.exp(-dt*self.out_beta)
+        deltas["prI"] = 1 - np.power(exp_change_in_beta, deltas["inI"]) * np.power(exp_change_out_beta, deltas["outI"])
             
         # Update N values based on prI
         if not stochastic:
             deltas["N"] = -deltas["N"] * deltas["prI"]
         else:
-            deltas["N"] = -np.random.binomial(deltas["N"],deltas["prI"])
+            deltas["N"] = -np.random.binomial(deltas["N"], deltas["prI"])
         
         #drop temporary columns inI, outI, prI
         deltas.drop(["inI", "outI", "prI"], axis=1, inplace=True)
