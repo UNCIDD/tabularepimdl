@@ -53,12 +53,12 @@ class SimpleInfection(Rule, BaseModel):
 
         deltas = current_state.loc[current_state[self.column]==self.s_st].copy()
 
+        exp_change_rate = np.power(np.exp(-dt*beta), infectious)
         if not stochastic:
-            deltas["N"] = -deltas["N"] * (1 - np.power(np.exp(-dt*beta), infectious))
+            deltas["N"] = -deltas["N"] * (1 - exp_change_rate)
         else:
-            deltas["N"] = -np.random.binomial(deltas["N"], 1 - np.power(np.exp(-dt*beta),infectious))
+            deltas["N"] = -np.random.binomial(deltas["N"], 1 - exp_change_rate)
         
-        #deltas_add = deltas.copy()
         deltas_add = deltas.assign(**{self.column: self.inf_to, "N": -deltas["N"]})
         
         return pd.concat([deltas, deltas_add]).reset_index(drop=True)
