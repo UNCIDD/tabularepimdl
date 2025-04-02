@@ -32,9 +32,14 @@ class WAIFWTransmission(Rule):
 
     def get_deltas(self, current_state, dt = 1.0, stochastic = None):
         """
-        @param current_state, a data frame (at the moment) w/ the current epidemic state
-        @param dt, the size of the timestep
+        @param current_state: a data frame (at the moment) w/ the current epidemic state.
+        @param dt: the size of the timestep.
+        @return: a DataFrame containing changes in population infection.
         """
+        required_columns = {"N"} #check if column N presents in current_state
+        if not required_columns.issubset(current_state.columns):
+            raise ValueError(f"Missing required columns in current_state: {required_columns}")
+        
         if stochastic is None:
             stochastic = self.stochastic
 
@@ -72,10 +77,11 @@ class WAIFWTransmission(Rule):
         print('prI codes are\n', prI[deltas[self.group_col].cat.codes], '\n') #debug
 
         ##do infectious process, getting the number of individuals who get infected from susceptible status
+        prI_per_group = prI[deltas[self.group_col].cat.codes]
         if not stochastic:
-            deltas["N"] = -deltas["N"] * prI[deltas[self.group_col].cat.codes]
+            deltas["N"] = -deltas["N"] * prI_per_group
         else:
-            deltas["N"] = -np.random.binomial(deltas["N"], prI[deltas[self.group_col].cat.codes])
+            deltas["N"] = -np.random.binomial(deltas["N"], prI_per_group)
 
         print('deltas after infection process:\n', deltas)
         deltas_add = deltas.assign(**{self.inf_col: self.inf_to, "N": -deltas["N"]})
