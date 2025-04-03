@@ -1,7 +1,7 @@
 from tabularepimdl.Rule import Rule
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field
 from typing import Annotated
 
 class SimpleObservationProcess(Rule, BaseModel):
@@ -24,9 +24,9 @@ class SimpleObservationProcess(Rule, BaseModel):
     source_state: str
     obs_col: str
     rate: Annotated[int | float, Field(ge=0)]
-    unobs_state: str
-    incobs_state: str
-    prevobs_state: str
+    unobs_state: str = 'U'
+    incobs_state: str = 'I'
+    prevobs_state: str = 'P'
     stochastic: bool = False
 
     def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
@@ -43,7 +43,7 @@ class SimpleObservationProcess(Rule, BaseModel):
             stochastic = self.stochastic
 
         ##first get the states that produce incident observations
-        delta_incobs = current_state.loc[(current_state[self.source_col]==self.source_state) & (current_state[self.obs_col]==self.unobs_state)] #un-observed individuals with source_state
+        delta_incobs = current_state.loc[(current_state[self.source_col]==self.source_state) & (current_state[self.obs_col]==self.unobs_state)].copy() #un-observed individuals with source_state
 
         exp_change_rate = np.exp(-dt*self.rate)
         if not stochastic:
@@ -53,15 +53,16 @@ class SimpleObservationProcess(Rule, BaseModel):
             delta_incobs["N"] = -np.random.binomial(delta_incobs["N"], 1-exp_change_rate)
             
         #additions
-        tmp = delta_incobs.assign(
-            N=-delta_incobs.N
-        )
-
-        tmp[self.obs_col] = self.incobs_state
+        #tmp = delta_incobs.assign(N=-delta_incobs.N)
+        #tmp[self.obs_col] = self.incobs_state
+        tmp = delta_incobs.assign(**{self.obs_col: self.incobs_state, "N": -delta_incobs["N"]})
+        
+        #move folks out of current_state incobs state
+        tmp2 = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
+        tmp2["N"] = -tmp2["N"]
 
         #move folks out of the incident state and into the previous state
         delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
-        tmp2 = delta_toprev.assign(N=-delta_toprev.N)
         delta_toprev[self.obs_col] = self.prevobs_state
         #if source_state = 'I', then following is true
         #dela_incobs = folks moved out infected and unobserved (-)
@@ -72,18 +73,12 @@ class SimpleObservationProcess(Rule, BaseModel):
         #print('-tmp2 is\n', tmp2)
         return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) 
 
-    def to_yaml(self):
+    def to_yaml(self) -> dict:
+        """
+        return the rule's attributes to a dictionary.
+        """
         rc = {
-            'tabularepimdl.SimpleObservationProcess': {
-                'source_col': self.source_col,
-                'source_state': self.source_state,
-                'rate': self.rate,
-                'unobs_state': self.unobs_state,
-                'incobs_state': self.incobs_state,
-                'prevobs_state':self.prevobs_state,
-                'stochastic':self.stochastic
-            }
+            'tabularepimdl.SimpleObservationProcess': self.model_dump()
         }
-
         return rc        
 
