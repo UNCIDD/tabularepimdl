@@ -146,9 +146,10 @@ def test_to_yaml(simple_observation):
          'tabularepimdl.SimpleObservationProcess': {
                 'source_col': 'Infection_State',
                 'source_state': 'I',
+                'obs_col': 'Hosp',
                 'rate': 0.05,
                 'unobs_state': 'U',
-                'incobs_state':  'I',
+                'incobs_state': 'I',
                 'prevobs_state': 'P',
                 'stochastic': False
             }
