@@ -1,10 +1,15 @@
 from tabularepimdl.Rule import Rule
 import numpy as np
 import pandas as pd
+from numba import njit
+
+
 
 class WAIFWTransmission(Rule):
     """!
     Rule that does transmission based on a simple WAIFW transmission matrix."""
+
+    
 
     def __init__(self, waifw_matrix, inf_col, group_col, s_st="S", i_st="I", inf_to="I", stochastic=False) -> None:
         ##TODO: Add a frequency dependent flag?
@@ -30,6 +35,42 @@ class WAIFWTransmission(Rule):
         self.inf_to = inf_to
         self.stochastic = stochastic
 
+    @classmethod    
+    @njit
+    def compute_infection_array(present_cat_codes, weights, num_of_categories):
+        """
+        Optimized function using numba to compute the number of infected individuals per group.
+        """
+        inf_array = np.zeros(num_of_categories, dtype=np.float64)  # Initialize array with zeros
+        for i in range(len(present_cat_codes)):
+            inf_array[present_cat_codes[i]] = inf_array[present_cat_codes[i]] + weights[i]
+        return inf_array
+    
+    @classmethod
+    @njit
+    def compute_prI(waifw_matrix, inf_array, dt):
+        """
+        Computes probabilities of infection using numba.
+        Equivalent to: prI = 1 - np.power(np.exp(-dt*self.waifw_matrix), inf_array)
+        """
+        matrix_size = len(waifw_matrix)
+        prI = np.ones(matrix_size, dtype=np.float64) #initialize prI with 1s
+
+        for i in range(matrix_size):
+            for j in range(matrix_size):
+                #print('waifw value is {}, exponential is {}'.format(waifw_matrix[i, j], np.exp(-dt * waifw_matrix[i, j])))#debug
+                infection_power = np.exp(-dt * waifw_matrix[i, j]) ** inf_array[j]
+                #print('inf_array[j] is {}, np.exp(matrx) to the power of inf_array[j] is {}'.format(inf_array[j], a))#debug
+                #every exp is powered to a single waifw matrix element and inf_array element in the same row
+                #then each prI in positin i times above result, and iterate through all elements in a matrix row 
+                prI[i] = prI[i] * infection_power #so prI[i] gets its final prodcution value
+                #print('prI[{}] is {}'.format(i, prI[i])) #debug
+                #print('whole prI is{}'.format(prI)) #debug
+            prI[i] = 1 - prI[i]
+        return prI
+        
+
+
     def get_deltas(self, current_state, dt = 1.0, stochastic = None):
         """
         @param current_state: a data frame (at the moment) w/ the current epidemic state.
@@ -47,34 +88,45 @@ class WAIFWTransmission(Rule):
         #Instead of doing the conversion in model applications such as AgingPopulation?
 
         #quesiton and fix: convert group_col to categorical type first, so groupby observed=False generate full list of array values
-        current_state[self.group_col]=pd.Categorical(current_state[self.group_col])
+        if not isinstance(current_state[self.group_col].dtype, pd.CategoricalDtype):
+            current_state[self.group_col]=pd.Categorical(current_state[self.group_col])
 
         #Check if the number of unique categories in current_state's group_col matches waifw matrix's size
         if len(current_state[self.group_col].cat.categories) != len(self.waifw_matrix):
-            raise ValueError(f"The number of unique categories in 'current_state' group column should be equal to the size of 'waifw_matrix'. "
-                             f"However, the current number of unique categories in 'current_state' group column is ({len(current_state[self.group_col].cat.categories)}), "
-                             f"'waifw_matrix' current size is ({len(self.waifw_matrix)})."
+            raise ValueError(f"Mismatch between the number of unique categories and WAIFW matrix size. "
+                             f"Expected {len(self.waifw_matrix)} categories, but found {len(current_state[self.group_col].cat.categories)}. "
+                             f"Categories: {current_state[self.group_col].cat.categories}"
                             )
 
         ##create an array for the total number of infections in each unique group. Only records with i_st are sumed, other records's N are filled with 0.
-        #inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col, observed=False)['N'].sum(numeric_only=True).values #moved ['N'] position 
-        inf_array = np.bincount(current_state.loc[current_state[self.inf_col]==self.i_st, self.group_col].cat.codes, current_state.loc[current_state[self.inf_col]==self.i_st, "N"], minlength=len(current_state[self.group_col].cat.categories))
-        print('inf_array is\n', inf_array) #debug
+        #inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col, observed=False)['N'].sum(numeric_only=True).values #moved ['N'] position #groupby approach
+        inf_array = np.bincount(current_state.loc[current_state[self.inf_col]==self.i_st, self.group_col].cat.codes, current_state.loc[current_state[self.inf_col]==self.i_st, "N"], minlength=len(current_state[self.group_col].cat.categories)) #np.bincount approach
+        
+        #num_of_categories = len(current_state[self.group_col].cat.categories)
+        #infected_mask = current_state[self.inf_col] == self.i_st
+        #infected_group_codes = current_state.loc[infected_mask, self.group_col].cat.codes.values
+        #infected_weights = current_state.loc[infected_mask, "N"].values
+        
+        #inf_array = self.compute_infection_array(infected_group_codes, infected_weights, num_of_categories)
+
+        #print('inf_array is\n', inf_array) #debug
 
         #get the probability of being infected in each unique group
-        print('-dt*matrix\n', -dt*self.waifw_matrix)
-        print('exponential\n', np.exp(-dt*self.waifw_matrix))
+        #print('-dt*matrix\n', -dt*self.waifw_matrix)
+        #print('exponential\n', np.exp(-dt*self.waifw_matrix))
         
-        prI = np.power(np.exp(-dt*self.waifw_matrix), inf_array)
-        print('powered prI is\n', prI) #debug
-        
+        prI = np.power(np.exp(-dt*self.waifw_matrix), inf_array) #whole matrix multiplication approach
+        #print('powered prI is\n', prI) #debug
         prI = 1-prI.prod(axis=1)
-        print('1-prI prod\n', prI) #debug
+        #print('1-prI prod\n', prI) #debug
+
+        #prI = self.compute_prI(self.waifw_matrix, inf_array, dt)
+
 
         ##get folks in susceptible states which link to all unique groups
         deltas = current_state.loc[current_state[self.inf_col]==self.s_st].copy()
-        print('deltas is\n', deltas, '\n') #debug
-        print('prI codes are\n', prI[deltas[self.group_col].cat.codes], '\n') #debug
+        #print('deltas is\n', deltas, '\n') #debug
+        #print('prI codes are\n', prI[deltas[self.group_col].cat.codes], '\n') #debug
 
         ##do infectious process, getting the number of individuals who get infected from susceptible status
         prI_per_group = prI[deltas[self.group_col].cat.codes]
@@ -83,11 +135,15 @@ class WAIFWTransmission(Rule):
         else:
             deltas["N"] = -np.random.binomial(deltas["N"], prI_per_group)
 
-        print('deltas after infection process:\n', deltas)
+        #print('deltas after infection process:\n', deltas)
+        #deltas_add = deltas.assign(N=-deltas['N'])
+        #deltas_add[self.inf_col] = self.inf_to
         deltas_add = deltas.assign(**{self.inf_col: self.inf_to, "N": -deltas["N"]})
         
         rc = pd.concat([deltas,deltas_add])
         return rc.loc[rc.N!=0].reset_index(drop=True) #reset index for the new dataframe
+    
+    
     
     def to_yaml(self):
         rc = {
@@ -105,6 +161,6 @@ class WAIFWTransmission(Rule):
         return rc #added return operation
 
 
-
+    
 
 
