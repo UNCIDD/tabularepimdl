@@ -64,7 +64,7 @@ class SimpleInfection(Rule, BaseModel):
         return pd.concat([deltas, deltas_add]).reset_index(drop=True)
         
         
-    def to_yaml(self):
+    def to_yaml(self) -> dict:
         """
         return the rule's attributes to a dictionary.
         """
