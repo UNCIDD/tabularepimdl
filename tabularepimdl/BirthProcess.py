@@ -15,13 +15,14 @@ class BirthProcess(Rule, BaseModel):
     @param state_start_sig: initial state configuration for new births.
     @param stochastic: whether the transition is stochastic or deterministic.
     """
+
     # Pydantic Configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+      
     rate: Annotated[int | float, Field(ge=0)]
     start_state_sig: dict | pd.DataFrame
     stochastic: bool = False
-
+    
     @field_validator("start_state_sig") #validate if start_state_sig is an instance of dict or dataframe
     @classmethod
     def validate_start_state_sig(cls, start_state_sig):
