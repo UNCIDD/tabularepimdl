@@ -129,10 +129,10 @@ class EpiModel:
         for ruleset in self.rules:
             all_deltas = pd.DataFrame()
             for rule in ruleset:
-                #print('current rule is\n', rule) #debug
+                print('current rule is\n', rule) #debug
                 if self.stoch_policy == "rule_based":
                     nw_deltas = rule.get_deltas(self.cur_state, dt=dt)
-                    #print('nw_delta is\n', nw_deltas) #debug
+                    print('nw_delta is\n', nw_deltas) #debug
                     
                 else:
                     nw_deltas = rule.get_deltas(self.cur_state, dt=dt, stochastic= (self.stoch_policy=="stochastic"))
@@ -142,7 +142,7 @@ class EpiModel:
                     all_deltas = all_deltas
                 else: 
                     all_deltas = pd.concat([all_deltas, nw_deltas])
-                #print('all_deltas is\n', all_deltas) #debug
+                print('all_deltas is\n', all_deltas) #debug
                 #if rule is not ruleset[-1]: #debug
                 #    print('---next rule---') #debug
                 #else: print('moving on') #debug
@@ -186,7 +186,7 @@ class EpiModel:
             nw_state = nw_state[nw_state['N']!=0]
   
 
-            self.cur_state = nw_state
+            self.cur_state = nw_state.reset_index(drop=True) #need to reset index befor passing cur_state to next rule
             #if ruleset is not self.rules[-1]: #debug
             #    print('-------next ruleset--------') #debug
             #else: print('for loop ends') #debug
