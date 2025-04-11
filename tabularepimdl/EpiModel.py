@@ -141,7 +141,7 @@ class EpiModel:
                 if nw_deltas is None or nw_deltas.empty: #fix of question: there are cases returned nw_deltas is None or empty, adding if-else here to avoid Future warnings
                     all_deltas = all_deltas
                 else: 
-                    all_deltas = pd.concat([all_deltas, nw_deltas])
+                    all_deltas = pd.concat([all_deltas, nw_deltas])#.reset_index(drop=True) #add reset index before passing 
                 print('all_deltas is\n', all_deltas) #debug
                 #if rule is not ruleset[-1]: #debug
                 #    print('---next rule---') #debug
@@ -162,8 +162,8 @@ class EpiModel:
             #so adding a if-else to check column T existence first, then assign T=0 depending on the checked result
             
             #append all deltas
-            nw_state = pd.concat([self.cur_state, all_deltas]).reset_index(drop=True)
-            #print('before grouping nw_state is\n', nw_state) #debug
+            nw_state = pd.concat([self.cur_state, all_deltas])#.reset_index(drop=True) #1st change, confirmed this reset_index is not needed for MultiStrainSI 
+            print('before grouping nw_state is\n', nw_state) #debug
 
             # Get grouping columns
             tbr = {'N','T'}
@@ -177,23 +177,23 @@ class EpiModel:
 
             #now collapse..only if we have groups. This causes problems 
             if gp_cols:
-                nw_state = nw_state.groupby(gp_cols, dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index() #question: add dropna=False option in case combined dataset nw_state has NaN so groupby() can handle them.
+                nw_state = nw_state.groupby(gp_cols, dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index() #2nd change, reset_index is needed here without drop=True #question: add dropna=False option in case combined dataset nw_state has NaN so groupby() can handle them.
                 #nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()
 
             #print("***")
-            #print('after grouping new state is\n', nw_state)
+            print('after grouping new state is\n', nw_state)
      
-            nw_state = nw_state[nw_state['N']!=0]
-  
+            nw_state = nw_state[nw_state['N']!=0].reset_index(drop=True) #3rd change, this reset index is needed
+            print('remove 0 rows, nw_state is\n', nw_state)
 
-            self.cur_state = nw_state.reset_index(drop=True) #need to reset index befor passing cur_state to next rule
+            self.cur_state = nw_state#.reset_index(drop=True) #above operation resets index befor passing cur_state to next rule
             #if ruleset is not self.rules[-1]: #debug
             #    print('-------next ruleset--------') #debug
             #else: print('for loop ends') #debug
     
       
         self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) ##max deals with new states.
-        #print('final current_state is\n', self.cur_state) #debug
+        print('final current_state is\n', self.cur_state) #debug
         
         # append the new current state to the epidemic history.
         self.full_epi = pd.concat([self.full_epi, self.cur_state]).reset_index(drop=True)
