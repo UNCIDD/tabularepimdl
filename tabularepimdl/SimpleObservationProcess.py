@@ -42,28 +42,28 @@ class SimpleObservationProcess(Rule, BaseModel):
         if stochastic is None:
             stochastic = self.stochastic
 
-        ##first get the states that produce incident observations
-        delta_incobs = current_state.loc[(current_state[self.source_col]==self.source_state) & (current_state[self.obs_col]==self.unobs_state)].copy() #un-observed individuals with source_state
+        ##first get the states that produce incident observations, this portion supports deterministic and stochastic
+        out_of_unobs = current_state.loc[(current_state[self.source_col]==self.source_state) & (current_state[self.obs_col]==self.unobs_state)].copy() #un-observed individuals with source_state
 
         exp_change_rate = np.exp(-dt*self.rate)
         if not stochastic:
             #subtractions
-            delta_incobs["N"] = -delta_incobs["N"] * (1-exp_change_rate)
+            out_of_unobs["N"] = -out_of_unobs["N"] * (1-exp_change_rate)
         else:
-            delta_incobs["N"] = -np.random.binomial(delta_incobs["N"], 1-exp_change_rate)
+            out_of_unobs["N"] = -np.random.binomial(out_of_unobs["N"], 1-exp_change_rate)
             
-        #additions
+        #additions, changes in incobs and prevobs only need deterministic process
         #tmp = delta_incobs.assign(N=-delta_incobs.N)
         #tmp[self.obs_col] = self.incobs_state
-        tmp = delta_incobs.assign(**{self.obs_col: self.incobs_state, "N": -delta_incobs["N"]})
+        into_incobs = out_of_unobs.assign(**{self.obs_col: self.incobs_state, "N": -out_of_unobs["N"]})
         
         #move folks out of current_state incobs state
-        tmp2 = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
-        tmp2["N"] = -tmp2["N"]
+        out_of_incobs = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
+        out_of_incobs["N"] = -out_of_incobs["N"]
 
         #move folks out of the incident state and into the previous state
-        delta_toprev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
-        delta_toprev[self.obs_col] = self.prevobs_state
+        into_prev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
+        into_prev[self.obs_col] = self.prevobs_state
         #if source_state = 'I', then following is true
         #dela_incobs = folks moved out infected and unobserved (-)
         #tmp = folks moved in infected and incident-observed (+)
@@ -71,7 +71,7 @@ class SimpleObservationProcess(Rule, BaseModel):
         #tmp2 = folks moved out incident-observed (-)
         #print('+tmp is\n', tmp)
         #print('-tmp2 is\n', tmp2)
-        return(pd.concat([delta_incobs, tmp, delta_toprev, tmp2]).reset_index(drop=True)) 
+        return(pd.concat([out_of_unobs, into_incobs, out_of_incobs, into_prev]).reset_index(drop=True)) 
 
     def to_yaml(self) -> dict:
         """
