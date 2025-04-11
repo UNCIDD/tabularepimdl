@@ -42,7 +42,13 @@ class SimpleObservationProcess(Rule, BaseModel):
         if stochastic is None:
             stochastic = self.stochastic
 
-        ##first get the states that produce incident observations, this portion supports deterministic and stochastic
+        #variables definition
+        #out_of_unobs: folks moved out unobserved (-)
+        #into_incobs: folks moved in incident-observed (+)
+        #out_of_incobs: folks moved out incident-observed (-)
+        #into_prev: folks moved in previously-observed (+)
+
+        #out_of_unobs supports deterministic and stochastic
         out_of_unobs = current_state.loc[(current_state[self.source_col]==self.source_state) & (current_state[self.obs_col]==self.unobs_state)].copy() #un-observed individuals with source_state
 
         exp_change_rate = np.exp(-dt*self.rate)
@@ -52,9 +58,7 @@ class SimpleObservationProcess(Rule, BaseModel):
         else:
             out_of_unobs["N"] = -np.random.binomial(out_of_unobs["N"], 1-exp_change_rate)
             
-        #additions, changes in incobs and prevobs only need deterministic process
-        #tmp = delta_incobs.assign(N=-delta_incobs.N)
-        #tmp[self.obs_col] = self.incobs_state
+        #additions, changes in in_ and out_ incobs and prevobs only require deterministic process
         into_incobs = out_of_unobs.assign(**{self.obs_col: self.incobs_state, "N": -out_of_unobs["N"]})
         
         #move folks out of current_state incobs state
@@ -64,13 +68,7 @@ class SimpleObservationProcess(Rule, BaseModel):
         #move folks out of the incident state and into the previous state
         into_prev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
         into_prev[self.obs_col] = self.prevobs_state
-        #if source_state = 'I', then following is true
-        #dela_incobs = folks moved out infected and unobserved (-)
-        #tmp = folks moved in infected and incident-observed (+)
-        #delta_toprev = folks moved in previously-observed (+)
-        #tmp2 = folks moved out incident-observed (-)
-        #print('+tmp is\n', tmp)
-        #print('-tmp2 is\n', tmp2)
+        
         return(pd.concat([out_of_unobs, into_incobs, out_of_incobs, into_prev]).reset_index(drop=True)) 
 
     def to_yaml(self) -> dict:
