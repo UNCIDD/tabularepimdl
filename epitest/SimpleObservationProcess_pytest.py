@@ -99,7 +99,7 @@ def test_get_deltas_deterministic(simple_observation, dummy_state):
         'Hosp': ['I'] #obs_col is U
     })
 
-    expected_result = pd.concat([expected_deltas_incobs_of_subtractions, expected_tmp_of_additions, expected_delta_toprev, expected_tmp2])
+    expected_result = pd.concat([expected_deltas_incobs_of_subtractions, expected_tmp_of_additions, expected_tmp2, expected_delta_toprev])
     pd.testing.assert_frame_equal(returned_deltas_and_tmp.reset_index(drop=True), expected_result.reset_index(drop=True))
 
 def test_get_deltas_stochastic(simple_observation, dummy_state):
@@ -134,7 +134,7 @@ def test_get_deltas_stochastic(simple_observation, dummy_state):
                 'Hosp': ['I'] #obs_col is U
             })
 
-            expected_result = pd.concat([expected_deltas_incobs_of_subtractions, expected_tmp_of_additions, expected_delta_toprev, expected_tmp2])
+            expected_result = pd.concat([expected_deltas_incobs_of_subtractions, expected_tmp_of_additions, expected_tmp2, expected_delta_toprev])
             pd.testing.assert_frame_equal(returned_deltas_and_tmp.reset_index(drop=True), expected_result.reset_index(drop=True))
 
 def test_to_yaml(simple_observation):
