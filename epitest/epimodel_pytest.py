@@ -311,9 +311,14 @@ def test_do_timestep_rule_based(epimodel, dt, instantiated_rules, cur_state, sto
         if all_deltas.shape[0]==0:
             continue
 
-        all_deltas = all_deltas.assign(T=0)
+        #all_deltas = all_deltas.assign(T=0)
+        if 'T' in cur_state.columns:
+            pass #if column T exists in the initial cur_state dataframe, do nothing
+        else:
+            all_deltas = all_deltas.assign(T=0.0) #add a new column T with initial value 0 to all_deltas
+            full_epi = full_epi.assign(T=0.0)
 
-        nw_state = pd.concat([cur_state, all_deltas]).reset_index(drop=True) #append all_deltas to cur_state
+        nw_state = pd.concat([cur_state, all_deltas])#.reset_index(drop=True) #append all_deltas to cur_state
     
         # Get grouping columns
         tbr = {'N','T'}
@@ -324,8 +329,9 @@ def test_do_timestep_rule_based(epimodel, dt, instantiated_rules, cur_state, sto
             #question: do we want to use dropna=False option to keep data iterating through the for loop?
             #question: T column values are always assigned with 0, why do we search the max value of T?
     
-        nw_state = nw_state[nw_state['N']!=0]
+        nw_state = nw_state[nw_state['N']!=0].reset_index(drop=True)
         cur_state = nw_state
+        print('test case cur_state is\n', cur_state)
     
     expected_cur_state = cur_state.assign(T=max(cur_state['T'])+dt) #T values are always 0, +dt = 1
     
