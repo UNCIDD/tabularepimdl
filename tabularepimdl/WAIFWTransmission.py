@@ -27,7 +27,7 @@ class WAIFWTransmission(Rule):
         """
 
         super().__init__()
-        self.waifw_matrix = waifw_matrix
+        self.waifw_matrix = np.asarray(waifw_matrix).T #transpose the input matrix
         self.inf_col = inf_col
         self.group_col = group_col
         self.s_st = s_st
@@ -147,7 +147,7 @@ class WAIFWTransmission(Rule):
     def to_yaml(self):
         rc = {
             'tabularepimdl.WAIFWTransmission' : {
-                'waifw_matrix' : self.waifw_matrix,
+                'waifw_matrix' : self.waifw_matrix.T, #when write rule waifw matrix to yaml file, should it be transposed back as initial order?
                 'inf_col' : self.inf_col,
                 'group_col' : self.group_col,
                 's_st': self.s_st,
