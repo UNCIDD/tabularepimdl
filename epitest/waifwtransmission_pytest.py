@@ -11,7 +11,6 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-import os
 import sys
 sys.path.append('../')
 from tabularepimdl.WAIFWTransmission import WAIFWTransmission
@@ -52,7 +51,7 @@ def test_initialization(waifw_transmission):
     Test the initialization of the WAIFWTransmission object.
     Args: waifw_transmission object.
     """
-    assert (waifw_transmission.waifw_matrix == np.array([[0.1, 0.2], [0.3, 0.4]])).all()
+    assert (waifw_transmission.waifw_matrix == np.array([[0.1, 0.3], [0.2, 0.4]])).all() #initial waifw_matrix is transposed within WAIFW rule
     assert waifw_transmission.inf_col == 'Infection_State'
     assert waifw_transmission.group_col == 'Age_Group'
     assert waifw_transmission.s_st == 'S'
@@ -111,11 +110,11 @@ def test_probablity_of_infection_calculation(waifw_transmission, dummy_state, du
     prI = 1-prI.prod(axis=1) #axis=1 makes column-elements multiply
 
     expected_inf_array = np.array([5, 10])
-    expected_prI = np.power(np.exp(-1.0*dummy_waifw_matrix), expected_inf_array)
+    expected_prI = np.power(np.exp(-1.0*dummy_waifw_matrix.T), expected_inf_array) #transpose dummy_waifw_matrix as waifw_matrix is transposed within WAIFW rule
     expected_prI = 1-expected_prI.prod(axis=1)
 
-    assert (prI == expected_prI).all() #array([0.917915  , 0.99591323]), these output values are rounded floating numbers
-    #actual values are 0.9179150013761013 , 0.995913228561536
+    assert (prI == expected_prI).all() #array([0.96980262, 0.99326205]), these output values are rounded floating numbers
+    
 
 def test_deltas_calculation(waifw_transmission, dummy_state):
     """
@@ -146,9 +145,9 @@ def test_get_deltas_deterministic(waifw_transmission, dummy_state, dummy_waifw_m
     })
 
     expected_inf_array = np.array([5, 10])
-    prI_calc = np.power(np.exp(-1.0*dummy_waifw_matrix), expected_inf_array)
+    prI_calc = np.power(np.exp(-1.0*dummy_waifw_matrix.T), expected_inf_array)#transpose dummy_waifw_matrix as waifw_matrix is transposed within WAIFW rule
     prI_calc = 1-prI_calc.prod(axis=1)
-    prI_rounded = np.array([0.917915, 0.99591323])#rounded result from test_probablity_of_infection_calculation
+    prI_rounded = np.array([0.96980262, 0.99326205])#rounded result from test_probablity_of_infection_calculation
     
     #check prI calculated values
     assert(abs(prI_calc - prI_rounded) < 1e-8).all() #method1: if diff is less than 1e-8 magnitude, then pass
@@ -156,17 +155,17 @@ def test_get_deltas_deterministic(waifw_transmission, dummy_state, dummy_waifw_m
     #check prI indexed values
     prI_indexed = prI_calc[filtered_deltas['Age_Group'].cat.codes] #codes should be 0 and 1 now
     #assert(abs(prI_indexed - prI_rounded) < 1e-8).all() #if diff is less than 1e-8 magnitude, then pass
-    assert (prI_indexed == np.array([0.9179150013761013 , 0.995913228561536])).all() #method2: use actual values to compare with programmatic values
+    assert (prI_indexed == np.array([0.9698026165776815, 0.9932620530009145])).all() #method2: use actual values to compare with programmatic values
     
     #generate expected deltas value with filtered deltas value and actual prI values
     expected_deltas = pd.DataFrame({
-        'N': [-50, -40]*np.array([0.9179150013761013 , 0.995913228561536]),
+        'N': [-50, -40]*np.array([0.9698026165776815, 0.9932620530009145]),
         'Infection_State': ['S', 'S'], #links to inf_col
         'Age_Group': pd.Categorical(['youth', 'adult'], categories=['youth', 'adult']) #links to group_col
     })
 
     expected_deltas_add = pd.DataFrame({
-        'N': [50, 40]*np.array([0.9179150013761013 , 0.995913228561536]),
+        'N': [50, 40]*np.array([0.9698026165776815, 0.9932620530009145]),
         'Infection_State': ['I', 'I'], #links to inf_col
         'Age_Group': pd.Categorical(['youth', 'adult'], categories=['youth', 'adult']) #links to group_col
     })
