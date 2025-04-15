@@ -83,10 +83,10 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
             betas = self.betas
 
         ##get number infectious of each type
-        print('Multistrain, current_state is\n', current_state)#debug
+        #print('Multistrain, current_state is\n', current_state)#debug
         infectious = ((current_state[self.columns] == self.i_st).multiply(current_state["N"], axis=0)).sum(axis=0) #when no value 'I' exists in columns, infectious values are all zeros
         infectious = np.array(infectious)
-        print('infectious value: ', infectious) #debug
+        #print('infectious value: ', infectious) #debug
         if sum(infectious)==0: #there are cases that infecious==0
             return None
         
@@ -101,7 +101,7 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         recovered_mask = (current_state[self.columns] == self.r_st).values #extract R folks only from each strain column
         row_beta_mult = 1 - np.max(recovered_mask[:, np.newaxis] * self.cross_protect, axis=2)
         row_beta_mult = pd.DataFrame(row_beta_mult)
-        print('row beta mult is\n', row_beta_mult) #debug
+        #print('row beta mult is\n', row_beta_mult) #debug
         #now we turn that into a strain specific probablity of infection
 
         ## This line does a few things:
@@ -109,7 +109,7 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         #   - it makes the FOI 0 for folks when folks are not susceptible to a strain
         
         row_beta = (row_beta_mult * betas * (current_state[self.columns]==self.s_st).values)
-        print('row beta before is\n ', row_beta) #debug
+        #print('row beta before is\n ', row_beta) #debug
         # This makes the probablity of infectoin 0 when folks are infected with a different strain...
         # i.e., no coinfections!
         # Maybe slightly problematic given the strong assumption of only being infected with 1 strain...max() is better.
@@ -117,12 +117,12 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         #    1-(current_state[self.columns] == self.i_st).max(axis=1), axis=0 #changed sum() to max() to make sure only one strain stands out
         #    ) #original code
         row_beta = row_beta * (1 - np.max((current_state[self.columns] == self.i_st).values, axis=1))[:, np.newaxis]
-        print('row beta after is\n ', row_beta) #debug
+        #print('row beta after is\n ', row_beta) #debug
         #prI = 1-(np.exp(-dt*row_beta)).apply(lambda x: np.power(x, infectious), axis=1) #original code
         prI = 1 - np.power(np.exp(-dt * row_beta.values), infectious)
         prI = pd.DataFrame(prI)
-        print('prI is\n', prI) #debug
-        print('current state is\n', current_state)
+        #print('prI is\n', prI) #debug
+        #print('current state is\n', current_state) #debug
         #deltas can only happen to rows where we have and FOI>1
         deltas =  current_state.loc[prI.sum(axis=1)>0].copy() 
         
@@ -146,7 +146,7 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
             N_index = deltas.columns.get_loc("N")
             #multinomial draw for each delta and create the appropriate deltas.
             for i in range(prI.shape[0]):
-                tmp = np.random.multinomial(deltas['N'].iloc[i], np.append(prI.iloc[i].values,[0]))
+                tmp = np.random.multinomial(deltas["N"].iloc[i], np.append(prI.iloc[i].values,[0]))
                 #print("tmp is\n", tmp) #debug
                 deltas.iloc[i,N_index] = -tmp[:-1].sum()
                 #print('detla is\n', deltas) #debug
@@ -158,8 +158,8 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
             deltas = deltas#.reset_index(drop=True)
 
         
-        deltas = deltas[deltas['N']!=0].reset_index(drop=True)
-        print('multirule final delta is\n', deltas) #debug
+        deltas = deltas[deltas["N"]!=0].reset_index(drop=True)
+        #print('multirule final delta is\n', deltas) #debug
         return deltas
 
 
