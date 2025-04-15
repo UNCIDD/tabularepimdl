@@ -129,10 +129,10 @@ class EpiModel:
         for ruleset in self.rules:
             all_deltas = pd.DataFrame()
             for rule in ruleset:
-                print('current rule is\n', rule) #debug
+                #print('current rule is\n', rule) #debug
                 if self.stoch_policy == "rule_based":
                     nw_deltas = rule.get_deltas(self.cur_state, dt=dt)
-                    print('nw_delta is\n', nw_deltas) #debug
+                    #print('nw_delta is\n', nw_deltas) #debug
                     
                 else:
                     nw_deltas = rule.get_deltas(self.cur_state, dt=dt, stochastic= (self.stoch_policy=="stochastic"))
@@ -141,8 +141,8 @@ class EpiModel:
                 if nw_deltas is None or nw_deltas.empty: #fix of question: there are cases returned nw_deltas is None or empty, adding if-else here to avoid Future warnings
                     all_deltas = all_deltas
                 else: 
-                    all_deltas = pd.concat([all_deltas, nw_deltas])#.reset_index(drop=True) #add reset index before passing 
-                print('all_deltas is\n', all_deltas) #debug
+                    all_deltas = pd.concat([all_deltas, nw_deltas]) #add reset index before passing 
+                #print('all_deltas is\n', all_deltas) #debug
                 #if rule is not ruleset[-1]: #debug
                 #    print('---next rule---') #debug
                 #else: print('moving on') #debug
@@ -163,7 +163,7 @@ class EpiModel:
             
             #append all deltas
             nw_state = pd.concat([self.cur_state, all_deltas])#.reset_index(drop=True) #1st change, confirmed this reset_index is not needed for MultiStrainSI 
-            print('before grouping nw_state is\n', nw_state) #debug
+            #print('before grouping nw_state is\n', nw_state) #debug
 
             # Get grouping columns
             tbr = {'N','T'}
@@ -181,10 +181,10 @@ class EpiModel:
                 #nw_state = nw_state.groupby(gp_cols,observed=True).sum(numeric_only=False).reset_index()
 
             #print("***")
-            print('after grouping new state is\n', nw_state)
+            #print('after grouping new state is\n', nw_state)
      
-            nw_state = nw_state[nw_state['N']!=0].reset_index(drop=True) #3rd change, this reset index is needed
-            print('remove 0 rows, nw_state is\n', nw_state)
+            nw_state = nw_state[nw_state["N"]!=0].reset_index(drop=True) #3rd change, this reset index is needed
+            #print('remove 0 rows, nw_state is\n', nw_state)
 
             self.cur_state = nw_state#.reset_index(drop=True) #above operation resets index befor passing cur_state to next rule
             #if ruleset is not self.rules[-1]: #debug
@@ -193,7 +193,7 @@ class EpiModel:
     
       
         self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) ##max deals with new states.
-        print('final current_state is\n', self.cur_state) #debug
+        #print('final current_state is\n', self.cur_state) #debug
         
         # append the new current state to the epidemic history.
         self.full_epi = pd.concat([self.full_epi, self.cur_state]).reset_index(drop=True)
