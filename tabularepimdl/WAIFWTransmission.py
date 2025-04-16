@@ -95,7 +95,6 @@ class WAIFWTransmission(Rule):
 
         ##create an array for the total number of infections in each unique group. Only records with i_st are sumed, other records's N are filled with 0.
         #inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col, observed=False)['N'].sum(numeric_only=True).values #moved ['N'] position #groupby approach
-        #inf_array = np.bincount(current_state.loc[current_state[self.inf_col]==self.i_st, self.group_col].cat.codes, current_state.loc[current_state[self.inf_col]==self.i_st, "N"], minlength=len(current_state[self.group_col].cat.categories)) #np.bincount approach
         
         num_of_categories = len(current_state[self.group_col].cat.categories)
         present_category_codes = current_state[self.group_col].cat.codes.to_numpy()
@@ -107,15 +106,9 @@ class WAIFWTransmission(Rule):
 
         #print('inf_array is\n', inf_array) #debug
 
-        #get the probability of being infected in each unique group
-        #print('-dt*matrix\n', -dt*self.waifw_matrix)
-        #print('exponential\n', np.exp(-dt*self.waifw_matrix))
-        
-        #prI = np.power(np.exp(-dt*self.waifw_matrix), inf_array) #whole matrix multiplication approach
-        #print('powered prI is\n', prI) #debug
+        #prI = np.power(np.exp(-dt*self.waifw_matrix), inf_array)
         #prI = 1-prI.prod(axis=1)
-        #print('1-prI prod\n', prI) #debug
-
+        
         prI = self.compute_prI(self.waifw_matrix, inf_array, dt) #numba approach
 
 
@@ -134,13 +127,10 @@ class WAIFWTransmission(Rule):
         else:
             deltas["N"] = -np.random.binomial(deltas["N"], prI_per_group)
 
-        #print('deltas after infection process:\n', deltas)
-        #deltas_add = deltas.assign(N=-deltas['N'])
-        #deltas_add[self.inf_col] = self.inf_to
         deltas_add = deltas.assign(**{self.inf_col: self.inf_to, "N": -deltas["N"]})
         
         rc = pd.concat([deltas,deltas_add])
-        return rc.loc[rc["N"] != 0].reset_index(drop=True) #reset index for the new dataframe
+        return rc.loc[rc["N"] != 0].reset_index(drop=True)
     
     
     
@@ -157,7 +147,7 @@ class WAIFWTransmission(Rule):
             }
         }
         
-        return rc #added return operation
+        return rc
 
 
     
