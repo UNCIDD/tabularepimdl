@@ -16,13 +16,14 @@ class SimpleTransition(Rule):
         @param rate: transition rate per unit time.
         @param stochastic: whether the transition is stochastic or deterministic.
         """
-
+        #print('ST rule intitalization begins.')
         super().__init__()
         self.column = column
         self.from_st = from_st
         self.to_st = to_st
         self.rate = rate
         self.stochastic = stochastic
+        #print('ST rule intitalization ends.')
 
     def get_deltas(self, current_state: pd.DataFrame, dt=1.0, stochastic=None):
         """
@@ -39,11 +40,13 @@ class SimpleTransition(Rule):
             
         deltas = current_state.loc[current_state[self.column]==self.from_st].copy()
         #print('st rule\n') #debug
-        print('st\'s begin current_state is\n', current_state) #debug
+        #print('st\'s begin current_state is\n', current_state) #debug
         if not stochastic:
             #subtractions
+            #print('deterministic')
             deltas["N"] = -deltas["N"] * (1-np.exp(-dt*self.rate))
         else:
+            #print('stochastic')
             deltas["N"] = -np.random.binomial(deltas["N"], 1-np.exp(-dt*self.rate))
         
 
@@ -52,11 +55,11 @@ class SimpleTransition(Rule):
         tmp["N"] = -deltas["N"]
         tmp[self.column] = self.to_st
 
-        print('st-rule exit delta is\n', pd.concat([deltas, tmp]).reset_index(drop=True)) #debug
+        #print('st-rule exit delta is\n', pd.concat([deltas, tmp]).reset_index(drop=True)) #debug
         return pd.concat([deltas, tmp]).reset_index(drop=True)
     
     def __str__(self) -> str:
-        return "{} --> {} at rate {}".format(self.from_st, self.to_st, self.rate)
+        return "Simple Transtion state {} --> {} at rate {}".format(self.from_st, self.to_st, self.rate)
     
     def to_yaml(self):
         rc = {
