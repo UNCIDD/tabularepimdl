@@ -2,38 +2,47 @@ from tabularepimdl.Rule import Rule
 import numpy as np
 import pandas as pd
 from numba import njit
+from pydantic import BaseModel, field_validator, ValidationInfo, ConfigDict
 
 
-
-class WAIFWTransmission(Rule):
+class WAIFWTransmission(Rule, BaseModel):
     """!
     Rule that does transmission based on a simple WAIFW transmission matrix."""
 
-    
+    #def __init__(self, waifw_matrix, inf_col, group_col, s_st="S", i_st="I", inf_to="I", stochastic=False) -> None:
+    """!Initialization.
+    @param waifw_martrix: the waifw transmission rate matrix, a square matrix is required.
+    @param inf_col: the column for this infectious process.
+    @param group_col: the column where group is specified. The number of possible unique values in the column should match the waifw matrix size,
+     and the unique values should have an order (i.e., it should be a pd.categorical).
+    @param s_st: the state for susceptibles, assumed to be S.
+    @param i_st: the state for infectious, assumed to be I.
+    @param inf_to: the state infectious folks go to, assumed to be I.
+    @param stochastic: whether the process is stochastic or deterministic.
+    @param freq_dep: whether this model is a frequency dependent model.
+    """
 
-    def __init__(self, waifw_matrix, inf_col, group_col, s_st="S", i_st="I", inf_to="I", stochastic=False) -> None:
-        ##TODO: Add a frequency dependent flag?
-        """!Initialization.
-        @param waifw_martrix: the waifw matrix
-        @param inf_col: the column for this infectious process
-        @param group_col: the column where group is specified. Should have the same number of
-            possible unique values as the beta matrix, and they should have an order (i.e., it 
-            should be a pd.categorical)
-        @param s_st: the state for susceptibles, assumed to be S
-        @param i_st: the state for infectious, assumed to be I
-        @param inf_to: the state infectious folks go to, assumed to be I
-        @param freq_dep: is this a frequency dependent model
-        @param stochastic: is this rule stochastic
-        """
+    # Pydantic Configuration
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        super().__init__()
-        self.waifw_matrix = np.asarray(waifw_matrix).T #transpose the input matrix
-        self.inf_col = inf_col
-        self.group_col = group_col
-        self.s_st = s_st
-        self.i_st = i_st
-        self.inf_to = inf_to
-        self.stochastic = stochastic
+    waifw_matrix: np.ndarray
+    inf_col: str
+    group_col: str
+    s_st: str = "S"
+    i_st: str = "I"
+    inf_to: str = "I"
+    stochastic: bool = False
+
+    @field_validator("waifw_matrix", mode="before") #validate array type and its element sign
+    @classmethod
+    def validate_waifw_matrix(cls, matrix_parameters, field: ValidationInfo):
+        """Ensure the input matrix is a NumPy array and all elements are non-negative values."""
+        if not isinstance(matrix_parameters, np.ndarray):
+            raise ValueError(f"{cls.__name__} expects a NumPy array for {field.field_name}, got {type(matrix_parameters)}")
+        
+        if np.any(matrix_parameters < 0):
+            raise ValueError(f"All elements in {field.field_name} must be non-negative, but got {matrix_parameters}.")
+        return matrix_parameters.T #transpose the input matrix
     
     @staticmethod    
     @njit
