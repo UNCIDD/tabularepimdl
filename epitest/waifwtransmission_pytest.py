@@ -59,6 +59,18 @@ def test_initialization(waifw_transmission):
     assert waifw_transmission.inf_to == 'I'
     assert waifw_transmission.stochastic == False
 
+def test_intialization_error_handling():
+    """
+    Test the error handling for input matrix parameters. Set the following parameters with incorrect values or format in the way to trigger ValueError.
+    If setting the correct values and format with commented out data, the test will fail with message "Failed: DID NOT RAISE <class 'ValueError'>"
+    """
+    check_matrix = np.array([0.1, -0.2]) #np.array([0.1, 0.05])
+    check_inf_col = 3 #"Infection_State"
+    check_group_col = ['A', 'B', 'C'] #"Host"
+
+    with pytest.raises(ValueError) as excinfo:
+        WAIFWTransmission(waifw_matrix=check_matrix, inf_col=check_inf_col, group_col=check_group_col)
+
 def test_len_of_categories_match_len_of_waifw(waifw_transmission):
     """
     Test the number of unique categories in current_state's group_col match the waifw matrix's length.
