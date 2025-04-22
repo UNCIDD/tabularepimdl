@@ -36,7 +36,7 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
     @field_validator("betas", "cross_protect", mode="before") #validate array type and its element sign
     @classmethod
     def validate_numpy_array(cls, array_parameters, field: ValidationInfo):
-        """Ensure the input is a NumPy array."""
+        """Ensure the input is a NumPy array and all elements are non-negative values."""
         if not isinstance(array_parameters, np.ndarray):
             raise ValueError(f"{cls.__name__} expects a NumPy array for {field.field_name}, got {type(array_parameters)}")
         
