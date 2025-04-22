@@ -3,7 +3,7 @@ from tabularepimdl.WithFilters import WithFilters
 
 class FilteredSimpleInfection(WithFilters, SimpleInfection):
     """A version of SimpleInfection that supports filtering."""
-    def __init__(self, beta, column, s_st, i_st, inf_to, filter_column=None, filter_value=None, stochastic=False):
-        #initialize the filter and the rule that applies the filter
-        super().__init__(filter_column=filter_column, filter_value=filter_value, beta=beta, column=column, s_st=s_st, i_st=i_st, inf_to=inf_to, stochastic=stochastic)
+    #def __init__(self, beta, column, s_st, i_st, inf_to, filter_column=None, filter_value=None, stochastic=False):
+    filter_column: str | None = None #subclass attribute for filter
+    filter_value: list[str] | None = None #subclass attribute for filter
        
