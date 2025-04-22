@@ -1,7 +1,5 @@
 from tabularepimdl.SimpleTransition import SimpleTransition
 from tabularepimdl.WithFilters import WithFilters
-from pydantic import BaseModel, Field
-from typing import Annotated
 
 class FilteredSimpleTransition(WithFilters, SimpleTransition):
 
