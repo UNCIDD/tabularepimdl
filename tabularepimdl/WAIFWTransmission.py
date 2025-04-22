@@ -143,7 +143,10 @@ class WAIFWTransmission(Rule, BaseModel):
     
     
     
-    def to_yaml(self):
+    def to_yaml(self) -> dict:
+        """
+        return the rule's attributes to a dictionary.
+        """
         rc = {
             'tabularepimdl.WAIFWTransmission' : {
                 'waifw_matrix' : self.waifw_matrix.T, #when write rule waifw matrix to yaml file, should it be transposed back as initial order?
