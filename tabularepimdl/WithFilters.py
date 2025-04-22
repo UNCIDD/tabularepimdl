@@ -3,19 +3,21 @@ import pandas as pd
 class WithFilters():
     """Mixin class to add filtering capability to other rules."""
     
-    def __init__(self, filter_column:str = None, filter_value: list[str] = None, *args, **kwargs) -> None: #allows the filter to accept extra arguments for other rules
-        """
-        Initialization.
-        @para filter_column: name of the column in dataframe this filter applies to.
-        @para filter_value: values of the filter_column.
-        @para *args: other positional arguments this filter may take for other rules.
-        @para **kwargs: other keyword arguments this filter may take for other rules.
-        """
-        #print('start init of withFilters')
-        self.filter_column = filter_column
-        self.filter_value = filter_value
+    #def __init__(self, filter_column:str = None, filter_value: list[str] = None, *args, **kwargs) -> None: #allows the filter to accept extra arguments for other rules
+    """
+    Initialization.
+    @para filter_column: name of the column in dataframe this filter applies to.
+    @para filter_value: values of the filter_column.
+    @para *args: other positional arguments this filter may take for other rules.
+    @para **kwargs: other keyword arguments this filter may take for other rules.
+    """
+    print('start init of withFilters')
+        #self.filter_column = filter_column
+        #self.filter_value = filter_value
         #print('next go to SimpleTransition to init')
-        super().__init__(*args, **kwargs)
+        #super().__init__(*args, **kwargs)
+    #filter_column: str | None = None #can remove it as long as it is used with other pydantic class
+    #filter_value: list[str] | None = None #can remove it as long as it is used with other pydantic class
         
     def filter_data(self, current_state: pd.DataFrame) -> pd.DataFrame:
         """
