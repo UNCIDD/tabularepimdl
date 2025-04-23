@@ -4,6 +4,11 @@ from tabularepimdl.Rule import Rule
 
 
 class SharedTraitInfection_MultiBeta(Rule):
+    """
+    This rule is derived from SharedTraitInfection rule. This rule allows each trait has their own
+    unique in_beta value and different traits have different between-trait out_beta values.
+    The in_beta and out_beta are defined with dictionary format for now.
+    """
 
     def __init__(self, in_beta: dict[str, float], out_beta: dict[str, float],
                  inf_col: str, trait_col: str, s_st="S", i_st="I",
