@@ -105,7 +105,7 @@ class EpiModel(BaseModel):
             for i in range(len(ruleset)):
                 ruleset[i] = Rule.from_yaml(ruleset[i])
 
-        return cls(init_state, rules, stoch_policy)
+        return cls(init_state=init_state, rules=rules, stoch_policy=stoch_policy)
     
     def to_yaml(self, save_epi = False, save_state=False)->dict:
         '''! Creates a dictionary object appropriate to be saved to YAML for this EpiModel.
