@@ -1,51 +1,75 @@
 import pandas as pd
 import copy
 from tabularepimdl.Rule import Rule
+from pydantic import BaseModel, field_validator, ValidationInfo, ConfigDict
+from typing import List, Optional
 
-
-class EpiModel:
+class EpiModel(BaseModel):
     """! Class that that applies a list of rules to a changing current state through 
-    some number of time steps to produce an epidemic. It has attributes representing the current
-    state and the full epidemic thus far
+    some number of time steps to produce an epidemic. It has attributes representing the initial state,
+    current state and the full epidemic thus far.
 
-    @param cur_state, a data frame (at the moment) w/ the current epidemic state
-    @param full_epi, full epidemic history
+    @param init_state: a data frame with the initial epidemic state. Must have at minimum columns T and N.
+    @param cur_state: a data frame (at the moment) with the current epidemic state.
+    @param full_epi: a data frame contains full epidemic history.
+    @param rules: a list of epidemic rules that will represent the epidemic process. Must be a list of lists.
+    @param stoch_policy: whether the entire epidemic process is rule based or centralized with either deterministic or stochastic.
     """
+    
+    #def __init__(self, init_state, rules:list, stoch_policy = "rule_based") -> None:
+    # Pydantic Configuration
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     init_state: pd.DataFrame
-    cur_state: pd.DataFrame
-    full_epi: pd.DataFrame
-    rules: list
-    stoch_policy: str
+    cur_state: Optional[pd.DataFrame] = None
+    full_epi: Optional[pd.DataFrame] = None
+    rules: List[List[Rule]]
+    stoch_policy: str = "rule_based"
     
-    ##TODO: Add a precision option
-    ##TODO: decide if we want to make it possible to add rules dynamically
+    
+    @field_validator("init_state", mode="before")
+    @classmethod
+    def validate_init_state(cls, initial_state): #check if init_state is a DataFrame
+        if not isinstance(initial_state, pd.DataFrame):
+            raise TypeError(f"Expected a DataFrame, but got {type(initial_state).__name__} instead.")
+        required_cols = {"T", "N"}
+        missing = required_cols - set(initial_state.columns)
+        if missing:
+            raise ValueError(f"init_state is missing required columns: {missing}")
+        return initial_state
+    
+    @field_validator("rules", mode="before")
+    @classmethod
+    def validate_rules_list(cls, rules): #check if the rules is a list or list of lists
+        # Step 1: Wrap single Rule instance
+        if isinstance(rules, Rule):
+            return [[rules]]
 
-    def __init__(self, init_state, rules:list, stoch_policy = "rule_based") -> None:
-        """! Initialize with a initial state and set of rules.
+        # Step 2: Ensure input is list-like
+        if not isinstance(rules, list):
+            raise TypeError("rules must be a Rule instance or a list (or list of lists).")
         
-        Question: should their be a default for those as NULL
-        
-        @param init_state the initial state. Must have at minimum columns T and N
-        @param rules the initial set of rules. Can either be a list of list of lists.
-        @param stoch_policy how should stochasticity be determined. If "rule_based" we
-           revert to the rule, if "deterministic" we force deterministic and if 
-           "stochastic" we force stochastic"""
-        #check if init_state is a DataFrame
-        if not isinstance(init_state, pd.DataFrame):
-            raise TypeError(f"Expected a DataFrame, but got {type(init_state).__name__} instead.")
+        normalized = []
+        for item in rules:
+            if isinstance(item, Rule):
+                # Single rule instance: wrap it
+                normalized.append([item])
+            elif isinstance(item, list):
+                # Sublist: validate contents
+                if not all(isinstance(subitem, Rule) for subitem in item):
+                    raise TypeError("All elements in rule sublists must be instances of Rule.")
+                normalized.append(item)
+            else:
+                raise TypeError("Each item in rules must be a Rule or a list of Rule instances.")
 
-        self.init_state = init_state #for the TBI reset function
-        self.cur_state = init_state
-        self.full_epi = init_state #the full epidemic is just the current state
-
-        if isinstance(rules[0],list):
-            self.rules = rules
-        else:
-            self.rules = [rules]
+        return normalized
             
-        self.stoch_policy=stoch_policy
         
+    def model_post_init(self, __context):
+        if self.cur_state is None:
+            self.cur_state = copy.deepcopy(self.init_state)
+        if self.full_epi is None:
+            self.full_epi = copy.deepcopy(self.init_state)    
 
     def reset(self):
         '''! Resets the class state to have the initial state, etc. 
