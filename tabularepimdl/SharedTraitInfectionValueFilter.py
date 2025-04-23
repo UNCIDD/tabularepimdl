@@ -4,6 +4,10 @@ from tabularepimdl.Rule import Rule
 
 
 class SharedTraitInfectionValueFilter(Rule):
+    """
+    This rule filters designated trait value in a population and applies shared trait rule on
+    filtered trait value.
+    """
 
     def __init__(self,in_beta:float, out_beta:float,
                  inf_col, trait_col, trait_value, s_st="S", i_st="I",
