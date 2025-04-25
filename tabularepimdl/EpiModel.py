@@ -1,7 +1,7 @@
 import pandas as pd
 import copy
 from tabularepimdl.Rule import Rule
-from pydantic import BaseModel, field_validator, ValidationInfo, ConfigDict
+from pydantic import BaseModel, field_validator, ConfigDict
 from typing import List, Optional
 
 class EpiModel(BaseModel):
@@ -29,33 +29,31 @@ class EpiModel(BaseModel):
     
     @field_validator("init_state", mode="before")
     @classmethod
-    def validate_init_state(cls, initial_state): #check if init_state is a DataFrame
-        if not isinstance(initial_state, pd.DataFrame):
+    def validate_init_state(cls, initial_state): 
+        if not isinstance(initial_state, pd.DataFrame): #check if init_state is a dataFrame
             raise TypeError(f"Expected a DataFrame, but got {type(initial_state).__name__} instead.")
         required_cols = {"T", "N"}
         missing = required_cols - set(initial_state.columns)
-        if missing:
+        if missing: #check if column T and N are in the dataframe
             raise ValueError(f"init_state is missing required columns: {missing}")
         return initial_state
     
     @field_validator("rules", mode="before")
     @classmethod
-    def validate_rules_list(cls, rules): #check if the rules is a list or list of lists
+    def validate_rules_list(cls, input_rules): #check if the rules is a list or list of lists
         # Step 1: Wrap single Rule instance
-        if isinstance(rules, Rule):
-            return [[rules]]
+        if isinstance(input_rules, Rule):
+            return [[input_rules]]
 
         # Step 2: Ensure input is list-like
-        if not isinstance(rules, list):
+        if not isinstance(input_rules, list):
             raise TypeError("rules must be a Rule instance or a list (or list of lists).")
         
         normalized = []
-        for item in rules:
+        for item in input_rules:
             if isinstance(item, Rule):
-                # Single rule instance: wrap it
-                normalized.append([item])
-            elif isinstance(item, list):
-                # Sublist: validate contents
+                normalized.append([item]) #Single rule instance: wrap it in list
+            elif isinstance(item, list): # Sublist: validate contents
                 if not all(isinstance(subitem, Rule) for subitem in item):
                     raise TypeError("All elements in rule sublists must be instances of Rule.")
                 normalized.append(item)
@@ -65,17 +63,17 @@ class EpiModel(BaseModel):
         return normalized
             
         
-    def model_post_init(self, __context):
+    def model_post_init(self, _):
         if self.cur_state is None:
             self.cur_state = copy.deepcopy(self.init_state)
         if self.full_epi is None:
             self.full_epi = copy.deepcopy(self.init_state)    
 
     def reset(self):
-        '''! Resets the class state to have the initial state, etc. 
+        '''! Resets the class state to have the initial state. 
              note that this will lose all of the information on the epidemic run so far'''
-        self.cur_state = self.init_state.copy()
-        self.full_epi = self.init_state.copy()
+        self.cur_state = self.init_state.copy(deep=True)
+        self.full_epi = self.init_state.copy(deep=True)
         return(self.cur_state, self.full_epi)
 
     @classmethod
@@ -105,7 +103,7 @@ class EpiModel(BaseModel):
             for i in range(len(ruleset)):
                 ruleset[i] = Rule.from_yaml(ruleset[i])
 
-        return cls(init_state=init_state, rules=rules, stoch_policy=stoch_policy)
+        return cls(init_state=init_state, rules=rules, stoch_policy=stoch_policy) #keyword is required when returning a class object
     
     def to_yaml(self, save_epi = False, save_state=False)->dict:
         '''! Creates a dictionary object appropriate to be saved to YAML for this EpiModel.
