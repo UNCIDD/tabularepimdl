@@ -8,10 +8,7 @@ deterministic and stochastic scenarios.
 import pytest
 import pandas as pd
 import numpy as np
-from unittest import mock #used for mocking binomial distribution
-import copy
 
-import os
 import sys
 sys.path.append('../')
 from tabularepimdl.Rule import Rule
@@ -34,7 +31,7 @@ def init_state():
     'Age_Group': pd.Categorical(['youth', 'adult'], categories=['youth', 'adult']) #links to group_col of WAIFWTransmission, need to designate the order of categories
     }
     return(pd.DataFrame(init_state))
-
+    
 @pytest.fixture
 def cur_state(init_state):
     """
