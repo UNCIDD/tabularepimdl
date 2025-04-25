@@ -17,13 +17,13 @@ class SimpleTransition(Rule, BaseModel):
     @param rate: transition rate per unit time.
     @param stochastic: whether the process is stochastic or deterministic.
     """
-    print('start init simpletransition')
+    #print('start init simpletransition')
     column: str
     from_st: str
     to_st: str
     rate: Annotated[int | float, Field(ge=0)]
     stochastic: bool = False
-    print('end simple transition init')
+    #print('end simple transition init')
 
     def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
         """

@@ -11,7 +11,7 @@ class WithFilters():
     @para *args: other positional arguments this filter may take for other rules.
     @para **kwargs: other keyword arguments this filter may take for other rules.
     """
-    print('start init of withFilters')
+    #print('start init of withFilters')
         #self.filter_column = filter_column
         #self.filter_value = filter_value
         #print('next go to SimpleTransition to init')
