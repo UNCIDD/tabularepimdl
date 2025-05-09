@@ -39,8 +39,8 @@ class SimpleTransition(Rule, BaseModel):
             stochastic = self.stochastic
             
         deltas = current_state.loc[current_state[self.column]==self.from_st].copy()
-        #print('st rule\n') #debug
-        #print('st\'s current_state is\n', current_state) #debug
+        print('st rule\n') #debug
+        print('st\'s current_state is\n', current_state) #debug
         if not stochastic:
             #subtractions
             deltas["N"] = -deltas["N"] * (1 - np.exp(-dt*self.rate))
