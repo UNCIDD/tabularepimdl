@@ -25,7 +25,7 @@ def init_state():
     Returns: DataFrame containing population counts, their infection states and age groups.
     """
     init_state = {
-    'T': [0, 0], #column T might not be needed in initial state setup, it will be added in do_timestep method
+    'T': [0, 0],
     'N': [100, 200],
     'Infection_State': ['S', 'I'],
     'Age_Group': pd.Categorical(['youth', 'adult'], categories=['youth', 'adult']) #links to group_col of WAIFWTransmission, need to designate the order of categories
@@ -64,7 +64,7 @@ def instantiated_rules():
     waifw_transmission = WAIFWTransmission(waifw_matrix= np.array([[0.1, 0.2], [0.3, 0.4]]), inf_col='Infection_State', group_col='Age_Group', s_st='S', i_st='I', inf_to='I', stochastic=False)
 
     #put the rules to a list of lists. It will be used in __init__ method and to_yaml method of EpiModel
-    instantiated_rules = [ [birth_process, simple_infection], [simple_transition], [birth_process, waifw_transmission] ]
+    instantiated_rules = [ [birth_process, simple_infection], [simple_transition], [birth_process, waifw_transmission] ] #[ [b_p, s_i], [s_t], [b_p, w_t] ]
     return(instantiated_rules)
 
 @pytest.fixture
@@ -225,8 +225,19 @@ def test_from_yaml(epimodel, epi_yaml, init_state, b_p, s_i, s_t, w_t):
     """
     #create an instance of EpiModel by using the data defined in epi_yaml dictionary
     #this EpiModel instance contains init_state dataframe, a list of list which contains different rule objects and, and stochastic policy string
-    returned_class_from_yaml = epimodel.from_yaml(epi_yaml)
 
+    #print('before taking rule_yaml, the initial epimodel rules are\n', epimodel.rules) #rules: [ [b_p, s_i], [s_t], [b_p, w_t] ]
+    #returned_class_from_yaml = epimodel.from_yaml(epi_yaml) #the epi_yaml will not re-config the rules in epimodel, just a new model is created
+    returned_class_from_yaml = EpiModel.from_yaml(epi_yaml) #better use the class iteself to create a new model
+    #epimodel = epimodel.from_yaml(epi_yaml) #epi_yaml will re-config the rules in epimodel, now epimodel's rules are: [ [b_p], [s_i], [s_t], [w_t] ]
+    #print('after taking rule_yaml, the epimodel rules are\n', epimodel.rules)
+
+    #print('returned class rules from yaml is: ', returned_class_from_yaml.rules) #debug to check the returned rules format and content [ [b_p], [s_i], [s_t], [w_t] ]
+    #print('rule 0 is\n', returned_class_from_yaml.rules[0][0]) #debug
+    #print('rule 1 is\n', returned_class_from_yaml.rules[1][0]) #debug
+    #print('rule 2 is\n', returned_class_from_yaml.rules[2][0]) #debug
+    #print('rule 3 is\n', returned_class_from_yaml.rules[3][0]) #debug
+    
     #compare returned class' init_state to the defined init_state in EpiModel
     pd.testing.assert_frame_equal(returned_class_from_yaml.init_state, init_state) 
 
@@ -240,16 +251,16 @@ def test_from_yaml(epimodel, epi_yaml, init_state, b_p, s_i, s_t, w_t):
     pd.testing.assert_frame_equal(returned_class_from_yaml.rules[0][0].start_state_sig, b_p.start_state_sig)
 
     #simple infection
-    assert returned_class_from_yaml.rules[0][1].column == s_i.column
-    assert returned_class_from_yaml.rules[0][1].stochastic == s_i.stochastic
+    assert returned_class_from_yaml.rules[1][0].column == s_i.column
+    assert returned_class_from_yaml.rules[1][0].stochastic == s_i.stochastic
     
     #simple transition
-    assert returned_class_from_yaml.rules[0][2].from_st == s_t.from_st
-    assert returned_class_from_yaml.rules[0][2].rate == s_t.rate
+    assert returned_class_from_yaml.rules[2][0].from_st == s_t.from_st
+    assert returned_class_from_yaml.rules[2][0].rate == s_t.rate
 
     #waifw transmission
-    assert (returned_class_from_yaml.rules[0][3].waifw_matrix == w_t.waifw_matrix).all()
-    assert returned_class_from_yaml.rules[0][3].group_col == w_t.group_col
+    assert (returned_class_from_yaml.rules[3][0].waifw_matrix == w_t.waifw_matrix).all()
+    assert returned_class_from_yaml.rules[3][0].group_col == w_t.group_col
 
 def test_to_yaml(epimodel, init_state, epi_yaml):
     """
@@ -294,6 +305,7 @@ def test_do_timestep_rule_based(epimodel, dt, instantiated_rules, cur_state, sto
     Args: epimodel object, instantiated rules, current state.
     """
     returned_cur_state = epimodel.do_timestep(dt, ret_nw_state=True)
+    print('returned cur state is\n', returned_cur_state) #debug
 
     for ruleset in instantiated_rules:
         all_deltas = pd.DataFrame() #reset all_deltas
@@ -303,8 +315,14 @@ def test_do_timestep_rule_based(epimodel, dt, instantiated_rules, cur_state, sto
             else:
                 nw_deltas = rule.get_deltas(cur_state, dt=dt, stochastic=(stoch_policy=="stochastic"))
             
-            all_deltas = pd.concat([all_deltas, nw_deltas])
-       
+            
+            if nw_deltas is None or nw_deltas.empty:
+                all_deltas = all_deltas
+            else: 
+                all_deltas = pd.concat([all_deltas, nw_deltas])
+            
+            print('test case in for loop, all deltas is\n', all_deltas)#debug
+
         if all_deltas.shape[0]==0:
             continue
 
@@ -316,10 +334,12 @@ def test_do_timestep_rule_based(epimodel, dt, instantiated_rules, cur_state, sto
             full_epi = full_epi.assign(T=0.0)
 
         nw_state = pd.concat([cur_state, all_deltas]) #append all_deltas to cur_state
+        print('test case after concat before gourpby, nw_state is\n', nw_state) #debug
     
         # Get grouping columns
         tbr = {'N','T'}
-        gp_cols = [item for item in all_deltas.columns if item not in tbr] #filter out all column names that are not 'N' or 'T' => ['age', 'health', 'Infection_State', 'Age_Group']
+        gp_cols = [item for item in nw_state.columns if item not in tbr] #filter out all column names that are not 'N' or 'T' => ['age', 'health', 'Infection_State', 'Age_Group']
+        print('test case group col is:', gp_cols) #debug
 
         if gp_cols:
             nw_state = nw_state.groupby(gp_cols, dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index() #group by the filtered columns and make aggregation on N and T
@@ -328,9 +348,10 @@ def test_do_timestep_rule_based(epimodel, dt, instantiated_rules, cur_state, sto
     
         nw_state = nw_state[nw_state['N']!=0].reset_index(drop=True)
         cur_state = nw_state
-        
+    print('test do_timestep final cur_state:\n', cur_state)  #debug  
     
     expected_cur_state = cur_state.assign(T=max(cur_state['T'])+dt) #T values are always 0, +dt = 1
+    print('expected cur state is\n', expected_cur_state) #debug
     
     pd.testing.assert_frame_equal(returned_cur_state, expected_cur_state)
 
