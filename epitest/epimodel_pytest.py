@@ -111,7 +111,7 @@ def epi_yaml():
                     },
                     { #waifw_transmission
                     'tabularepimdl.WAIFWTransmission' : {
-                                                        'waifw_matrix' : np.array([[0.1, 0.2], [0.3, 0.4]]),
+                                                        'waifw_matrix' : [[0.1, 0.2], [0.3, 0.4]],
                                                         'inf_col' : 'Infection_State',
                                                         'group_col' : 'Age_Group',
                                                         's_st': 'S',
@@ -292,8 +292,8 @@ def test_to_yaml(epimodel, init_state, epi_yaml):
     assert returned_dict_to_yaml['rules'][1][0] == epi_yaml['rules'][2]
 
     #waifw transmission
-    #array comparison for waifw_matrix
-    assert (returned_dict_to_yaml['rules'][2][1]['tabularepimdl.WAIFWTransmission']['waifw_matrix'] == epi_yaml['rules'][3]['tabularepimdl.WAIFWTransmission']['waifw_matrix']).all()
+    #waifw_matrix array is converted back to list, this is list comparison, so .all() is not required
+    assert (returned_dict_to_yaml['rules'][2][1]['tabularepimdl.WAIFWTransmission']['waifw_matrix'] == epi_yaml['rules'][3]['tabularepimdl.WAIFWTransmission']['waifw_matrix'])
     assert returned_dict_to_yaml['rules'][2][1]['tabularepimdl.WAIFWTransmission']['group_col'] == epi_yaml['rules'][3]['tabularepimdl.WAIFWTransmission']['group_col']
 
 def test_do_timestep_rule_based(epimodel, dt, instantiated_rules, cur_state, stoch_policy = "rule_based"):
