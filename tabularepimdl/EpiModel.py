@@ -55,11 +55,13 @@ class EpiModel(BaseModel):
             if isinstance(item, Rule):
                 normalized_list.append([item]) #Single rule instance: wrap it in list
             elif isinstance(item, list): # Sublist: validate contents
-                if not all(isinstance(subitem, Rule) for subitem in item):
-                    raise TypeError("All elements in rule sublists must be instances of Rule.")
+                invalid_subitems = [(subitem, type(subitem).__name__) for subitem in item if not isinstance(subitem, Rule)]
+                if invalid_subitems:
+                    error_details = ', '.join(f'{repr(val)} (type: {typ})' for val, typ in invalid_subitems)
+                    raise TypeError(f"All elements in rule sublists must be a epidemic Rule or a flat list of epidemic Rules (i.e. epidemic Rule type). Found invalid items and types: {error_details}.")
                 normalized_list.append(item)
             else:
-                raise TypeError(f"Each item in rules must be a Rule or a list of Rule instances. Received {type(item).__name__}.")
+                raise TypeError(f"Each item in rules must be a epidemic Rule or a list of epidemic Rule instances. Received {type(item).__name__}.")
 
         return normalized_list
             
@@ -160,7 +162,7 @@ class EpiModel(BaseModel):
         return(rc_converted)
 
     @staticmethod    
-    def convert_to_yaml_friendly(data):
+    def convert_to_yaml_friendly(data) -> dict:
         """
         Recursively traverses the to_yaml dictionary and converts any non-serializable types into YAML-friendly formats.
         """
@@ -275,11 +277,10 @@ class EpiModel(BaseModel):
             return self.cur_state
             
     ##Echo TODO: decide if we want to make it possible to add rules dynamically
-    ##add a method to add rules. This allows new rules to be added to the model at any time, even after the model has been initialized. 
-    def add_rule(self, new_rule):
+    ##Add new rules to the exiting rules. This allows new rules to be added to the model at any time, even after the model has been initialized. 
+    def add_rule(self, new_rule) -> List[List[Rule]]:
         """! Adds a new rule or a list of rules to the model.
-        
-        @param new_rule, a single rule object or a list of rule objects to be added."""
+        @param new_rule: a single rule object or a list of rule objects to be added."""
         
         # If the new rule is a single Rule object, wrap it in a list
         if isinstance(new_rule, Rule):
@@ -296,4 +297,6 @@ class EpiModel(BaseModel):
         else:
             raise ValueError("new_rule must be a Rule object or a list of Rule objects")
         
+        self.validate_rules_list(self.rules) #validate the update rules before processing
+
         return(self.rules)
