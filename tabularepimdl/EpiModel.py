@@ -48,20 +48,27 @@ class EpiModel(BaseModel):
 
         # Step 2: Ensure input is list-like
         if not isinstance(input_rules, list):
-            raise TypeError(f"rules must be a Rule instance or a list (or list of lists). Received {type(input_rules).__name__}.")
+            raise TypeError(f"rules must be an epidemic Rule or a list (or list of lists) of epidemic Rules. Received {type(input_rules).__name__}.")
         
         normalized_list = []
-        for item in input_rules:
+        for i, item in enumerate(input_rules):
             if isinstance(item, Rule):
                 normalized_list.append([item]) #Single rule instance: wrap it in list
             elif isinstance(item, list): # Sublist: validate contents
-                invalid_subitems = [(subitem, type(subitem).__name__) for subitem in item if not isinstance(subitem, Rule)]
-                if invalid_subitems:
-                    error_details = ', '.join(f'{repr(val)} (type: {typ})' for val, typ in invalid_subitems)
-                    raise TypeError(f"All elements in rule sublists must be a epidemic Rule or a flat list of epidemic Rules (i.e. epidemic Rule type). Found invalid items and types: {error_details}.")
+                for j, subitem in enumerate(item):
+                    if isinstance(subitem, Rule):
+                        continue
+                    elif isinstance(subitem, list):
+                        raise TypeError(
+                            f"Too much nesting at input rules[{i}][{j}], element is {subitem} with type {type(subitem).__name__}. Expected an epidemic Rule, received nested list with depth > 2."
+                        )
+                    else:
+                        raise TypeError(
+                            f"Invalid type at input rules[{i}][{j}]: expected an epidemic Rule, received {subitem} with type {type(subitem).__name__}."
+                        )
                 normalized_list.append(item)
             else:
-                raise TypeError(f"Each item in rules must be a epidemic Rule or a list of epidemic Rule instances. Received {type(item).__name__}.")
+                raise TypeError(f"Element {subitem} at input rules[{i}] must be an epidemic Rule or a list of epidemic Rules. Received {type(item).__name__}.")
 
         return normalized_list
             
