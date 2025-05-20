@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from numba import njit
 from pydantic import BaseModel, field_validator, ValidationInfo, ConfigDict
-
+from typing import List
 
 class WAIFWTransmission(Rule, BaseModel):
     """!
@@ -25,7 +25,7 @@ class WAIFWTransmission(Rule, BaseModel):
     # Pydantic Configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    waifw_matrix: np.ndarray
+    waifw_matrix: List[List] | np.ndarray
     inf_col: str
     group_col: str
     s_st: str = "S"
@@ -36,12 +36,35 @@ class WAIFWTransmission(Rule, BaseModel):
     @field_validator("waifw_matrix", mode="before") #validate array type and its element sign
     @classmethod
     def validate_waifw_matrix(cls, matrix_parameters, field: ValidationInfo):
-        """Ensure the input matrix is a NumPy array and all elements are non-negative values."""
-        if not isinstance(matrix_parameters, np.ndarray):
-            raise ValueError(f"{cls.__name__} expects a NumPy array for {field.field_name}, got {type(matrix_parameters)}")
+        """Ensure the input matrix is a 2-diemnsional array with sqaure shape and all elements are non-negative values."""
+        #1, check list or array type.
+        if isinstance(matrix_parameters, List): #convert list to array
+            matrix_parameters = np.array(matrix_parameters)
+        elif isinstance(matrix_parameters, np.ndarray):
+            matrix_parameters = matrix_parameters
+        else:
+            raise TypeError(f"{cls.__name__} expects a NumPy array for {field.field_name}, received {type(matrix_parameters)}.")
         
+        #2, check if input is a 2-dimensional square matrix.
+        if matrix_parameters.ndim !=2 or (matrix_parameters.shape[0] != matrix_parameters.shape[1]):
+            raise ValueError(f"{cls.__name__} expects a 2-dimensional square matrix for {field.field_name}, received {matrix_parameters.shape}.")
+        
+        #3, check for non-empty matrix
+        if matrix_parameters.size == 0:
+            raise ValueError(f"Matrix must not be empty.")
+        
+        #4, check for numeric data type.
+        if not np.issubdtype(matrix_parameters.dtype, np.number):
+            raise ValueError(f"Matrix must contain numeric data, received dtype {matrix_parameters.dtype}.")
+                             
+        #5, check if all elements are non-negative values.
         if np.any(matrix_parameters < 0):
-            raise ValueError(f"All elements in {field.field_name} must be non-negative, but got {matrix_parameters}.")
+            raise ValueError(f"All elements in {field.field_name} must be non-negative, but received {matrix_parameters}.")
+        
+        #6, check for NaN or Inf
+        if np.isnan(matrix_parameters).any() or np.isinf(matrix_parameters).any():
+            raise ValueError("Matrix must not contain NaN or Infinity values.")
+        
         return matrix_parameters.T #transpose the input matrix
     
     @staticmethod    
@@ -99,7 +122,7 @@ class WAIFWTransmission(Rule, BaseModel):
         if len(current_state[self.group_col].cat.categories) != len(self.waifw_matrix):
             raise ValueError(f"Mismatch between the number of unique categories and WAIFW matrix size. "
                              f"Expected {len(self.waifw_matrix)} categories, but found {len(current_state[self.group_col].cat.categories)}. "
-                             f"Categories: {current_state[self.group_col].cat.categories}"
+                             f"Categories: {current_state[self.group_col].cat.categories}."
                             )
 
         ##create an array for the total number of infections in each unique group. Only records with i_st are sumed, other records's N are filled with 0.
