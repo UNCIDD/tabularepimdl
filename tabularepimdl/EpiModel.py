@@ -60,7 +60,8 @@ class EpiModel(BaseModel):
                         continue
                     elif isinstance(subitem, list):
                         raise TypeError(
-                            f"Too much nesting at input rules[{i}][{j}], element is {subitem} with type {type(subitem).__name__}. Expected an epidemic Rule, received nested list with depth > 2."
+                            f"Too much nesting at input rules[{i}][{j}], element is {subitem} with type {type(subitem).__name__}. " 
+                            f"Expected an epidemic Rule, received nested list with depth > 2."
                         )
                     else:
                         raise TypeError(
