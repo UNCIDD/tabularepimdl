@@ -197,7 +197,7 @@ class EpiModel(BaseModel):
         """!Does a timestep process, updating the epidemic current state by applying each epidemic rule to the current state data.
             If in cycles of simulation, appends each iteration's current state to the full epidemic history.
         @param dt: the time step.
-        @param: ret_cur_state: whether return the the current state at the end of iterations.
+        @param ret_cur_state: whether return the the current state at the end of iterations.
         """
 
         #iterates through the rulesets, gets delta out of each rule, updates the current state with deltas,
@@ -234,7 +234,7 @@ class EpiModel(BaseModel):
                 continue
             
             #Need to make sure the T for all deltas is 0 first.
-            #yl: this if-else block fro T may not be needed since EpiModel checks T and N at initialization
+            #yl: this if-else block for T may not be needed since EpiModel checks T and N at initialization
             #if 'T' in self.cur_state.columns:
             #    pass #if column T exists in the initial cur_state dataframe, do nothing
             #else:
