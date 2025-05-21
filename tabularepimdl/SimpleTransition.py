@@ -54,7 +54,7 @@ class SimpleTransition(Rule, BaseModel):
         return pd.concat([deltas, deltas_add]).reset_index(drop=True)
     
     def __str__(self) -> str:
-        return "{} --> {} at rate {}".format(self.from_st, self.to_st, self.rate)
+        return "SimpleTransition: {} --> {} at rate {}".format(self.from_st, self.to_st, self.rate)
     
     def to_yaml(self) -> dict:
         rc = {
