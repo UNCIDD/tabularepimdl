@@ -14,3 +14,4 @@ from .SimpleTransition import SimpleTransition
 from .StateBasedDeathProcess import StateBasedDeathProcess
 from .WAIFWTransmission import WAIFWTransmission
 from .WithFilters import WithFilters
+__version__ = "0.1.0"
