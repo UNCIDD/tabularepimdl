@@ -10,7 +10,6 @@ import pytest
 import pandas as pd
 import numpy as np
 
-import os
 import sys
 sys.path.append('../')
 from tabularepimdl.BirthProcess import BirthProcess
@@ -56,9 +55,9 @@ def test_birthprocess_initialization(start_state_dict, start_state_df):
     assert bp.start_state_sig.equals(start_state_df)
     assert bp.stochastic == True
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as excinfo:
         BirthProcess(rate=0.1, start_state_sig='invalid', stochastic=True)
-
+    
 def test_birthprocess_get_deltas_non_stochastic(birthprocess_non_stochastic, current_state):
     """
     Test the get_deltas method for non-stochastic BirthProcess.

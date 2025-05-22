@@ -11,7 +11,6 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-import os
 import sys
 sys.path.append('../')
 from tabularepimdl.WAIFWTransmission import WAIFWTransmission
@@ -52,13 +51,25 @@ def test_initialization(waifw_transmission):
     Test the initialization of the WAIFWTransmission object.
     Args: waifw_transmission object.
     """
-    assert (waifw_transmission.waifw_matrix == np.array([[0.1, 0.2], [0.3, 0.4]])).all()
+    assert (waifw_transmission.waifw_matrix == np.array([[0.1, 0.3], [0.2, 0.4]])).all() #initial waifw_matrix is transposed within WAIFW rule
     assert waifw_transmission.inf_col == 'Infection_State'
     assert waifw_transmission.group_col == 'Age_Group'
     assert waifw_transmission.s_st == 'S'
     assert waifw_transmission.i_st == 'I'
     assert waifw_transmission.inf_to == 'I'
     assert waifw_transmission.stochastic == False
+
+def test_intialization_error_handling():
+    """
+    Test the error handling for input matrix parameters. Set the following parameters with incorrect values or format in the way to trigger ValueError.
+    If setting the correct values and format with commented out data, the test will fail with message "Failed: DID NOT RAISE <class 'ValueError'>"
+    """
+    check_matrix = np.array([0.1, -0.2]) #np.array([0.1, 0.05])
+    check_inf_col = 3 #"Infection_State"
+    check_group_col = ['A', 'B', 'C'] #"Host"
+
+    with pytest.raises(ValueError) as excinfo:
+        WAIFWTransmission(waifw_matrix=check_matrix, inf_col=check_inf_col, group_col=check_group_col)
 
 def test_len_of_categories_match_len_of_waifw(waifw_transmission):
     """
@@ -69,22 +80,29 @@ def test_len_of_categories_match_len_of_waifw(waifw_transmission):
         {
         'N': [50, 5, 40, 10],
         'Infection_State': ['S', 'I', 'S', 'I'], #links to inf_col
-        #'Age_Group': ['youth', 'child', 'senior', 'adult'] #links to group_col, reserved to test error handling in get_deltas() method
-        'Age_Group': ['youth', 'youth', 'adult', 'adult']
+        'Age_Group': ['youth', 'child', 'senior', 'adult'] #links to group_col, reserved to test error handling in get_deltas() method
+        #'Age_Group': ['youth', 'youth', 'adult', 'adult'] #links to group_col, reserved to trigger ValueError in get_deltas() method
         }
     )
-    waifw_transmission.get_deltas(state_with_more_categories, stochastic=True) #if this test fails, a ValueError from the source code will pop up.
+    
+    with pytest.raises(ValueError) as excinfo:
+        waifw_transmission.get_deltas(state_with_more_categories, stochastic=True)
 
 def test_inf_array_slicing(waifw_transmission, dummy_state):
     """
     Test slicing and aggregation of current_state.
     Args: waifw_transmission object and dummy dataframe.
     """
-    inf_array = dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st].groupby(waifw_transmission.group_col)['N'].sum(numeric_only=True).values
-    
+    #two different approaches for calculating infection array
+    inf_array_groupby = dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st].groupby(waifw_transmission.group_col, observed=False)['N'].sum(numeric_only=True).values
+    inf_array_bincount = np.bincount(dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st, waifw_transmission.group_col].cat.codes, #array input
+                                     dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st, 'N'], #weights
+                                     minlength=len(dummy_state[waifw_transmission.group_col].cat.categories)) #minimum length
+
     expected_inf_array = np.array([5, 10]) #in each age group, sum the number of individuals whose infection_state is I
 
-    assert (inf_array == expected_inf_array).all()
+    assert (inf_array_groupby == expected_inf_array).all()
+    assert (inf_array_bincount == expected_inf_array).all()
 
 def test_categorical_type(waifw_transmission, dummy_state):
     """
@@ -99,16 +117,16 @@ def test_probablity_of_infection_calculation(waifw_transmission, dummy_state, du
     Test infection probability for individuals from filtered groups.
     Args: waifw_transmission object, dummy dataframe and dummy waifw_matrix.
     """
-    inf_array = dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st].groupby(waifw_transmission.group_col)['N'].sum(numeric_only=True).values
+    inf_array = dummy_state.loc[dummy_state[waifw_transmission.inf_col]==waifw_transmission.i_st].groupby(waifw_transmission.group_col, observed=False)['N'].sum(numeric_only=True).values
     prI = np.power(np.exp(-1.0*waifw_transmission.waifw_matrix), inf_array)
     prI = 1-prI.prod(axis=1) #axis=1 makes column-elements multiply
 
     expected_inf_array = np.array([5, 10])
-    expected_prI = np.power(np.exp(-1.0*dummy_waifw_matrix), expected_inf_array)
+    expected_prI = np.power(np.exp(-1.0*dummy_waifw_matrix.T), expected_inf_array) #transpose dummy_waifw_matrix as waifw_matrix is transposed within WAIFW rule
     expected_prI = 1-expected_prI.prod(axis=1)
 
-    assert (prI == expected_prI).all() #array([0.917915  , 0.99591323]), these output values are rounded floating numbers
-    #actual values are 0.9179150013761013 , 0.995913228561536
+    assert (prI == expected_prI).all() #array([0.96980262, 0.99326205]), these output values are rounded floating numbers
+    
 
 def test_deltas_calculation(waifw_transmission, dummy_state):
     """
@@ -139,9 +157,9 @@ def test_get_deltas_deterministic(waifw_transmission, dummy_state, dummy_waifw_m
     })
 
     expected_inf_array = np.array([5, 10])
-    prI_calc = np.power(np.exp(-1.0*dummy_waifw_matrix), expected_inf_array)
+    prI_calc = np.power(np.exp(-1.0*dummy_waifw_matrix.T), expected_inf_array)#transpose dummy_waifw_matrix as waifw_matrix is transposed within WAIFW rule
     prI_calc = 1-prI_calc.prod(axis=1)
-    prI_rounded = np.array([0.917915, 0.99591323])#rounded result from test_probablity_of_infection_calculation
+    prI_rounded = np.array([0.96980262, 0.99326205])#rounded result from test_probablity_of_infection_calculation
     
     #check prI calculated values
     assert(abs(prI_calc - prI_rounded) < 1e-8).all() #method1: if diff is less than 1e-8 magnitude, then pass
@@ -149,17 +167,17 @@ def test_get_deltas_deterministic(waifw_transmission, dummy_state, dummy_waifw_m
     #check prI indexed values
     prI_indexed = prI_calc[filtered_deltas['Age_Group'].cat.codes] #codes should be 0 and 1 now
     #assert(abs(prI_indexed - prI_rounded) < 1e-8).all() #if diff is less than 1e-8 magnitude, then pass
-    assert (prI_indexed == np.array([0.9179150013761013 , 0.995913228561536])).all() #method2: use actual values to compare with programmatic values
+    assert (prI_indexed == np.array([0.9698026165776815, 0.9932620530009145])).all() #method2: use actual values to compare with programmatic values
     
     #generate expected deltas value with filtered deltas value and actual prI values
     expected_deltas = pd.DataFrame({
-        'N': [-50, -40]*np.array([0.9179150013761013 , 0.995913228561536]),
+        'N': [-50, -40]*np.array([0.9698026165776815, 0.9932620530009145]),
         'Infection_State': ['S', 'S'], #links to inf_col
         'Age_Group': pd.Categorical(['youth', 'adult'], categories=['youth', 'adult']) #links to group_col
     })
 
     expected_deltas_add = pd.DataFrame({
-        'N': [50, 40]*np.array([0.9179150013761013 , 0.995913228561536]),
+        'N': [50, 40]*np.array([0.9698026165776815, 0.9932620530009145]),
         'Infection_State': ['I', 'I'], #links to inf_col
         'Age_Group': pd.Categorical(['youth', 'adult'], categories=['youth', 'adult']) #links to group_col
     })

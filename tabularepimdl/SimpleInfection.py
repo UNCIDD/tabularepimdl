@@ -1,83 +1,74 @@
 from tabularepimdl.Rule import Rule
 import numpy as np
 import pandas as pd
+from pydantic import BaseModel, Field
+from typing import Annotated
 
-class SimpleInfection(Rule):
-    """"! 
-    Represents a simple infection process where people in one column are infected by people
+class SimpleInfection(Rule, BaseModel):
+    """!Class represents a simple infection process where people in one column are infected by people
     in a given state in that same column with a probability."""
 
-    def __init__(self, beta:float, column, s_st="S", i_st="I", inf_to="I", freq_dep=True, stochastic=False) -> None:
-        """!
-        Initialize with the columns. 
+    #def __init__(self, beta:float, column, s_st="S", i_st="I", inf_to="I", freq_dep=True, stochastic=False) -> None:
+    """!Initialization. 
+    @param beta: the transmission parameter. 
+    @param column: name of the column this rule applies to.
+    @param s_st: the state for susceptibles, assumed to be S.
+    @param i_st: the state for infectious, assumed to be I.
+    @param inf_to: the state infectious folks go to, assumed to be I.
+    @param freq_dep: whether this model is a frequency dependent model.
+    @param stochastic: whether the process is stochastic or deterministic.
+    """
+    beta: Annotated[int | float, Field(ge=0)]
+    column: str
+    s_st: str = "S"
+    i_st: str = "I"
+    inf_to: str = "I"
+    freq_dep: bool = True
+    stochastic: bool = False
 
-        @param beta the transmission parameter. 
-        @param column the column for this infectious process
-        @param s_st the state for susceptibles, assumed to be S
-        @param i_st the state for infectious, assumed to be I
-        @param inf_to the state infectious folks go to, assumed to be I
-        @param freq_dep is this a frequency dependent model
-        @param stochastic is this rule stochastic
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float =1.0, stochastic: bool = None) -> pd.DataFrame:
         """
-        super().__init__() 
-        self.beta = beta
-        self.column = column
-        self.s_st = s_st
-        self.i_st = i_st
-        self.inf_to = inf_to
-        self.freq_dep = freq_dep
-        self.stochastic = stochastic
-
-    def get_deltas(self, current_state, dt = 1.0, stochastic = None):
+        @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
+        @param dt: size of the timestep.
+        @return: a pandas DataFrame containing changes in s_st and inf_to.
         """
-        @param current_state, a data frame (at the moment) w/ the current epidemic state
-        @param dt, the size of the timestep
-        """
+        required_columns = {"N"} #check if column N presents in current_state
+        if not required_columns.issubset(current_state.columns):
+            raise ValueError(f"Missing required columns in current_state: {required_columns}")
         
         if stochastic is None:
             stochastic = self.stochastic
 
-        if self.freq_dep:
-            beta = self.beta/(current_state['N'].sum())
+        total_population = current_state["N"].sum()
+
+        if total_population != 0:
+            if self.freq_dep:
+                beta = self.beta/total_population
+            else:
+                beta = self.beta
         else:
             beta = self.beta
 
-        infectious = current_state.loc[current_state[self.column]==self.i_st, 'N'].sum()
+        infectious = current_state.loc[current_state[self.column]==self.i_st, "N"].sum()
 
-        deltas = current_state.loc[current_state[self.column]==self.s_st]
+        deltas = current_state.loc[current_state[self.column]==self.s_st].copy()
 
-        
-        #subtractions
+        exp_change_rate = np.power(np.exp(-dt*beta), infectious)
         if not stochastic:
-            deltas = deltas.assign(
-                    N=-deltas.N*(1-np.power(np.exp(-dt*beta),infectious))
-                )
+            deltas["N"] = -deltas["N"] * (1 - exp_change_rate)
         else:
-            deltas = deltas.assign(
-                    N= -np.random.binomial(deltas.N, 1-np.power(np.exp(-dt*beta),infectious))
-                )
+            deltas["N"] = -np.random.binomial(deltas["N"], 1 - exp_change_rate)
         
-        #additions
-        tmp = deltas.assign(
-            N=-deltas.N
-        )
-
-        tmp[self.column] = self.inf_to
-
-        return pd.concat([deltas, tmp]).reset_index(drop=True)
+        deltas_add = deltas.assign(**{self.column: self.inf_to, "N": -deltas["N"]})
+        
+        return pd.concat([deltas, deltas_add]).reset_index(drop=True)
         
         
-    def to_yaml(self):
+    def to_yaml(self) -> dict:
+        """
+        return the rule's attributes to a dictionary.
+        """
         rc = {
-            'tabularepimdl.SimpleInfection': {
-                'beta': self.beta,
-                'column': self.column,
-                's_st': self.s_st,
-                'i_st': self.i_st,
-                'inf_to': self.inf_to,
-                'freq_dep':self.freq_dep,
-                'stochastic':self.stochastic
-            }
+            'tabularepimdl.SimpleInfection': self.model_dump()
         }
-
         return rc        

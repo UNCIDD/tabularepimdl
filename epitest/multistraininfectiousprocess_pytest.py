@@ -10,7 +10,6 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-import os
 import sys
 sys.path.append('../')
 from tabularepimdl.MultiStrainInfectiousProcess import MultiStrainInfectiousProcess
@@ -83,6 +82,17 @@ def test_intialization(multistrain_infectiousprocess):
     assert multistrain_infectiousprocess.cross_protect.shape[0] == multistrain_infectiousprocess.cross_protect.shape[1] #Check that cross_protect is a square matrix 
     assert multistrain_infectiousprocess.cross_protect.shape[0] == len(multistrain_infectiousprocess.betas) #Check that cross_protect matrix dimension equals to the length of betas
 
+def test_intialization_error_handling():
+    """
+    Test the error handling for input array parameters. Set the following parameters with incorrect values or format in the way to trigger ValueError.
+    If setting the correct values and format with commented out data, the test will fail with message "Failed: DID NOT RAISE <class 'ValueError'>"
+    """
+    check_betas = np.array([0.1, -0.2]) #np.array([0.1, 0.05])
+    check_cross_protect = [0.3, 0.4] #np.array([[1.0, 0.5], [0.5, 1.0]])
+    check_columns = ['A', 'B', 'C'] #["Strain1", "Strain2"]
+
+    with pytest.raises(ValueError) as excinfo:
+        MultiStrainInfectiousProcess(betas=check_betas, columns=check_columns, cross_protect=check_cross_protect)
 
 def test_betas_on_freq_dep(dummy_state, betas):
     """
@@ -117,15 +127,21 @@ def test_cross_protection_multiplier(multistrain_infectiousprocess, dummy_state,
     Test beta values calculation based on cross-protect matrix.
     Args: multistrain_infectiousprocess object, dummy dataframe, columns, cross_protect.
     """
-    #return values use equation from source code
+    #return values done with original loop-like equation
     #Convert the boolean result of x == r_st into an array of True (1) and False (0).
     #Multiply the boolean array with cross_protect, effectively zeroing out the values in cross_protect where the condition is False (0).
     #Computes the maximum value along each row of the resulting matrix.
-    returned_row_beta_mult = dummy_state[columns].apply(lambda x: ((x==multistrain_infectiousprocess.r_st).array* cross_protect).max(axis=1), 
-                                                        axis=1, #apply lambda function to each row
-                                                        result_type='expand' #expand the result into a DataFrame
-                                                        )
-    returned_row_beta_mult = 1-returned_row_beta_mult
+    #returned_row_beta_mult = dummy_state[columns].apply(lambda x: ((x==multistrain_infectiousprocess.r_st).array* cross_protect).max(axis=1), 
+    #                                                    axis=1, #apply lambda function to each row
+    #                                                    result_type='expand' #expand the result into a DataFrame
+    #                                                    )
+    #returned_row_beta_mult = 1-returned_row_beta_mult
+
+    #broadcasts recovered_mask so that each row of self.cross_protect gets multiplied by each corresponding element of recovered_mask
+    recovered_mask = (dummy_state[columns] == multistrain_infectiousprocess.r_st).values
+    returned_row_beta_mult = 1 - np.max(recovered_mask[:, np.newaxis] * cross_protect, axis=2)
+    returned_row_beta_mult = pd.DataFrame(returned_row_beta_mult)
+
 
     #expected values use known calculated data
     boolean_df = pd.DataFrame({'Strain1': [False, False, True], 'Strain2': [False, False, False]})
@@ -151,10 +167,11 @@ def test_beta_on_susceptibility(multistrain_infectiousprocess, dummy_state, colu
     """
     #return values use equation from source code
     expected_betas = np.array([0.1, 0.05])/(100+200+150)
-    returned_row_beta_mult = 1 - dummy_state[columns].apply(lambda x: ((x==multistrain_infectiousprocess.r_st).array* cross_protect).max(axis=1), 
-                                                        axis=1, 
-                                                        result_type='expand' 
-                                                        )
+    
+    recovered_mask = (dummy_state[columns] == multistrain_infectiousprocess.r_st).values
+    returned_row_beta_mult = 1 - np.max(recovered_mask[:, np.newaxis] * cross_protect, axis=2)
+    returned_row_beta_mult = pd.DataFrame(returned_row_beta_mult)
+
     returned_row_beta = (returned_row_beta_mult * expected_betas * (dummy_state[columns]==multistrain_infectiousprocess.s_st).values)
     
     #expected values use known calculated data
@@ -177,15 +194,21 @@ def test_no_coinfections(multistrain_infectiousprocess, dummy_state, columns, cr
     returned_infectious = np.array(returned_infectious)
 
     expected_betas = np.array([0.1, 0.05])/(100+200+150)
-    returned_row_beta_mult = 1 - dummy_state[columns].apply(lambda x: ((x==multistrain_infectiousprocess.r_st).array* cross_protect).max(axis=1), 
-                                                        axis=1, 
-                                                        result_type='expand' 
-                                                        )
+    
+    recovered_mask = (dummy_state[columns] == multistrain_infectiousprocess.r_st).values
+    returned_row_beta_mult = 1 - np.max(recovered_mask[:, np.newaxis] * cross_protect, axis=2)
+    returned_row_beta_mult = pd.DataFrame(returned_row_beta_mult)
+    
     returned_row_beta = (returned_row_beta_mult * expected_betas * (dummy_state[columns]==multistrain_infectiousprocess.s_st).values)
 
     returned_row_beta = returned_row_beta.multiply(1-(dummy_state[columns] == multistrain_infectiousprocess.i_st).max(axis=1), axis=0)
-    returned_prI = 1-(np.exp(-1.0*returned_row_beta)).apply(lambda x: np.power(x, returned_infectious), axis=1)
     
+    #prI done with original loop-like equation
+    #returned_prI = 1-(np.exp(-1.0*returned_row_beta)).apply(lambda x: np.power(x, returned_infectious), axis=1)
+    
+    returned_prI = 1 - np.power(np.exp(-1.0 * returned_row_beta.values), returned_infectious)
+    returned_prI = pd.DataFrame(returned_prI)
+
     #expected values use known calculated data
     expected_infectious = np.array([200, 150])
     expected_co_infection = 1 - pd.DataFrame({'Strain1': [False, True, False], 'Strain2': [False, False, True]}).max(axis=1)
@@ -210,14 +233,14 @@ def test_prI(multistrain_infectiousprocess, dummy_state, columns, cross_protect,
     returned_infectious = np.array(returned_infectious)
 
     expected_betas = np.array([0.1, 0.05])/(100+200+150)
-    returned_row_beta_mult = 1 - dummy_state[columns].apply(lambda x: ((x==multistrain_infectiousprocess.r_st).array* cross_protect).max(axis=1), 
-                                                        axis=1, 
-                                                        result_type='expand' 
-                                                        )
+    recovered_mask = (dummy_state[columns] == multistrain_infectiousprocess.r_st).values
+    returned_row_beta_mult = 1 - np.max(recovered_mask[:, np.newaxis] * cross_protect, axis=2)
+    returned_row_beta_mult = pd.DataFrame(returned_row_beta_mult)
     returned_row_beta = (returned_row_beta_mult * expected_betas * (dummy_state[columns]==multistrain_infectiousprocess.s_st).values)
 
     returned_row_beta = returned_row_beta.multiply(1-(dummy_state[columns] == multistrain_infectiousprocess.i_st).sum(axis=1), axis=0)
-    returned_prI = 1-(np.exp(-1.0*returned_row_beta)).apply(lambda x: np.power(x, returned_infectious), axis=1)
+    returned_prI = 1 - np.power(np.exp(-1.0 * returned_row_beta.values), returned_infectious)
+    returned_prI = pd.DataFrame(returned_prI)
     
     returned_deltas = dummy_state.loc[returned_prI.sum(axis=1)>0]
     returned_prI_filtered = returned_prI.loc[returned_prI.sum(axis=1)>0]

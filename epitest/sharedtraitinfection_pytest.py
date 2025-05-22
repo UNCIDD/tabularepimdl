@@ -167,7 +167,7 @@ def test_get_deltas_stochastic(sharedtrait_infection, dummy_state):
 def test_to_yaml(sharedtrait_infection):
     """
     Test the to_yaml method of the WAIFWTransmission object.
-    Args: waifw_transmission object.
+    Args: sharedtrait_infection object.
     """
     returned_yaml = sharedtrait_infection.to_yaml()
 
