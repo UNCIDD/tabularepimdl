@@ -37,7 +37,7 @@ class WAIFWTransmission(Rule, BaseModel):
     @classmethod
     def validate_waifw_matrix(cls, matrix_parameters, field: ValidationInfo):
         """Ensure the input matrix is a 2-diemnsional array with sqaure shape and all elements are non-negative values."""
-        #1, check list or array type.
+        #1. check list or array type.
         if isinstance(matrix_parameters, List): #convert list to array
             matrix_parameters = np.array(matrix_parameters)
         elif isinstance(matrix_parameters, np.ndarray):
@@ -45,23 +45,23 @@ class WAIFWTransmission(Rule, BaseModel):
         else:
             raise TypeError(f"{cls.__name__} expects a NumPy array for {field.field_name}, received {type(matrix_parameters)}.")
         
-        #2, check if input is a 2-dimensional square matrix.
+        #2. check if input is a 2-dimensional square matrix.
         if matrix_parameters.ndim !=2 or (matrix_parameters.shape[0] != matrix_parameters.shape[1]):
             raise ValueError(f"{cls.__name__} expects a 2-dimensional square matrix for {field.field_name}, received {matrix_parameters.shape}.")
         
-        #3, check for non-empty matrix
+        #3. check for non-empty matrix
         if matrix_parameters.size == 0:
             raise ValueError(f"Matrix must not be empty.")
         
-        #4, check for numeric data type.
+        #4. check for numeric data type.
         if not np.issubdtype(matrix_parameters.dtype, np.number):
             raise ValueError(f"Matrix must contain numeric data, received dtype {matrix_parameters.dtype}.")
                              
-        #5, check if all elements are non-negative values.
+        #5. check if all elements are non-negative values.
         if np.any(matrix_parameters < 0):
             raise ValueError(f"All elements in {field.field_name} must be non-negative, but received {matrix_parameters}.")
         
-        #6, check for NaN or Inf
+        #6. check for NaN or Inf.
         if np.isnan(matrix_parameters).any() or np.isinf(matrix_parameters).any():
             raise ValueError("Matrix must not contain NaN or Infinity values.")
         
