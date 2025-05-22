@@ -25,7 +25,7 @@ or from github:
 # 1. Create a virtual environment
 python -m venv .venv
 .venv\Scripts\activate # Windows
-source .venv/bin/activate #macOS/Linux
+source .venv/bin/activate # macOS/Linux
 # 2. Install the package
 pip install "git+https://github.com/UNCIDD/tabularepimdl.git"
 ```
@@ -38,6 +38,8 @@ tabularepimdl/
 ├── examples/            # Example simulations
 ├── tabularepimdl/       # Individual process rules (infection, birth, death, etc.)
 ├── setup.py             # Package configuration
+├── requirements.txt     # Package dependencies
+├── LICENSE              # MIT license
 └── README.md            # Project description
 ```
 
@@ -59,7 +61,7 @@ import tabularepimdl as tepi
 
 infect_rule = tepi.SimpleInfection(beta=0.5, column='InfState')
 recover_rule = tepi.SimpleTransition(column='InfState', from_st='I', to_st='R', rate=0.25)
-epi_mdl = tepi.EpiModel(init_state = population_df, rules=[infect_rule, recover_rule])
+epi_mdl = tepi.EpiModel(init_state=population_df, rules=[infect_rule, recover_rule])
 
 epi_model.do_timestep(dt=0.25)
 
