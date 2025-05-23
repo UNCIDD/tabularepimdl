@@ -68,7 +68,7 @@ class Rule(ABC):
         
         rule_fields_mapping = tepi_rule.model_fields #get all field items from Pydantic-integrated model
         print('tepi rule fields mapping: ', rule_fields_mapping) #debug
-        rule_required_fields = {name for name, field in rule_fields_mapping.items() if field.is_required()==True} #get required fields defined in an epidemic rule
+        rule_required_fields = {name for name, field in rule_fields_mapping.items() if field.is_required} #get required fields defined in an epidemic rule
         print('rule required fields: ', rule_required_fields) #debug, e.g. {'column', 'from_st', 'to_st', 'rate'}
         rule_all_fields = set(rule_fields_mapping.keys()) #get all field names defined in an epidemic rule
         print('rule all fields: ', rule_all_fields) #debug, e.g. {'to_st', 'column', 'from_st', 'rate', 'stochastic'}
