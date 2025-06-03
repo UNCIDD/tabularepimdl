@@ -83,13 +83,13 @@ def test_birthprocess_to_yaml(birthprocess_non_stochastic, start_state_dict):
     expected_yaml = {
         'tabularepimdl.BirthProcess': {
             'rate': 0.1,
-            'start_state_sig': pd.DataFrame([start_state_dict]),
+            'start_state_sig': start_state_dict,
             'stochastic': False
         }
     }
     result_yaml = birthprocess_non_stochastic.to_yaml()
     assert result_yaml['tabularepimdl.BirthProcess']['rate'] == expected_yaml['tabularepimdl.BirthProcess']['rate']
     assert result_yaml['tabularepimdl.BirthProcess']['stochastic'] == expected_yaml['tabularepimdl.BirthProcess']['stochastic']
-    
+    assert expected_yaml == result_yaml
     #Extract the DataFrame from the result_yaml and expected_yaml for comparison
-    pd.testing.assert_frame_equal(result_yaml['tabularepimdl.BirthProcess']['start_state_sig'], expected_yaml['tabularepimdl.BirthProcess']['start_state_sig'])
+    #pd.testing.assert_frame_equal(result_yaml['tabularepimdl.BirthProcess']['start_state_sig'], expected_yaml['tabularepimdl.BirthProcess']['start_state_sig'])
