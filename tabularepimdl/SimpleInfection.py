@@ -8,7 +8,6 @@ class SimpleInfection(Rule, BaseModel):
     """!Class represents a simple infection process where people in one column are infected by people
     in a given state in that same column with a probability."""
 
-    #def __init__(self, beta:float, column, s_st="S", i_st="I", inf_to="I", freq_dep=True, stochastic=False) -> None:
     """!Initialization. 
     @param beta: the transmission parameter. 
     @param column: name of the column this rule applies to.
@@ -54,6 +53,7 @@ class SimpleInfection(Rule, BaseModel):
         deltas = current_state.loc[current_state[self.column]==self.s_st].copy()
 
         exp_change_rate = np.power(np.exp(-dt*beta), infectious)
+        
         if not stochastic:
             deltas["N"] = -deltas["N"] * (1 - exp_change_rate)
         else:

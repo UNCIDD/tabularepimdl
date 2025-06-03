@@ -17,7 +17,6 @@ class EpiModel(BaseModel):
     @param stoch_policy: whether the entire epidemic process is rule based or centralized with either deterministic or stochastic.
     """
     
-    #def __init__(self, init_state, rules:list, stoch_policy = "rule_based") -> None:
     # Pydantic Configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -98,7 +97,7 @@ class EpiModel(BaseModel):
         
         init_state = pd.DataFrame(epi_yaml['init_state'])
 
-        #Check stochastc, defaulting to rule based. 
+        #check stochastic, defaulting to rule based. 
         if 'stoch_policy' in epi_yaml.keys():
             stoch_policy = epi_yaml['stoch_policy']
         else:
@@ -107,20 +106,10 @@ class EpiModel(BaseModel):
         #now instantiate rules. Important to work on a copy
         rules_dict = copy.deepcopy(epi_yaml['rules'])
 
-        #make sure rules have nested structure
-        #if not isinstance(rules[0],list):
-        #    rules = [rules]
-        
-        #now iterate over rulesets...turning dicts into rules.
-        #for ruleset in rules:
-            #keys = list(ruleset.keys())
-        #    for i in range(len(ruleset)):
-        #        ruleset[i] = Rule.from_yaml(ruleset[i])
-        print('start processing rules from yaml dict.')
+        #make sure rules have nested structure and turn dicts into rules.
         processed_rules = cls.instantiate_rules(rules_section=rules_dict) #instantiated rules are returned
-        print('end process rules from yaml dict.')
-        print('processed rules parameters are\n', processed_rules)
-        print('the type is\n', type(processed_rules))
+        print('processed rules parameters are\n', processed_rules) #debug
+        
         return cls(init_state=init_state, rules=processed_rules, stoch_policy=stoch_policy) #keyword is required when returning a class object due to use of Pydantic
     
     @staticmethod

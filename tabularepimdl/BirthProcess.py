@@ -9,7 +9,6 @@ class BirthProcess(Rule, BaseModel):
     Represents a birth process where people are borne based
     on a birth rate based on the full poplation size."""
 
-    #def __init__(self, rate: float, start_state_sig, stochastic=False)-> None:
     """!Initialization.
     @param rate: birth rate at per time step (where N*rate births occur).
     @param state_start_sig: initial state configuration for new births.
@@ -27,11 +26,15 @@ class BirthProcess(Rule, BaseModel):
     @classmethod
     def validate_start_state_sig(cls, start_state_sig):
         if isinstance(start_state_sig, dict):
-            start_state_sig = pd.DataFrame([start_state_sig]) #convert a dict to a dataframe
+            key, value = next(iter(start_state_sig.items())) #obtain the first item from the dictionary
+            if len(value) == 1: #value contains single element
+                start_state_sig = pd.DataFrame([start_state_sig])
+            else:
+                start_state_sig = pd.DataFrame(start_state_sig) #value contains two or more elements
         elif isinstance(start_state_sig, pd.DataFrame):
             start_state_sig = start_state_sig.copy()
         else:
-            raise ValueError ("start_state_sig must be either a dictionary or a pandas DataFrame")
+            raise ValueError (f"start_state_sig must be either a dictionary or a pandas DataFrame, received {type(start_state_sig)}.")
         return start_state_sig
         
     def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
@@ -62,7 +65,19 @@ class BirthProcess(Rule, BaseModel):
         """
         return the rule's attributes to a dictionary.
         """
+        if isinstance(self.start_state_sig, pd.DataFrame): #convert dataframe to dict before saving to yaml data
+            if len(self.start_state_sig) == 1: #if single row in dataframe
+                start_state_sig_dict = self.start_state_sig.iloc[0].to_dict()
+            else:
+                start_state_sig_dict = self.start_state_sig.to_dict(orient='list')#if multiple-rows in dataframe
+        else:
+            start_state_sig_dict = self.start_state_sig #keep the original dict data
+
         rc = {
-            'tabularepimdl.BirthProcess' : self.model_dump()
+            'tabularepimdl.BirthProcess' : {
+                'rate': self.rate,
+                'start_state_sig': start_state_sig_dict,
+                'stochastic': self.stochastic
+            }
         }
         return rc

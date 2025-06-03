@@ -40,4 +40,4 @@ class WithFilters():
         return super().get_deltas(filtered_state, dt=dt, stochastic=stochastic)
     
     def __str__(self) -> str:
-        return "WithFilter rule."
+        return "WithFilter rule. Cannot be used indpendently, have to be used with other epidemic rules."

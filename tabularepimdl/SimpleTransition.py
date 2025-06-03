@@ -9,7 +9,6 @@ class SimpleTransition(Rule, BaseModel):
     such that if a column has the from specified value, it creates transitions with the to
     specified value at the given rate."""
 
-    #def __init__(self, column, from_st, to_st, rate: float, stochastic=False) -> None:
     """! Initialization.
     @param column: Name of the column this rule applies to.
     @param from_st: the state that column transitions from.
@@ -39,16 +38,15 @@ class SimpleTransition(Rule, BaseModel):
             stochastic = self.stochastic
             
         deltas = current_state.loc[current_state[self.column]==self.from_st].copy()
-        print('st rule\n') #debug
-        print('st\'s current_state is\n', current_state) #debug
+        #print('st rule\n') #debug
+        #print('st\'s current_state is\n', current_state) #debug
+        #subtractions
         if not stochastic:
-            #subtractions
             deltas["N"] = -deltas["N"] * (1 - np.exp(-dt*self.rate))
         else:
             deltas["N"] = -np.random.binomial(deltas["N"], 1 - np.exp(-dt*self.rate))
 
         #additions
-        #deltas_add = deltas.copy()
         deltas_add = deltas.assign(**{self.column: self.to_st, "N": -deltas["N"]})
         #print('st-rule delta is\n', deltas) #debug
         return pd.concat([deltas, deltas_add]).reset_index(drop=True)

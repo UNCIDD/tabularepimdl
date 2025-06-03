@@ -8,7 +8,6 @@ class SimpleObservationProcess(Rule, BaseModel):
     '''! This rule captures a simple generic observation process where people from a particular state are
     observed to move into another state at some constant rate.'''
 
-    #def __init__(self, source_col, source_state, obs_col, rate:float,  unobs_state="U", incobs_state="I", prevobs_state="P", stochastic = False) -> None:
     """Initialization.
     @param source_col: the column containing source_state for the observation process.
     @param source_state: the state individuals start.
@@ -52,6 +51,7 @@ class SimpleObservationProcess(Rule, BaseModel):
         out_of_unobs = current_state.loc[(current_state[self.source_col]==self.source_state) & (current_state[self.obs_col]==self.unobs_state)].copy() #un-observed individuals with source_state
 
         exp_change_rate = np.exp(-dt*self.rate)
+        
         if not stochastic:
             #subtractions
             out_of_unobs["N"] = -out_of_unobs["N"] * (1-exp_change_rate)
