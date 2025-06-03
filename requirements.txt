@@ -8,6 +8,7 @@ pandas==2.2.3
 plotly==6.1.1
 pydantic==2.11.4
 pydantic_core==2.33.2
+pytest==8.3.5
 python-dateutil==2.9.0.post0
 pytz==2025.2
 PyYAML==6.0.2
