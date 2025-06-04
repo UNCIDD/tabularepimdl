@@ -1,3 +1,6 @@
-my_module.MyRule:
-  param1: 1.0
-  param2: 2.0
+tabularepimdl.BirthProcess:
+  rate: 0.1
+  start_state_sig:
+    age: 10
+    health: good
+  stochastic: false
