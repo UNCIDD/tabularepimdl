@@ -9,8 +9,6 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-import sys
-sys.path.append('../')
 from tabularepimdl.EnvironmentalTransmission import EnvironmentalTransmission
 
 @pytest.fixture
