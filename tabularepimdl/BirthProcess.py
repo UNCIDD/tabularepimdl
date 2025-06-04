@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Annotated
+from collections.abc import Iterable
 
 class BirthProcess(Rule, BaseModel):
     """!
@@ -27,10 +28,10 @@ class BirthProcess(Rule, BaseModel):
     def validate_start_state_sig(cls, start_state_sig):
         if isinstance(start_state_sig, dict):
             key, value = next(iter(start_state_sig.items())) #obtain the first item from the dictionary
-            if len(value) == 1: #value contains single element
+            if isinstance(value, Iterable) and not isinstance(value, (str, bytes, dict)): #value contains two or more elements
+                start_state_sig = pd.DataFrame(start_state_sig)
+            else: #value contains single element
                 start_state_sig = pd.DataFrame([start_state_sig])
-            else:
-                start_state_sig = pd.DataFrame(start_state_sig) #value contains two or more elements
         elif isinstance(start_state_sig, pd.DataFrame):
             start_state_sig = start_state_sig.copy()
         else:
