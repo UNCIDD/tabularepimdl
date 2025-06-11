@@ -67,15 +67,15 @@ class Rule(ABC):
             raise TypeError(f"Epidemic rule's parameters must be in dictionary type. Received {type(definition)}")
         
         rule_fields_mapping = tepi_rule.model_fields #get all field items from Pydantic-integrated model
-        print('tepi rule fields mapping: ', rule_fields_mapping) #debug
+        #print('tepi rule fields mapping: ', rule_fields_mapping) #debug
         rule_required_fields = {name for name, field in rule_fields_mapping.items() if field.is_required} #get required fields defined in an epidemic rule
-        print('rule required fields: ', rule_required_fields) #debug, e.g. {'column', 'from_st', 'to_st', 'rate'}
+        #print('rule required fields: ', rule_required_fields) #debug, e.g. {'column', 'from_st', 'to_st', 'rate'}
         rule_all_fields = set(rule_fields_mapping.keys()) #get all field names defined in an epidemic rule
-        print('rule all fields: ', rule_all_fields) #debug, e.g. {'to_st', 'column', 'from_st', 'rate', 'stochastic'}
+        #print('rule all fields: ', rule_all_fields) #debug, e.g. {'to_st', 'column', 'from_st', 'rate', 'stochastic'}
 
         #Check if the YAML definitions match the epidemic rule class's __init__ fields.
         yaml_provided_fields = set(definition.keys()) #get all the field names defined in yaml file
-        print('yaml provided fields: ', yaml_provided_fields) #debug
+        #print('yaml provided fields: ', yaml_provided_fields) #debug
 
         missing_fields = rule_required_fields - yaml_provided_fields #fields that are in epidemic rule but missed in yaml definition
         #print(missing_fields) #debug
