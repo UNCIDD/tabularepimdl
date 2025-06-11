@@ -1,6 +1,7 @@
 annotated-types==0.7.0
 llvmlite==0.44.0
 narwhals==1.40.0
+nbformat==5.10.4
 numba==0.61.2
 numpy==2.2.6
 packaging==25.0
