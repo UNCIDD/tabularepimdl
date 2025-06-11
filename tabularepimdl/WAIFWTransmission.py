@@ -50,7 +50,7 @@ class WAIFWTransmission(Rule, BaseModel):
         
         #3. check for non-empty matrix.
         if matrix_parameters.size == 0:
-            raise ValueError(f"Matrix must not be empty.")
+            raise ValueError("Matrix must not be empty.")
         
         #4. check for numeric data type.
         if not np.issubdtype(matrix_parameters.dtype, np.number):
