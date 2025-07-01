@@ -11,3 +11,14 @@ def apply_stochastic_transition(counts: np.ndarray, probs: np.ndarray) -> np.nda
         out[i] = np.random.binomial(counts[i], probs[i])
     return out
 
+# === Filter index ===
+@nb.njit
+def get_indices(mask: np.ndarray) -> np.ndarray:
+    return np.nonzero(mask)[0]
+
+
+# === Categorical encoding ===
+def encode_categories(categories: np.ndarray) -> Tuple[np.ndarray, Dict[str, int]]:
+    unique, inv = np.unique(categories, return_inverse=True)
+    mapping = {name: i for i, name in enumerate(unique)}
+    return inv, mapping
