@@ -18,10 +18,10 @@ from tabularepimdl.arrayops_utils import (
     masked_sum_serial, masked_sum_parallel)
 
 from tabularepimdl.operations import (apply_deterministic_transition,
-    apply_stochastic_transition_serial,
+    apply_stochastic_transition,
     encode_categories)
 
-from tabularepimdl.benchmark_utils import save_benchmark_result, hash_fn_source
+from benchmark_utils import save_benchmark_result, hash_fn_source
 
 # === CONFIG ===
 MAX_TIME = 60.0  # seconds
@@ -229,7 +229,7 @@ def run_benchmark_case(func_name, tier, N_vals, probs, mask, group_ids, n_groups
         elif tier == "tier_3":
             result = np.zeros((T, N_vals.shape[0]), dtype=np.int32)
             for t in range(T):
-                result[t] = apply_stochastic_transition_serial(N_vals.astype(np.int32), probs)
+                result[t] = apply_stochastic_transition(N_vals.astype(np.int32), probs)
             return result, result.nbytes
 
     else:

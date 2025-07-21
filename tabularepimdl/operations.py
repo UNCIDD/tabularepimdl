@@ -1,9 +1,11 @@
+# tabularepimdl/tabularepi/operations.py
 from tabularepimdl.arrayops import grouped_sum as array_grouped_sum
 from tabularepimdl.arrayops import grouped_count as array_grouped_count
 from tabularepimdl.arrayops import masked_sum as array_masked_sum
 from tabularepimdl.matrixops import matrix_grouped_sum, matrix_grouped_count, matrix_masked_sum
 import numpy as np
 import numba as nb
+from typing import Tuple, Dict
 # ===  Deterministic transition ===
 @nb.njit(parallel=False, fastmath=True)
 def apply_deterministic_transition(counts: np.ndarray, probs: np.ndarray) -> np.ndarray:
