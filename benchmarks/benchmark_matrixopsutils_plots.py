@@ -1,40 +1,62 @@
-import os
+import json
 import pandas as pd
-from tabularepimdl.benchmark_utils import (
-    load_benchmark_results,
+import glob
+import os
+
+from benchmarks.benchmark_utils import (
     plot_benchmark_heatmap,
-    get_latest_benchmark_file,
+    get_latest_benchmark_file
 )
 
-def main():
-    category = "matrixops"
-    latest_file = get_latest_benchmark_file(category)
-    df = pd.read_json(latest_file, lines=True)
+CATEGORY = "arrayops"
 
-    # Get all unique function names
-    fnames = df["function_name"].unique()
+def load_and_prepare_benchmark(filepath):
+    """Load benchmark JSON lines and map to code styles."""
+    with open(filepath, "r") as f:
+        records = [json.loads(line) for line in f if line.strip()]
+    if not records:
+        raise ValueError(f"Benchmark file {filepath} contains no valid records.")
+    df = pd.DataFrame(records)
 
-    for fname in fnames:
-        sub_df = df[df["function_name"] == fname].copy()
-        sub_df["Code Style"] = sub_df["tier"].map(
-            lambda x: "Dense" if x == "dense" else "Sparse"
-        )
-        # Plot wall time
-        plot_benchmark_heatmap(
-            df=sub_df,
-            func_name=fname,
-            category=category,
-            value_col="wall_time"
-        )
+    tier_map = {
+        "tier_0": "Legacy (Pandas)",
+        "tier_1": "Legacy (Loop)",
+        "tier_2": "Refactored (Vectorized)",
+        "tier_3": "Refactored (Numba)",
+        "tier_3p": "Refactored (Parallel Numba)"
+    }
+    df["Code Style"] = df["tier"].map(tier_map)
 
-        # Plot memory
-        plot_benchmark_heatmap(
-            df=sub_df,
-            func_name=fname,
-            category=category,
-            value_col="peak_memory_MB"
-        )
+    if df["Code Style"].isnull().any():
+        missing = df.loc[df["Code Style"].isnull(), "tier"].unique()
+        raise ValueError(f"Unmapped tiers found in {filepath}: {missing}")
+
+    if "function_name" not in df.columns:
+        raise ValueError(f"'function_name' column missing in {filepath}.")
+
+    return df
+
+
+def generate_plots_for_function(df, func_name, category):
+    df_fn = df[df["function_name"] == func_name]
+    if df_fn.empty:
+        print(f"No data found for function {func_name}, skipping.")
+        return
+
+    plot_benchmark_heatmap(df_fn, func_name, category, value_col="wall_time")
+    plot_benchmark_heatmap(df_fn, func_name, category, value_col="peak_memory_MB")
+
 
 if __name__ == "__main__":
-    main()
+    filepath = get_latest_benchmark_file(category=CATEGORY)
+    print(f"Using latest benchmark file: {filepath}")
+
+    df = load_and_prepare_benchmark(filepath)
+
+    if df.empty:
+        raise ValueError(f"Loaded benchmark file {filepath} produced empty DataFrame.")
+
+    for func_name in df["function_name"].unique():
+        print(f"Generating plots for {func_name}...")
+        generate_plots_for_function(df, func_name, CATEGORY)
 
