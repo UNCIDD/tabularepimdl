@@ -44,19 +44,33 @@ def grouped_count(values, group_ids, n_groups):
 
 
 # === 3. Masked sum ===
-def masked_sum(data, mask, T):
+def masked_sum(values, mask):
     """
-    Public masked_sum API — auto-dispatches to optimal implementation.
+    Public masked_sum API — auto-dispatches to optimal implementation
+    based on input size.
+
+    Parameters
+    ----------
+    values : np.ndarray
+        Array of values to sum.
+    mask : np.ndarray
+        Boolean mask indicating which entries to include.
+
+    Returns
+    -------
+    float
+        The masked sum of values.
     """
-    N = data.shape[0]
-    workload = N * T
+    N = values.shape[0]
+    workload = N  # Only depends on N now
 
     if workload >= 1e9:
-        return masked_sum_parallel_numba(data, mask, N, T)
+        return masked_sum_parallel(values, mask)
     elif workload >= 1e7:
-        return masked_sum_numba(data, mask, N, T)
+        return masked_sum_serial(values, mask)
     else:
-        return masked_sum_vectorized(data, mask)  # Removed N, T here
+        return masked_sum_vectorized(values, mask)
+
 
 
 

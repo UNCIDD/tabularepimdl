@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from tabularepimdl.benchmark_utils import (
+from benchmark_utils import (
     get_latest_benchmark_file,
     plot_benchmark_heatmap,
 )

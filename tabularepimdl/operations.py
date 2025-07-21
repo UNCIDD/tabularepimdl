@@ -104,3 +104,29 @@ def grouped_count_meta(values, group_ids=None, group_matrix=None):
         return array_grouped_count(values, group_ids, G)
 
 
+def masked_sum_meta(*, values=None, mask=None, mask_matrix=None, data=None):
+    """
+    Meta-dispatch for masked sum operation: chooses between matrix-based and flat-mask implementations.
+
+    Parameters
+    ----------
+    values : np.ndarray or None
+        1D array of values for flat-mask summation. Required if `mask` is used.
+    mask : np.ndarray or None
+        Boolean mask for flat-mask summation. Required if `values` is used.
+    mask_matrix : np.ndarray or scipy.sparse matrix or None
+        Group × N indicator matrix for matrix-based summation.
+    data : np.ndarray or None
+        1D array of length N for matrix-based summation.
+
+    Returns
+    -------
+    float or np.ndarray
+        Result of the masked sum.
+    """
+    if mask_matrix is not None and data is not None:
+        return matrix_masked_sum(mask_matrix, data)
+    elif values is not None and mask is not None:
+        return array_masked_sum(values, mask)
+    else:
+        raise ValueError("Provide either (values, mask) or (mask_matrix, data).")

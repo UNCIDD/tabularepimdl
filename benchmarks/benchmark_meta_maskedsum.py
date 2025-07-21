@@ -11,7 +11,7 @@ import multiprocessing
 import numpy as np
 from tabularepimdl.arrayops import masked_sum as masked_sum_array
 from tabularepimdl.matrixops import matrix_masked_sum
-from tabularepimdl.benchmark_utils import (
+from benchmark_utils import (
     save_benchmark_result,
     generate_results_file,
     hash_fn_source,
@@ -26,22 +26,23 @@ CORE_CAP = max(1, NUM_CORES - 2)
 print(f"Running with {CORE_CAP} threads (machine has {NUM_CORES})")
 
 def setup_data(N, G, T):
-    data = np.random.rand(N, T).astype(np.float32)
-    group_ids = np.random.randint(0, G, size=N).astype(np.int32)
+    data = np.random.rand(N * T).astype(np.float32)  # Flattened for 1D input
+    group_ids = np.repeat(np.random.randint(0, G, size=N).astype(np.int32), T)
 
-    mask_matrix = np.zeros((G, N), dtype=np.float32)
-    mask_matrix[group_ids, np.arange(N)] = 1.0
+    mask_matrix = np.zeros((G, N * T), dtype=np.float32)
+    mask_matrix[group_ids, np.arange(N * T)] = 1.0
 
     return data, group_ids, mask_matrix
 
-def run_benchmark_case(dispatch_type, data, group_ids, mask_matrix, T):
+def run_benchmark_case(dispatch_type, data, group_ids, mask_matrix):
     if dispatch_type == "array":
-        result = masked_sum_array(data, group_ids, T)
-        return result, result.nbytes
+        result = masked_sum_array(data, group_ids)
+        return result, np.dtype(type(result)).itemsize
+
 
     elif dispatch_type == "matrix":
         result = matrix_masked_sum(mask_matrix, data)
-        return result, result.nbytes
+        return result, np.dtype(type(result)).itemsize
 
     else:
         raise ValueError(f"Unknown dispatch type: {dispatch_type}")
@@ -66,13 +67,7 @@ def run_benchmarks():
             data, group_ids, mask_matrix = setup_data(N, G, T)
 
             for dispatch_type in dispatch_types:
-                args = (
-                    dispatch_type,
-                    data,
-                    group_ids,
-                    mask_matrix,
-                    T
-                )
+                args = (dispatch_type, data, group_ids, mask_matrix)
                 fn_hash = hash_fn_source(run_benchmark_case)
 
                 with tempfile.NamedTemporaryFile(delete=False) as f_args, tempfile.NamedTemporaryFile(delete=False) as f_result:
