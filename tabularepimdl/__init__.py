@@ -15,4 +15,10 @@ from .StateBasedDeathProcess import StateBasedDeathProcess
 from .WAIFWTransmission import WAIFWTransmission
 from .WithFilters import WithFilters
 from .FunctionalTransition import FunctionalTransition
+
+from .arrayops import (
+    grouped_sum,
+    grouped_count,
+    masked_sum,
+)
 __version__ = "0.1.0"
