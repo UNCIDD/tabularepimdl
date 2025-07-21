@@ -12,14 +12,15 @@ import psutil
 import threading
 import signal
 
-from tabularepimdl.arrayops import (
+from tabularepimdl.arrayops_utils import (
     grouped_sum_serial, grouped_sum_parallel,
     grouped_count_serial, grouped_count_parallel,
-    masked_sum_serial, masked_sum_parallel,
-    apply_deterministic_transition,
+    masked_sum_serial, masked_sum_parallel)
+
+from tabularepimdl.operations import (apply_deterministic_transition,
     apply_stochastic_transition_serial,
-    encode_categories
-)
+    encode_categories)
+
 from tabularepimdl.benchmark_utils import save_benchmark_result, hash_fn_source
 
 # === CONFIG ===
