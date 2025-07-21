@@ -17,11 +17,14 @@ from tabularepimdl.arrayops_utils import (
     grouped_count_serial, grouped_count_parallel,
     masked_sum_serial, masked_sum_parallel)
 
-from tabularepimdl.operations import (apply_deterministic_transition,
+from tabularepimdl.operations import (
+    apply_deterministic_transition,
     apply_stochastic_transition,
-    encode_categories)
+    encode_categories,
+)
 
-from benchmark_utils import save_benchmark_result, hash_fn_source
+# === Updated import for benchmark_utils from benchmarks/ ===
+from benchmarks.benchmark_utils import save_benchmark_result, hash_fn_source, generate_results_file
 
 # === CONFIG ===
 MAX_TIME = 60.0  # seconds
@@ -32,6 +35,9 @@ CORE_CAP = max(1, NUM_CORES - 2)
 
 numba.set_num_threads(CORE_CAP)
 print(f"Running with {CORE_CAP} threads (machine has {NUM_CORES})")
+
+# === RESULTS FILE SETUP ===
+RESULTS_FILE, RUN_ID = generate_results_file("arrayops")
 
 def setup_data(N):
     age = np.random.choice(["0-4", "5-9", "10-14"], size=N)
@@ -50,16 +56,14 @@ def setup_data(N):
 
 
 def worker_main(args_file, result_file):
-
-
-    # Load args
     with open(args_file, "rb") as f:
         args = pickle.load(f)
-
     result = run_benchmark_case(*args)
     with open(result_file, "wb") as f:
         pickle.dump(result, f)
 
+
+# === BENCHMARK FUNCTION ===
 def run_benchmark_case(func_name, tier, N_vals, probs, mask, group_ids, n_groups, df_base, T):
     if func_name == "grouped_sum":
         if tier == "tier_0":
@@ -235,6 +239,8 @@ def run_benchmark_case(func_name, tier, N_vals, probs, mask, group_ids, n_groups
     else:
         raise ValueError(f"Unknown function or tier: {func_name}, {tier}")
 
+
+# === RUNNER ===
 def run_benchmarks():
     Ns = [10**4, 10**5, 10**6, 10**7]
     Ts = [100, 300, 500, 700]
@@ -243,7 +249,7 @@ def run_benchmarks():
         "grouped_count": ["tier_0", "tier_1", "tier_2", "tier_3", "tier_3p"],
         "masked_sum": ["tier_0", "tier_1", "tier_2", "tier_3", "tier_3p"],
         "apply_deterministic_transition": ["tier_0", "tier_1", "tier_2", "tier_3"],
-        "apply_stochastic_transition": ["tier_0", "tier_1", "tier_2", "tier_3"]
+        "apply_stochastic_transition": ["tier_0", "tier_1", "tier_2", "tier_3"],
     }
 
     for N in Ns:
@@ -252,7 +258,6 @@ def run_benchmarks():
             for func_name, tiers in funcs_and_tiers.items():
                 for tier in tiers:
                     args = (func_name, tier, N_vals, probs, mask, group_ids, n_groups, df_base, T)
-
                     fn_hash = hash_fn_source(lambda: run_benchmark_case(*args))
 
                     with tempfile.NamedTemporaryFile(delete=False) as f_args, tempfile.NamedTemporaryFile(delete=False) as f_result:
@@ -274,10 +279,8 @@ def run_benchmarks():
                                     if rss > (MAX_MEMORY_MB * 1024 ** 2):
                                         print(f"[{func_name} - {tier}] N={N}, T={T} | MEMORY CAP EXCEEDED: {rss / 1024 ** 2:.2f} MB > {MAX_MEMORY_MB} MB")
                                         os.killpg(proc.pid, signal.SIGKILL)
-                                        
                                         proc.wait()
                                         time.sleep(0.05)
-
                                         break
                                     time.sleep(0.01)
                             except psutil.NoSuchProcess:
@@ -304,7 +307,6 @@ def run_benchmarks():
                                 dynamic_mem = max(dynamic_mem, peak_rss, MIN_PEAK_BYTES)
                                 status = "OK"
 
-
                         except subprocess.TimeoutExpired:
                             os.killpg(proc.pid, signal.SIGKILL)
                             proc.wait()
@@ -321,15 +323,17 @@ def run_benchmarks():
                             os.unlink(f_result.name)
 
                         save_benchmark_result(
+                            results_file=RESULTS_FILE,
                             tier=tier,
                             N=N,
                             T=T,
+                            G=n_groups,
                             elapsed=elapsed,
                             peak_memory=dynamic_mem,
                             result_shape=getattr(result, "shape", "n/a") if result is not None else "n/a",
                             cap_time=MAX_TIME,
                             fn_hash=fn_hash,
-                            function_name=func_name
+                            function_name=func_name,
                         )
 
                         print(f"[{func_name} - {tier}] N={N}, T={T} | Time: {elapsed:.2f}s | Mem: {dynamic_mem / 1024 ** 2:.4f}MB | Status: {status}")
