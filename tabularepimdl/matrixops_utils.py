@@ -45,7 +45,7 @@ def encode_sparse_groups(group_ids: np.ndarray, n_groups: int) -> csr_matrix:
     N = group_ids.shape[0]
     row = group_ids
     col = np.arange(N)
-    data = np.ones(N, dtype=np.float32)
+    data = np.ones(N, dtype=np.float64)
     return coo_matrix((data, (row, col)), shape=(n_groups, N)).tocsr()
 
 
@@ -54,7 +54,7 @@ def encode_dense_groups(group_ids: np.ndarray, n_groups: int) -> np.ndarray:
     Encode group ID vector → dense group matrix (G × N).
     """
     N = group_ids.shape[0]
-    G = np.zeros((n_groups, N), dtype=np.float32)
+    G = np.zeros((n_groups, N), dtype=np.float64)
     G[group_ids, np.arange(N)] = 1.0
     return G
 

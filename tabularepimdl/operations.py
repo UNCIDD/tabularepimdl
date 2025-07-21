@@ -2,7 +2,8 @@ from tabularepimdl.arrayops import grouped_sum as array_grouped_sum
 from tabularepimdl.arrayops import grouped_count as array_grouped_count
 from tabularepimdl.arrayops import masked_sum as array_masked_sum
 from tabularepimdl.matrixops import matrix_grouped_sum, matrix_grouped_count, matrix_masked_sum
-
+import numpy as np
+import numba as nb
 # ===  Deterministic transition ===
 @nb.njit(parallel=False, fastmath=True)
 def apply_deterministic_transition(counts: np.ndarray, probs: np.ndarray) -> np.ndarray:
@@ -11,7 +12,7 @@ def apply_deterministic_transition(counts: np.ndarray, probs: np.ndarray) -> np.
 # ===  Stochastic transition ===
 @nb.njit(parallel=False, fastmath=True)
 def apply_stochastic_transition(counts: np.ndarray, probs: np.ndarray) -> np.ndarray:
-    out = np.empty(counts.shape[0], dtype=np.int32)
+    out = np.empty(counts.shape[0], dtype=np.int64)
     for i in range(counts.shape[0]):
         out[i] = np.random.binomial(counts[i], probs[i])
     return out

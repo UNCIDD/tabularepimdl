@@ -32,7 +32,7 @@ def grouped_sum(values, group_ids, n_groups):
 def grouped_count(values, group_ids, n_groups):
     N = values.shape[0]
 
-    group_ids_int = group_ids.astype(np.int32)
+    group_ids_int = group_ids.astype(np.int64)
 
     if N >= 1_000_000:
         return grouped_count_parallel(group_ids_int, n_groups)

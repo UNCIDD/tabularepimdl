@@ -41,7 +41,7 @@ def grouped_count_serial(group_ids: np.ndarray, n_groups: int) -> np.ndarray:
     """
     Numba JIT grouped count (serial).
     """
-    result = np.zeros(n_groups, dtype=np.int32)
+    result = np.zeros(n_groups, dtype=np.int64)
     for i in range(group_ids.shape[0]):
         result[group_ids[i]] += 1
     return result
@@ -51,11 +51,11 @@ def grouped_count_parallel(group_ids: np.ndarray, n_groups: int) -> np.ndarray:
     """
     Numba JIT grouped count (parallel safe with thread-local accumulation).
     """
-    tmp = np.zeros((nb.get_num_threads(), n_groups), dtype=np.int32)
+    tmp = np.zeros((nb.get_num_threads(), n_groups), dtype=np.int64)
     for i in nb.prange(group_ids.shape[0]):
         thread_id = nb.get_thread_id()
         tmp[thread_id, group_ids[i]] += 1
-    result = np.zeros(n_groups, dtype=np.int32)
+    result = np.zeros(n_groups, dtype=np.int64)
     for t in range(tmp.shape[0]):
         for g in range(n_groups):
             result[g] += tmp[t, g]
@@ -65,7 +65,7 @@ def grouped_count_vectorized(group_ids: np.ndarray, n_groups: int) -> np.ndarray
     """
     Pure NumPy vectorized grouped count.
     """
-    result = np.zeros(n_groups, dtype=np.int32)
+    result = np.zeros(n_groups, dtype=np.int64)
     np.add.at(result, group_ids, 1)
     return result
 
