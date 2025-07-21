@@ -1,9 +1,7 @@
 import numpy as np
-import pandas as pd
 import pytest
 from numpy.testing import assert_allclose
 import numba as nb
-
 from tabularepimdl.operations import encode_categories
 
 
@@ -48,10 +46,6 @@ def test_grouped_sum_fastmath(N):
 def test_grouped_sum_parallel_fastmath(N):
     values, _, _, group_ids, n_groups = setup_data(N)
 
-    def make(fn, fastmath):
-        return nb.njit(parallel=True, fastmath=fastmath)(fn)
-
-    @make
     def grouped_sum_par(values, group_ids, n_groups):
         tmp = np.zeros((nb.get_num_threads(), n_groups), dtype=values.dtype)
         for i in nb.prange(values.shape[0]):
@@ -63,8 +57,11 @@ def test_grouped_sum_parallel_fastmath(N):
                 result[g] += tmp[t, g]
         return result
 
-    out_no = grouped_sum_par(False)(values, group_ids, n_groups)
-    out_yes = grouped_sum_par(True)(values, group_ids, n_groups)
+    fn_no = nb.njit(parallel=True, fastmath=False)(grouped_sum_par)
+    fn_yes = nb.njit(parallel=True, fastmath=True)(grouped_sum_par)
+
+    out_no = fn_no(values, group_ids, n_groups)
+    out_yes = fn_yes(values, group_ids, n_groups)
     assert_allclose(out_yes, out_no, rtol=1e-6, atol=1e-6)
 
 
@@ -94,10 +91,6 @@ def test_grouped_count_fastmath(N):
 def test_grouped_count_parallel_fastmath(N):
     _, _, _, group_ids, n_groups = setup_data(N)
 
-    def make(fn, fastmath):
-        return nb.njit(parallel=True, fastmath=fastmath)(fn)
-
-    @make
     def grouped_count_par(group_ids, n_groups):
         tmp = np.zeros((nb.get_num_threads(), n_groups), dtype=np.int64)
         for i in nb.prange(group_ids.shape[0]):
@@ -109,8 +102,11 @@ def test_grouped_count_parallel_fastmath(N):
                 result[g] += tmp[t, g]
         return result
 
-    out_no = grouped_count_par(False)(group_ids, n_groups)
-    out_yes = grouped_count_par(True)(group_ids, n_groups)
+    fn_no = nb.njit(parallel=True, fastmath=False)(grouped_count_par)
+    fn_yes = nb.njit(parallel=True, fastmath=True)(grouped_count_par)
+
+    out_no = fn_no(group_ids, n_groups)
+    out_yes = fn_yes(group_ids, n_groups)
     assert_allclose(out_yes, out_no)
 
 
@@ -143,10 +139,6 @@ def test_masked_sum_fastmath(N):
 def test_masked_sum_parallel_fastmath(N):
     values, _, mask, _, _ = setup_data(N)
 
-    def make(fn, fastmath):
-        return nb.njit(parallel=True, fastmath=fastmath)(fn)
-
-    @make
     def masked_sum_par(values, mask):
         tmp = np.zeros(nb.get_num_threads(), dtype=values.dtype)
         for i in nb.prange(values.shape[0]):
@@ -154,6 +146,10 @@ def test_masked_sum_parallel_fastmath(N):
                 tmp[nb.get_thread_id()] += values[i]
         return tmp.sum()
 
-    out_no = masked_sum_par(False)(values, mask)
-    out_yes = masked_sum_par(True)(values, mask)
+    fn_no = nb.njit(parallel=True, fastmath=False)(masked_sum_par)
+    fn_yes = nb.njit(parallel=True, fastmath=True)(masked_sum_par)
+
+    out_no = fn_no(values, mask)
+    out_yes = fn_yes(values, mask)
     assert_allclose(out_yes, out_no, rtol=1e-6, atol=1e-6)
+
