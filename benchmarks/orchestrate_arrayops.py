@@ -11,6 +11,6 @@ def run_benchmark_arrayops_plots():
     print("=== benchmark_arrayops_plots.py completed ===")
 
 if __name__ == "__main__":
-    run_benchmark_arrayops()
+    # run_benchmark_arrayops()
     run_benchmark_arrayops_plots()
     print("=== All benchmarking and plotting complete ===")
