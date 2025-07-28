@@ -3,9 +3,9 @@ from benchmark.Visualizer import Visualizer
 
 def Run_n_Visual():
     runner = SimpleTransitionRunner(
-        data_sizes= [10],#[10**4, 10**5, 10**6, 10**7],
+        data_sizes= [10**4, 10**5, 10**6, 10**7],
         structures=['Pandas', 'Numpy'],
-        iterations= [10],#[100, 300, 500, 700],
+        iterations= [100, 300, 500, 700],
         column='InfState',
         from_st='S',
         to_st='I',
