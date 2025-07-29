@@ -13,7 +13,7 @@ class Rule(ABC):
     @param stochastic: whether the process is stochastic or deterministic.
     """
         
-    @abstractmethod
+    # @abstractmethod
     def get_deltas(self, current_state: pd.DataFrame, dt: int|float, stochastic: bool) -> pd.DataFrame:
         """! Method should take in current state and return a series of deltas to that state.
         @param current_state: a data frame (at the moment) w/ the current epidemic state
