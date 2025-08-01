@@ -31,7 +31,7 @@ class SimpleTransition_Vec(Rule, BaseModel):
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.
-        @return: a pandas DataFrame containing changes in from_st and to_st.
+        return: a pandas DataFrame containing changes in from_st and to_st.
         """
         required_columns = {"N"} #check if column N presents in current_state
         if not required_columns.issubset(current_state.columns):
@@ -39,9 +39,6 @@ class SimpleTransition_Vec(Rule, BaseModel):
         
         if stochastic is None:
             stochastic = self.stochastic
-
-        if not isinstance(current_state[self.column].dtype, pd.CategoricalDtype):
-            current_state[self.column] = current_state[self.column].astype('category')
 
         mask_s = current_state[self.column].values == self.from_st
         if not np.any(mask_s): #Handle edge case when no from_st rows are filtered
