@@ -57,6 +57,9 @@ class EpiModel(BaseModel):
         all_comps = sorted(init_comps.union(rule_comps))
 
         # === Inject zero-row entries for missing compartments ===
+        if "group" not in df.columns:
+            df["group"] = 0
+            
         missing_comps = rule_comps - init_comps
         if missing_comps:
             missing_rows = []

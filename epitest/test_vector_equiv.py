@@ -15,15 +15,14 @@ from tabularepimdl.SimpleTransition import SimpleTransition as SimpleTransition_
 def sir_vector_model():
     """Fixture for a simple SIR model with vectorized rules."""
     df_init = pd.DataFrame({
-        "group": [0, 0],
         "compartment": ["S", "I"],
-        "N": [990, 10],
+        "N": [1500000, 10],
         "T": [0.0, 0.0]
     })
 
-    beta = 3.0
-    gamma = 0.1
-    t0, tf, dt = 0.0, 100.0, 0.25
+    beta = 0.25
+    gamma = 1/7
+    t0, tf, dt = 0.0, 500.0, 0.25
 
     rules = [[
         SimpleInfection(beta=beta, column="compartment", s_st="S", i_st="I", inf_to="I"),
@@ -48,12 +47,12 @@ def sir_base_model():
     df_init = pd.DataFrame({
         "group": [0, 0, 0],
         "compartment": ["S", "I", "R"],
-        "N": [990, 10, 0],
+        "N": [1500000, 10, 0],
         "T": [0.0, 0.0, 0.0]
     })
 
-    beta = 3.0
-    gamma = 0.1
+    beta = 0.25
+    gamma = 1/7
 
     rules = [[
         SimpleInfection_Base(beta=beta, column="compartment", s_st="S", i_st="I", inf_to="I"),
@@ -73,7 +72,7 @@ def test_vector_base_equivalence(sir_vector_model, sir_base_model):
 
     # Match number of steps and dt
     dt = 0.25
-    tf = 100.0
+    tf = 500.0
     n_steps = int(tf / dt)
     for _ in range(n_steps):
         sir_base_model.do_timestep(dt=dt)
@@ -94,8 +93,8 @@ def test_vector_base_equivalence(sir_vector_model, sir_base_model):
     vec_pivot = vec_epi_sorted.pivot_table(index=["T", "group"], columns="compartment", values="N")
     base_pivot = base_epi_sorted.pivot_table(index=["T", "group"], columns="compartment", values="N")
 
-    diff = np.abs(vec_pivot - base_pivot)
+    diff = np.abs(vec_pivot - base_pivot)/ np.maximum(base_pivot, 1e-10)  # Avoid division by zero
     max_diff = diff.max().max()
 
-    print("[DEBUG] max diff:", max_diff)
+    print("[DEBUG] max relative diff:", max_diff)
     assert max_diff < 1e-3, f"Discrepancy too large: {max_diff}"

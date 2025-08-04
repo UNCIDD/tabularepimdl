@@ -1,0 +1,117 @@
+{
+    "machine_info": {
+        "node": "Joshuas-MacBook-Pro-2.local",
+        "processor": "arm",
+        "machine": "arm64",
+        "python_compiler": "Clang 18.1.8 ",
+        "python_implementation": "CPython",
+        "python_implementation_version": "3.12.9",
+        "python_version": "3.12.9",
+        "python_build": [
+            "main",
+            "Mar  4 2025 22:44:42"
+        ],
+        "release": "23.6.0",
+        "system": "Darwin",
+        "cpu": {
+            "python_version": "3.12.9.final.0 (64 bit)",
+            "cpuinfo_version": [
+                9,
+                0,
+                0
+            ],
+            "cpuinfo_version_string": "9.0.0",
+            "arch": "ARM_8",
+            "bits": 64,
+            "count": 14,
+            "arch_string_raw": "arm64",
+            "brand_raw": "Apple M3 Max"
+        }
+    },
+    "commit_info": {
+        "id": "a4b714295030439a35f3ffdd52ab89088b897f79",
+        "time": "2025-07-29T11:36:18-04:00",
+        "author_time": "2025-07-29T11:36:18-04:00",
+        "dirty": true,
+        "project": "tabularepimdl",
+        "branch": "backend_dev"
+    },
+    "benchmarks": [
+        {
+            "group": null,
+            "name": "test_vector_model_benchmark",
+            "fullname": "benchmarks/benchmark_basicSIR.py::test_vector_model_benchmark",
+            "params": null,
+            "param": null,
+            "extra_info": {
+                "vector_peak_memory_MB": 16.417
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 1.0409858077764511e-06,
+                "max": 6.4999330788850784e-06,
+                "mean": 2.233171835541725e-06,
+                "stddev": 2.388473916152553e-06,
+                "rounds": 5,
+                "median": 1.125037670135498e-06,
+                "iqr": 1.5522819012403488e-06,
+                "q1": 1.1039373930543661e-06,
+                "q3": 2.656219294294715e-06,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 1.0409858077764511e-06,
+                "hd15iqr": 6.4999330788850784e-06,
+                "ops": 447793.57507767377,
+                "total": 1.1165859177708626e-05,
+                "iterations": 1
+            }
+        },
+        {
+            "group": null,
+            "name": "test_base_model_benchmark",
+            "fullname": "benchmarks/benchmark_basicSIR.py::test_base_model_benchmark",
+            "params": null,
+            "param": null,
+            "extra_info": {
+                "base_peak_memory_MB": 6.072
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 15.41003008291591,
+                "max": 15.947409708984196,
+                "mean": 15.695595600176603,
+                "stddev": 0.19750338464509928,
+                "rounds": 5,
+                "median": 15.66926641704049,
+                "iqr": 0.23255924994009547,
+                "q1": 15.597627270995872,
+                "q3": 15.830186520935968,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 15.41003008291591,
+                "hd15iqr": 15.947409708984196,
+                "ops": 0.06371214100271214,
+                "total": 78.47797800088301,
+                "iterations": 1
+            }
+        }
+    ],
+    "datetime": "2025-08-04T13:48:50.281791+00:00",
+    "version": "5.1.0"
+}

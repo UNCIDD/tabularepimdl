@@ -1,0 +1,78 @@
+{
+    "machine_info": {
+        "node": "Joshuas-MacBook-Pro-2.local",
+        "processor": "arm",
+        "machine": "arm64",
+        "python_compiler": "Clang 18.1.8 ",
+        "python_implementation": "CPython",
+        "python_implementation_version": "3.12.9",
+        "python_version": "3.12.9",
+        "python_build": [
+            "main",
+            "Mar  4 2025 22:44:42"
+        ],
+        "release": "23.6.0",
+        "system": "Darwin",
+        "cpu": {
+            "python_version": "3.12.9.final.0 (64 bit)",
+            "cpuinfo_version": [
+                9,
+                0,
+                0
+            ],
+            "cpuinfo_version_string": "9.0.0",
+            "arch": "ARM_8",
+            "bits": 64,
+            "count": 14,
+            "arch_string_raw": "arm64",
+            "brand_raw": "Apple M3 Max"
+        }
+    },
+    "commit_info": {
+        "id": "a4b714295030439a35f3ffdd52ab89088b897f79",
+        "time": "2025-07-29T11:36:18-04:00",
+        "author_time": "2025-07-29T11:36:18-04:00",
+        "dirty": true,
+        "project": "tabularepimdl",
+        "branch": "backend_dev"
+    },
+    "benchmarks": [
+        {
+            "group": null,
+            "name": "test_base_model_benchmark",
+            "fullname": "benchmarks/benchmark_basicSIR.py::test_base_model_benchmark",
+            "params": null,
+            "param": null,
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 13.387966542039067,
+                "max": 13.731501124915667,
+                "mean": 13.575530749978498,
+                "stddev": 0.1739328322108309,
+                "rounds": 3,
+                "median": 13.60712458298076,
+                "iqr": 0.25765093715745024,
+                "q1": 13.44275605227449,
+                "q3": 13.70040698943194,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 13.387966542039067,
+                "hd15iqr": 13.731501124915667,
+                "ops": 0.07366194504046068,
+                "total": 40.72659224993549,
+                "iterations": 1
+            }
+        }
+    ],
+    "datetime": "2025-08-04T13:58:24.303525+00:00",
+    "version": "5.1.0"
+}
