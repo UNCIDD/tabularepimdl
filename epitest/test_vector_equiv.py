@@ -35,6 +35,7 @@ def sir_vector_model():
         t0=t0,
         tf=tf,
         dt=dt,
+        store_stride = 1,
         compartment_col="compartment"
     )
 
@@ -45,10 +46,9 @@ def sir_vector_model():
 @pytest.fixture
 def sir_base_model():
     df_init = pd.DataFrame({
-        "group": [0, 0, 0],
-        "compartment": ["S", "I", "R"],
-        "N": [1500000, 10, 0],
-        "T": [0.0, 0.0, 0.0]
+        "compartment": ["S", "I"],
+        "N": [1500000, 10],
+        "T": [0.0, 0.0]
     })
 
     beta = 0.25
@@ -81,8 +81,8 @@ def test_vector_base_equivalence(sir_vector_model, sir_base_model):
     vec_epi = sir_vector_model.get_full_epi()
     base_epi = sir_base_model.full_epi
 
-    vec_epi_sorted = vec_epi.sort_values(["T", "group", "compartment"]).reset_index(drop=True)
-    base_epi_sorted = base_epi.sort_values(["T", "group", "compartment"]).reset_index(drop=True)
+    vec_epi_sorted = vec_epi.sort_values(["T", "compartment"]).reset_index(drop=True)
+    base_epi_sorted = base_epi.sort_values(["T", "compartment"]).reset_index(drop=True)
 
     # Restrict to shared time steps
     common_times = np.intersect1d(vec_epi_sorted["T"].unique(), base_epi_sorted["T"].unique())
@@ -90,8 +90,8 @@ def test_vector_base_equivalence(sir_vector_model, sir_base_model):
     base_epi_sorted = base_epi_sorted[base_epi_sorted["T"].isin(common_times)]
 
     # Pivot for comparison
-    vec_pivot = vec_epi_sorted.pivot_table(index=["T", "group"], columns="compartment", values="N")
-    base_pivot = base_epi_sorted.pivot_table(index=["T", "group"], columns="compartment", values="N")
+    vec_pivot = vec_epi_sorted.pivot_table(index=["T"], columns="compartment", values="N")
+    base_pivot = base_epi_sorted.pivot_table(index=["T"], columns="compartment", values="N")
 
     diff = np.abs(vec_pivot - base_pivot)/ np.maximum(base_pivot, 1e-10)  # Avoid division by zero
     max_diff = diff.max().max()

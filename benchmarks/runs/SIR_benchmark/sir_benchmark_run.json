@@ -1,0 +1,131 @@
+{
+    "machine_info": {
+        "node": "Joshuas-MacBook-Pro-2.local",
+        "processor": "arm",
+        "machine": "arm64",
+        "python_compiler": "Clang 18.1.8 ",
+        "python_implementation": "CPython",
+        "python_implementation_version": "3.12.9",
+        "python_version": "3.12.9",
+        "python_build": [
+            "main",
+            "Mar  4 2025 22:44:42"
+        ],
+        "release": "23.6.0",
+        "system": "Darwin",
+        "cpu": {
+            "python_version": "3.12.9.final.0 (64 bit)",
+            "cpuinfo_version": [
+                9,
+                0,
+                0
+            ],
+            "cpuinfo_version_string": "9.0.0",
+            "arch": "ARM_8",
+            "bits": 64,
+            "count": 14,
+            "arch_string_raw": "arm64",
+            "brand_raw": "Apple M3 Max"
+        }
+    },
+    "commit_info": {
+        "id": "6ccc53902d135befecfc447c221bd71c587c149b",
+        "time": "2025-08-04T10:12:58-04:00",
+        "author_time": "2025-08-04T10:12:58-04:00",
+        "dirty": true,
+        "project": "tabularepimdl",
+        "branch": "backend_dev"
+    },
+    "benchmarks": [
+        {
+            "group": null,
+            "name": "test_vector_model_benchmark",
+            "fullname": "benchmarks/benchmark_basicSIR.py::test_vector_model_benchmark",
+            "params": null,
+            "param": null,
+            "extra_info": {
+                "vector_peak_memory_MB": 16.415
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 1.084059476852417e-06,
+                "max": 2.874992787837982e-06,
+                "mean": 1.7500482499599456e-06,
+                "stddev": 7.697751136157852e-07,
+                "rounds": 5,
+                "median": 1.416075974702835e-06,
+                "iqr": 1.2284726835787296e-06,
+                "q1": 1.1463125701993704e-06,
+                "q3": 2.3747852537781e-06,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 1.084059476852417e-06,
+                "hd15iqr": 2.874992787837982e-06,
+                "ops": 571412.8167739875,
+                "total": 8.750241249799728e-06,
+                "data": [
+                    2.874992787837982e-06,
+                    1.416075974702835e-06,
+                    2.2080494090914726e-06,
+                    1.1670636013150215e-06,
+                    1.084059476852417e-06
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": null,
+            "name": "test_base_model_benchmark",
+            "fullname": "benchmarks/benchmark_basicSIR.py::test_base_model_benchmark",
+            "params": null,
+            "param": null,
+            "extra_info": {
+                "base_peak_memory_MB": 5.086
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 13.289644374977797,
+                "max": 13.57024208304938,
+                "mean": 13.412516749836504,
+                "stddev": 0.10405518778507003,
+                "rounds": 5,
+                "median": 13.384976833011024,
+                "iqr": 0.1237084585300181,
+                "q1": 13.352276749792509,
+                "q3": 13.475985208322527,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 13.289644374977797,
+                "hd15iqr": 13.57024208304938,
+                "ops": 0.07455722282786262,
+                "total": 67.06258374918252,
+                "data": [
+                    13.289644374977797,
+                    13.57024208304938,
+                    13.384976833011024,
+                    13.37315420806408,
+                    13.444566250080243
+                ],
+                "iterations": 1
+            }
+        }
+    ],
+    "datetime": "2025-08-04T14:33:49.242470+00:00",
+    "version": "5.1.0"
+}
