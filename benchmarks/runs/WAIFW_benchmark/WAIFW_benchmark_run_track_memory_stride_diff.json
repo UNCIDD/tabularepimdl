@@ -1,0 +1,145 @@
+{
+    "machine_info": {
+        "node": "Joshuas-MacBook-Pro-2.local",
+        "processor": "arm",
+        "machine": "arm64",
+        "python_compiler": "Clang 18.1.8 ",
+        "python_implementation": "CPython",
+        "python_implementation_version": "3.12.9",
+        "python_version": "3.12.9",
+        "python_build": [
+            "main",
+            "Mar  4 2025 22:44:42"
+        ],
+        "release": "23.6.0",
+        "system": "Darwin",
+        "cpu": {
+            "python_version": "3.12.9.final.0 (64 bit)",
+            "cpuinfo_version": [
+                9,
+                0,
+                0
+            ],
+            "cpuinfo_version_string": "9.0.0",
+            "arch": "ARM_8",
+            "bits": 64,
+            "count": 14,
+            "arch_string_raw": "arm64",
+            "brand_raw": "Apple M3 Max"
+        }
+    },
+    "commit_info": {
+        "id": "9c513c642156f5606699ca98cc6ae7fb0cc00c08",
+        "time": "2025-08-04T11:30:03-04:00",
+        "author_time": "2025-08-04T11:30:03-04:00",
+        "dirty": true,
+        "project": "tabularepimdl",
+        "branch": "backend_dev"
+    },
+    "benchmarks": [
+        {
+            "group": null,
+            "name": "test_waifw_model_benchmark[vector-True-WAIFWTransmission-SimpleTransition]",
+            "fullname": "benchmarks/benchmark_WAIFW.py::test_waifw_model_benchmark[vector-True-WAIFWTransmission-SimpleTransition]",
+            "params": {
+                "label": "vector",
+                "is_vector": true,
+                "rule_cls": "UNSERIALIZABLE[<class 'tabularepimdl.WAIFWTransmission_Vector.WAIFWTransmission'>]",
+                "transition_cls": "UNSERIALIZABLE[<class 'tabularepimdl.SimpleTransition_Vector.SimpleTransition'>]"
+            },
+            "param": "vector-True-WAIFWTransmission-SimpleTransition",
+            "extra_info": {
+                "vector_memory_MB_init": 0.0,
+                "vector_memory_MB_peak": 36.197,
+                "vector_memory_MB_growth": 36.197
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 1.08394306153059e-06,
+                "max": 4.292000085115433e-06,
+                "mean": 1.8251826986670495e-06,
+                "stddev": 1.3868070394353627e-06,
+                "rounds": 5,
+                "median": 1.1669471859931946e-06,
+                "iqr": 1.0517251212149858e-06,
+                "q1": 1.114764017984271e-06,
+                "q3": 2.166489139199257e-06,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 1.08394306153059e-06,
+                "hd15iqr": 4.292000085115433e-06,
+                "ops": 547890.3568011634,
+                "total": 9.125913493335247e-06,
+                "data": [
+                    4.292000085115433e-06,
+                    1.4579854905605316e-06,
+                    1.1669471859931946e-06,
+                    1.125037670135498e-06,
+                    1.08394306153059e-06
+                ],
+                "iterations": 1
+            }
+        },
+        {
+            "group": null,
+            "name": "test_waifw_model_benchmark[base-False-WAIFWTransmission-SimpleTransition]",
+            "fullname": "benchmarks/benchmark_WAIFW.py::test_waifw_model_benchmark[base-False-WAIFWTransmission-SimpleTransition]",
+            "params": {
+                "label": "base",
+                "is_vector": false,
+                "rule_cls": "UNSERIALIZABLE[<class 'tabularepimdl.WAIFWTransmission.WAIFWTransmission'>]",
+                "transition_cls": "UNSERIALIZABLE[<class 'tabularepimdl.SimpleTransition.SimpleTransition'>]"
+            },
+            "param": "base-False-WAIFWTransmission-SimpleTransition",
+            "extra_info": {
+                "base_memory_MB_init": 0.0,
+                "base_memory_MB_peak": 754.855,
+                "base_memory_MB_growth": 754.855
+            },
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 11.743249332997948,
+                "max": 22.970544083975255,
+                "mean": 17.53093737543095,
+                "stddev": 4.5490176097593125,
+                "rounds": 5,
+                "median": 18.047374959103763,
+                "iqr": 7.479355125542497,
+                "q1": 13.684616052254569,
+                "q3": 21.163971177797066,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 11.743249332997948,
+                "hd15iqr": 22.970544083975255,
+                "ops": 0.05704201541450192,
+                "total": 87.65468687715475,
+                "data": [
+                    11.743249332997948,
+                    14.331738292006776,
+                    18.047374959103763,
+                    20.561780209071003,
+                    22.970544083975255
+                ],
+                "iterations": 1
+            }
+        }
+    ],
+    "datetime": "2025-08-04T20:47:07.499056+00:00",
+    "version": "5.1.0"
+}

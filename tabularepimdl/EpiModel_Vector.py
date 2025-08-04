@@ -14,7 +14,7 @@ class EpiModel(BaseModel):
     dt: float = 0.25
     stoch_policy: str = "rule_based"
     compartment_col: str = "compartment"
-    store_stride: Optional[int] = None  # new field
+    store_stride: Optional[int] = None
 
     # Internal state
     cur_state_arr: Optional[np.ndarray] = None
@@ -48,25 +48,63 @@ class EpiModel(BaseModel):
 
         # === Collect compartments from init state and rules ===
         init_comps = set(df[self.compartment_col].astype(str).unique())
-        rule_comps = {str(x) for ruleset in self.rules for rule in ruleset for x in (rule.source_states + rule.target_states)}
+        rule_comps = {
+            str(x)
+            for ruleset in self.rules
+            for rule in ruleset
+            for x in (rule.source_states + rule.target_states)
+        }
         all_comps = sorted(init_comps.union(rule_comps))
 
-        if "group" not in df.columns:
-            df["group"] = 0
+        # === Ensure all group_col fields are present and inject missing compartments per rule ===
+        for ruleset in self.rules:
+            for rule in ruleset:
+                group_col = getattr(rule, "group_col", "group")
+                if group_col not in df.columns:
+                    df[group_col] = 0
 
-        # Inject missing compartments as zero rows
-        missing_comps = rule_comps - init_comps
-        if missing_comps:
-            missing_rows = [{"group": group, self.compartment_col: comp, "N": 0.0, "T": self.t0}
-                            for group in df["group"].unique() for comp in missing_comps]
-            df = pd.concat([df, pd.DataFrame(missing_rows)], ignore_index=True)
+                rule_comps = set(rule.source_states + rule.target_states)
+                present = df[self.compartment_col].astype(str).unique()
+                missing = rule_comps - set(present)
 
-        df = df.sort_values(["group", self.compartment_col]).reset_index(drop=True)
+                if missing:
+                    unique_groups = df[group_col].unique()
+                    missing_rows = [
+                        {group_col: g, self.compartment_col: comp, "N": 0.0, "T": self.t0}
+                        for g in unique_groups
+                        for comp in missing
+                    ]
+                    df = pd.concat([df, pd.DataFrame(missing_rows)], ignore_index=True)
 
+        # === Finalize compartment mapping ===
         self.comp_map = {label: i for i, label in enumerate(all_comps)}
         self.inv_comp_map = {v: k for k, v in self.comp_map.items()}
         num_comps = len(self.comp_map)
 
+        # === Determine group column for dense reindexing ===
+        group_col_candidates = list({getattr(rule, "group_col", None) for ruleset in self.rules for rule in ruleset})
+        group_col_candidates = [col for col in group_col_candidates if col]
+        group_col = group_col_candidates[0] if group_col_candidates else "group"
+        if group_col not in df.columns:
+            df[group_col] = 0
+
+        # === Replace string compartment labels with integer codes ===
+        df[self.compartment_col] = df[self.compartment_col].astype(str).map(self.comp_map).astype(np.int32)
+
+        # === Ensure rectangular group-major layout ===
+        unique_groups = np.sort(df[group_col].unique())
+        rows = []
+        for g in unique_groups:
+            for comp_code in range(num_comps):
+                mask = (df[group_col] == g) & (df[self.compartment_col] == comp_code)
+                if mask.any():
+                    row = df.loc[mask].iloc[0]
+                else:
+                    row = {group_col: g, self.compartment_col: comp_code, "N": 0.0, "T": self.t0}
+                rows.append(row)
+        df = pd.DataFrame(rows)
+
+        # === Compile rules with integer-encoded compartment map ===
         for ruleset in self.rules:
             for rule in ruleset:
                 if hasattr(rule, "compile"):
@@ -75,9 +113,8 @@ class EpiModel(BaseModel):
                     except TypeError:
                         rule.compile(self.comp_map)
 
-        df[self.compartment_col] = df[self.compartment_col].astype(str).map(self.comp_map).astype(np.int32)
-
-        self.column_order = list(df.columns)
+        # === Final column order: numeric dtype columns only ===
+        self.column_order = [col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])]
         self.col_idx = {col: i for i, col in enumerate(self.column_order)}
         n_rows, n_cols = df.shape[0], len(self.column_order)
 
@@ -129,3 +166,4 @@ class EpiModel(BaseModel):
         self.t_current = self.t0
         self._setup_internal_arrays()
         return self.get_cur_state()
+
