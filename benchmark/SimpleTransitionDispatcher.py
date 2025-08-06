@@ -6,7 +6,7 @@ import numpy as np
 from tabularepimdl.SimpleTransition import SimpleTransition
 from tabularepimdl.SimpleTransition_Vec import SimpleTransition_Vec
 from tabularepimdl.SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
-
+from tabularepimdl.ST_Josh_Encode_Vec import SimpleTransition as Josh_SimpleTransition
 
 class SimpleTransitionDispatcher(BaseModel):
     """
@@ -18,7 +18,7 @@ class SimpleTransitionDispatcher(BaseModel):
     @param rate: transition rate per unit time.
     @param stochastic: whether the process is stochastic or deterministic.
     """
-    structure: Literal["Pandas", "Numpy", "Numpy_Encode"]
+    structure: Literal["Pandas", "Numpy", "Numpy_Encode", "Josh_Encode_Vec"]
     column: str
     from_st: str
     to_st: str
@@ -27,7 +27,7 @@ class SimpleTransitionDispatcher(BaseModel):
     stochastic: bool = False
 
     #Dispatcher
-    _dispatcher: Union[SimpleTransition, SimpleTransition_Vec, SimpleTransition_Vec_Encode] = PrivateAttr(default=None)
+    _dispatcher: Union[SimpleTransition, SimpleTransition_Vec, SimpleTransition_Vec_Encode, Josh_SimpleTransition] = PrivateAttr(default=None)
 
     def model_post_init(self, _): #initialize dispatcher based on data structures
         if self.structure == 'Pandas':
@@ -55,6 +55,14 @@ class SimpleTransitionDispatcher(BaseModel):
                 infstate_compartments=self.infstate_compartments,
                 stochastic=self.stochastic
             )
+        elif self.structure == 'Josh_Encode_Vec':
+            self._dispatcher = Josh_SimpleTransition(
+                column=self.column,
+                from_st=self.from_st,
+                to_st=self.to_st,
+                rate=self.rate,
+                stochastic=self.stochastic
+            )
         else:
             raise ValueError(f"Unknown structure: {self.structure}")
 
@@ -70,3 +78,10 @@ class SimpleTransitionDispatcher(BaseModel):
             return self._dispatcher.get_deltas(current_state=current_state, dt=dt)
         elif self.structure == 'Numpy_Encode':
             return self._dispatcher.get_deltas(current_state=current_state, data_col=data_col, result_buffer=result_buffer, dt=dt)
+
+    def apply(self, state: np.ndarray, col_idx: Dict[str, int], dt: float) -> np.ndarray: #run Josh's code
+            return self._dispatcher.apply(state=state, col_idx=col_idx, dt=dt)
+    
+    def compile(self, comp_map: Dict[str, int]) -> None: #for Josh's class
+        """Resolve compartment string labels to integer codes."""
+        return self._dispatcher.compile(comp_map=comp_map)

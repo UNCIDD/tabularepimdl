@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import time
 import tracemalloc
+import gc
 
 class SimpleTransitionRunner(BaseModel):
     """
@@ -18,7 +19,7 @@ class SimpleTransitionRunner(BaseModel):
     @param to_st: the state that column transitions to.
     @param rate: transition rate per unit time.
     @param stochastic: whether the process is stochastic or deterministic.
-    @param data_col: mapping of input data columns and their column index. E.g. data_col = {'InfState' : 0, 'N': 1}.
+    @param data_col: mapping of input data columns and their column index. E.g. data_col = {'InfState': 0, 'N': 1}.
     @param state_map: mapping between infectin states values and their categorical values. E.g. state_map = {'S': 0, 'I': 1, 'R': 2}.
     @param infstate_compartments:the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R'].
     return: the time and memory usage of the rule with different data sizes, structures and iterations.
@@ -44,6 +45,8 @@ class SimpleTransitionRunner(BaseModel):
         """
         for size in self.data_sizes:
             np.random.seed(3)
+            #infstate_values = ['S', 'I', 'R', 'S', 'I', 'R']#np.random.choice(self.infstate_compartments, size=size) #column InfState values setup
+            #n_values = [10, 5, 0, 20, 0, 0]#np.random.randint(1, 10, size=size) #column N values setup
             infstate_values = np.random.choice(self.infstate_compartments, size=size) #column InfState values setup
             n_values = np.random.randint(1, 10, size=size) #column N values setup
             for struct in self.structures:
@@ -65,12 +68,22 @@ class SimpleTransitionRunner(BaseModel):
                         arr = np.column_stack((infstate_values, n_values))
                         arr_numba = arr.copy()
                         infstate_idx = self.data_col[self.column]
+                        #print('infstate_idx:', infstate_idx)
                         arr_numba[:, infstate_idx] = [self.state_map[val] for val in arr[:, infstate_idx]]
-                        arr_numba = arr_numba.astype(np.float64)
+                        arr_numba = arr_numba.astype(np.float32)
+                        #print('arr_numba\n', arr_numba)
                         n_rows = arr_numba.shape[0] #detect the number of rows and columns in input array
                         n_cols = arr_numba.shape[1]
-                        result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
-                   
+                        result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float32) #preallocate a result array
+                    elif struct == 'Josh_Encode_Vec': #speical value creation for Josh's class
+                        arr = np.column_stack((infstate_values, n_values))
+                        arr_numba = arr.copy()
+                        infstate_idx = self.data_col[self.column]
+                        comp_map = {label: i for i, label in enumerate(sorted(self.infstate_compartments))}
+                        #print('comp_map:', comp_map)
+                        arr_numba[:, infstate_idx] = [comp_map[val] for val in arr[:, infstate_idx]]
+                        arr_numba = arr_numba.astype(np.float32)
+                        #print('arr_numba for J\n', arr_numba)
                     dispatcher = SimpleTransitionDispatcher(
                         structure=struct,
                         column=self.column,
@@ -82,6 +95,7 @@ class SimpleTransitionRunner(BaseModel):
                     )
                     
                     if struct  == 'Pandas' or struct == 'Numpy':
+                        gc.collect()
                         tracemalloc.start() #track memory
                         t0 = time.perf_counter() #track time
                         for _ in range(iters):
@@ -90,6 +104,7 @@ class SimpleTransitionRunner(BaseModel):
                         peak = tracemalloc.get_traced_memory()[1]
                         tracemalloc.stop()
                     elif struct == 'Numpy_Encode':
+                        gc.collect()
                         tracemalloc.start() #track memory
                         t0 = time.perf_counter() #track time
                         for _ in range(iters):
@@ -97,8 +112,21 @@ class SimpleTransitionRunner(BaseModel):
                         t1 = time.perf_counter()
                         peak = tracemalloc.get_traced_memory()[1]
                         tracemalloc.stop()
+                    elif struct == 'Josh_Encode_Vec':
+                        gc.collect()
+                        #converting compartments to code first
+                        #comp_map = {label: i for i, label in enumerate (sorted(self.infstate_compartments))}
+                        #print('comp_map:', comp_map)
+                        dispatcher.compile(comp_map)
+                        tracemalloc.start() #track memory
+                        t0 = time.perf_counter() #track time
+                        for _ in range(iters):
+                            deltas = dispatcher.apply(state=arr_numba, col_idx= self.data_col, dt=1.0)
+                        t1 = time.perf_counter()
+                        peak = tracemalloc.get_traced_memory()[1]
+                        tracemalloc.stop()
 
-                    #print(f"Sample deltas for {struct}:\n{deltas}\n") #debug
+                    print(f"Sample deltas for {struct}:\n{deltas}\n, data length: {len(deltas)}\n, non-zero counts: {np.count_nonzero(deltas[:, 1] if isinstance(deltas, np.ndarray) else deltas.iloc[:, 1])}") #debug
 
                     #concatenate each iteration's result
                     self.time_mem_results.append({
@@ -109,5 +137,5 @@ class SimpleTransitionRunner(BaseModel):
                         'peak_memory_MB': round(peak / 1024**2, 2)
                     })
 
-                    print('time_mem_result\n', self.time_mem_results) #debug
+                    #print('time_mem_result\n', self.time_mem_results) #debug
         return self.time_mem_results
