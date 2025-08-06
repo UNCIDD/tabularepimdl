@@ -70,12 +70,12 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
 
         # Fill 'from' rows
         result_buffer[:count] = self._from_code #current_state[idxs]
-        result_buffer[:count, -1] = changed_N  # ΔN is negative
+        result_buffer[:count, n_idx] = changed_N  # delta_N is negative
 
         # Fill 'to' rows
         result_buffer[count:2 * count] = self._to_code
         #result[count:, self.column_idx] = self.to_st
-        result_buffer[count:2 * count, -1] = -changed_N  # reverse ΔN
+        result_buffer[count:2 * count, n_idx] = -changed_N  # reverse delta_N
 
         return result_buffer[:2*count]
 
