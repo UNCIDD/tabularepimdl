@@ -17,6 +17,8 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     @param rate: transition rate per unit time.
     @param stochastic: whether the process is stochastic or deterministic.
     @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R']. 
+    @param _from_code: encoded from_st.
+    @param _to_code: encoded to_st.
     """
     column: str
     from_st: str
