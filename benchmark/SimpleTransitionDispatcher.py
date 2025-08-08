@@ -17,6 +17,7 @@ class SimpleTransitionDispatcher(BaseModel):
     @param to_st: the state that column transitions to.
     @param rate: transition rate per unit time.
     @param stochastic: whether the process is stochastic or deterministic.
+    @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R']. 
     """
     structure: Literal["Pandas", "Numpy", "Numpy_Encode", "Josh_Encode_Vec"]
     column: str

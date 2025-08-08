@@ -21,7 +21,7 @@ class SimpleTransitionRunner(BaseModel):
     @param stochastic: whether the process is stochastic or deterministic.
     @param data_col: mapping of input data columns and their column index. E.g. data_col = {'InfState': 0, 'N': 1}.
     @param state_map: mapping between infectin states values and their categorical values. E.g. state_map = {'S': 0, 'I': 1, 'R': 2}.
-    @param infstate_compartments:the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R'].
+    @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R'].
     return: the time and memory usage of the rule with different data sizes, structures and iterations.
     """
     data_sizes: list[int]
