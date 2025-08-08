@@ -1,15 +1,15 @@
 from benchmark.SimpleTransitionRunner import SimpleTransitionRunner
 from benchmark.Visualizer import Visualizer
 
-def Run_n_Visual():
+def STrans_Run_n_Visual():
     runner = SimpleTransitionRunner(
-        data_sizes= [10**6, 10**7],
-        structures=['Pandas', 'Numpy', 'Numpy_Encode'],
+        data_sizes= [15],#[10**6, 10**7], #15, 15000, 15000000 works for Josh's code
+        structures= ['Pandas', 'Numpy', 'Numpy_Encode', 'Josh_Encode_Vec'],#['Josh_Encode_Vec'],
         iterations= [1],#[100, 300, 500, 700],
         column='InfState',
         from_st='S',
         to_st='I',
-        rate=0.05,
+        rate=0.1,
         stochastic=False,
         data_col = {'InfState' : 0, 'N': 1},
         state_map = {'S': 0, 'I': 1, 'R': 2},
@@ -21,5 +21,5 @@ def Run_n_Visual():
     viz.plot()
 
 if __name__ == "__main__":
-    Run_n_Visual()
-#python -m benchmark.Run_n_Visual
+    STrans_Run_n_Visual()
+#python -m benchmark.STrans_Run_n_Visual
