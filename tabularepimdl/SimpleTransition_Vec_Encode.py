@@ -40,7 +40,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         """
         @param current_state: a numpy array (at the moment) representing the current epidemic state. Must include population values (e.g. 'N' values).
         @param dt: size of the timestep.
-        @param: ADD TOO MANY ADDITIONAL PARAMETERS TO METHODS!!!
+        @param: Add additional parameters...
         @param data_col: mapping of input data columns and their column index. E.g. data_col = {'InfState' : 0, 'N': 1}
         @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. E.g. result_buffer = np.empty((2 * count, ncols), dtype=current_state.dtype)
         return: an array containing changes in from_st and to_st.
