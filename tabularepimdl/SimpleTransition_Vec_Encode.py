@@ -45,7 +45,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. E.g. result_buffer = np.empty((2 * count, ncols), dtype=current_state.dtype)
         return: an array containing changes in from_st and to_st.
         """
-
+        #if data_col is not None: then implement the following index fetching, otherwise skip it
         infstate_idx = data_col[self.column]
         n_idx = data_col['N']
         # Fast boolean mask for matching from-state
@@ -90,3 +90,11 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         }
 
         return rc
+    
+    @property
+    def source_states(self) -> list[str]:
+        return [self.from_st]
+
+    @property
+    def target_states(self) -> list[str]:
+        return [self.to_st]

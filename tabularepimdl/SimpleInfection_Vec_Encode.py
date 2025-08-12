@@ -43,7 +43,15 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         
 
     def get_deltas(self, current_state: np.ndarray, data_col: Dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0) -> np.ndarray:
-
+        """
+        @param current_state: a numpy array (at the moment) representing the current epidemic state. Must include population values (e.g. 'N' values).
+        @param dt: size of the timestep.
+        @param: Add additional parameters...
+        @param data_col: mapping of input data columns and their column index. E.g. data_col = {'InfState' : 0, 'N': 1}
+        @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. E.g. result_buffer = np.empty((2 * count, ncols), dtype=current_state.dtype)
+        return: an array containing changes in s_st and inf_to.
+        """
+        #if data_col is not None: then implement the following index fetching, otherwise skip it
         infstate_idx = data_col[self.column]
         n_idx = data_col['N']
         
@@ -100,3 +108,11 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
             'tabularepimdl.SimpleInfection': self.model_dump()
         }
         return rc
+    
+    @property
+    def source_states(self):
+        return [self.s_st]
+
+    @property
+    def target_states(self):
+        return [self.inf_to]
