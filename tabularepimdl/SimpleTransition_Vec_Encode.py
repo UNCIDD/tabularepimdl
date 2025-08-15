@@ -36,7 +36,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         self._to_code = infstate_to_int.get(self.to_st)
         
 
-    def get_deltas(self, current_state: np.ndarray, data_col: Dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0) -> np.ndarray:
+    def get_deltas(self, current_state: np.ndarray, data_col: Dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool = None) -> np.ndarray:
         """
         @param current_state: a numpy array (at the moment) representing the current epidemic state. Must include population values (e.g. 'N' values).
         @param dt: size of the timestep.
@@ -45,7 +45,10 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. E.g. result_buffer = np.empty((2 * count, ncols), dtype=current_state.dtype)
         return: an array containing changes in from_st and to_st.
         """
-        #if data_col is not None: then implement the following index fetching, otherwise skip it
+        if stochastic is None:
+            stochastic = self.stochastic
+        
+        #col_idx_map from EpiModel will provide key-value pair to data_col, consider renaming data_col to col_idx_map
         infstate_idx = data_col[self.column]
         n_idx = data_col['N']
         # Fast boolean mask for matching from-state
@@ -59,7 +62,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
 
         # Compute transition amounts
         rate_const = 1 - np.exp(-dt * self.rate)
-        if self.stochastic:
+        if stochastic:
             changed_N = -np.random.binomial(N.astype(np.int32), rate_const)
         else:
             changed_N = -N * rate_const
