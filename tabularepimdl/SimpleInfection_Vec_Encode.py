@@ -42,21 +42,20 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         self._inf_to_code = infstate_to_int.get(self.i_st) #inf_to code might be defined in infstate_compartments as well if needed
         
 
-    def get_deltas(self, current_state: np.ndarray, data_col: Dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool = None) -> np.ndarray:
+    def get_deltas(self, current_state: np.ndarray, col_idx_map: Dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool = None) -> np.ndarray:
         """
         @param current_state: a numpy array (at the moment) representing the current epidemic state. Must include population values (e.g. 'N' values).
         @param dt: size of the timestep.
         @param: Add additional parameters...
-        @param data_col: mapping of input data columns and their column index. E.g. data_col = {'InfState' : 0, 'N': 1}
+        @param col_idx_map: mapping of input data columns and their column index. E.g. col_idx_map = {'InfState' : 0, 'N': 1}
         @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. E.g. result_buffer = np.empty((2 * count, ncols), dtype=current_state.dtype)
         return: an array containing changes in s_st and inf_to.
         """
         if stochastic is None:
             stochastic = self.stochastic
         
-        #col_idx_map from EpiModel will provide key-value pair to data_col, consider renaming data_col to col_idx_map
-        infstate_idx = data_col[self.column]
-        n_idx = data_col['N']
+        infstate_idx = col_idx_map[self.column]
+        n_idx = col_idx_map['N']
         
         total_population = np.sum(current_state[:, n_idx])
 

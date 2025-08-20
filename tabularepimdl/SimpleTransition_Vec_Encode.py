@@ -36,21 +36,20 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         self._to_code = infstate_to_int.get(self.to_st)
         
 
-    def get_deltas(self, current_state: np.ndarray, data_col: Dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool = None) -> np.ndarray:
+    def get_deltas(self, current_state: np.ndarray, col_idx_map: Dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool = None) -> np.ndarray:
         """
         @param current_state: a numpy array (at the moment) representing the current epidemic state. Must include population values (e.g. 'N' values).
         @param dt: size of the timestep.
         @param: Add additional parameters...
-        @param data_col: mapping of input data columns and their column index. E.g. data_col = {'InfState' : 0, 'N': 1}
+        @param col_idx_map: mapping of input data columns and their column index. E.g. col_idx_map = {'InfState' : 0, 'N': 1}
         @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. E.g. result_buffer = np.empty((2 * count, ncols), dtype=current_state.dtype)
         return: an array containing changes in from_st and to_st.
         """
         if stochastic is None:
             stochastic = self.stochastic
         
-        #col_idx_map from EpiModel will provide key-value pair to data_col, consider renaming data_col to col_idx_map
-        infstate_idx = data_col[self.column]
-        n_idx = data_col['N']
+        infstate_idx = col_idx_map[self.column]
+        n_idx = col_idx_map['N']
         # Fast boolean mask for matching from-state
         mask = current_state[:, infstate_idx] == self._from_code
         if not np.any(mask):
