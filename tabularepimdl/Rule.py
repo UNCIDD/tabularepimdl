@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 import inspect
 import importlib
 import pandas as pd
+import numpy as np
+from typing import Dict
 
 class Rule(ABC):
 
@@ -14,7 +16,8 @@ class Rule(ABC):
     """
         
     @abstractmethod
-    def get_deltas(self, current_state: pd.DataFrame, dt: int|float, stochastic: bool) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int|float, stochastic: bool) -> pd.DataFrame: #the original get_deltas()
+        #get_deltas(self, current_state: np.ndarray, col_idx_map: Dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool = None) -> np.ndarray: #updated method definition
         """! Method should take in current state and return a series of deltas to that state.
         @param current_state: a data frame (at the moment) w/ the current epidemic state
         @param dt: the size of the timestep
