@@ -15,4 +15,7 @@ from .StateBasedDeathProcess import StateBasedDeathProcess
 from .WAIFWTransmission import WAIFWTransmission
 from .WithFilters import WithFilters
 from .FunctionalTransition import FunctionalTransition
+from. SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
+from. SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
+from .EpiModel_Vec_Encode import EpiModel_Vec_Encode
 __version__ = "0.1.0"
