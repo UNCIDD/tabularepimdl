@@ -20,7 +20,7 @@ class SimpleInfectionRunner(BaseModel):
     @param i_st: the state for infectious, assumed to be I.
     @param inf_to: the state infectious folks go to, assumed to be I.
     @param stochastic: whether the process is stochastic or deterministic.
-    @param data_col: mapping of input data columns and their column index. E.g. data_col = {'InfState': 0, 'N': 1}.
+    @param col_idx_map: mapping of input data columns and their column index. E.g. col_idx_map = {'InfState': 0, 'N': 1}.
     @param state_map: mapping between infectin states values and their categorical values. E.g. state_map = {'S': 0, 'I': 1, 'R': 2}.
     @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R'].
     return: the time and memory usage of the rule with different data sizes, structures and iterations.
@@ -35,7 +35,7 @@ class SimpleInfectionRunner(BaseModel):
     inf_to: str
     freq_dep: bool = True
     stochastic: bool = False
-    data_col: Dict[str, int] = None
+    col_idx_map: Dict[str, int] = None
     state_map: Dict[str, int] = None
     infstate_compartments: list[str] = None
 
@@ -70,7 +70,7 @@ class SimpleInfectionRunner(BaseModel):
                     elif struct == 'Numpy_Encode': #provide true Numpy array to Numpy_Encode
                         arr = np.column_stack((infstate_values, n_values))
                         arr_numba = arr.copy()
-                        infstate_idx = self.data_col[self.column]
+                        infstate_idx = self.col_idx_map[self.column]
                         #print('infstate_idx:', infstate_idx)
                         arr_numba[:, infstate_idx] = [self.state_map[val] for val in arr[:, infstate_idx]]
                         arr_numba = arr_numba.astype(np.float64)
@@ -81,7 +81,7 @@ class SimpleInfectionRunner(BaseModel):
                     elif struct == 'Josh_Encode_Vec': #speical value creation for Josh's class
                         arr = np.column_stack((infstate_values, n_values))
                         arr_numba = arr.copy()
-                        infstate_idx = self.data_col[self.column]
+                        infstate_idx = self.col_idx_map[self.column]
                         comp_map = {label: i for i, label in enumerate(sorted(self.infstate_compartments))}
                         #print('comp_map:', comp_map)
                         arr_numba[:, infstate_idx] = [comp_map[val] for val in arr[:, infstate_idx]]
@@ -115,7 +115,7 @@ class SimpleInfectionRunner(BaseModel):
                         tracemalloc.start() #track memory
                         t0 = time.perf_counter() #track time
                         for _ in range(iters):
-                            deltas = dispatcher.get_deltas(current_state=arr_numba, data_col= self.data_col, result_buffer=result_preallocation)
+                            deltas = dispatcher.get_deltas(current_state=arr_numba, col_idx_map=self.col_idx_map, result_buffer=result_preallocation)
                         t1 = time.perf_counter()
                         peak = tracemalloc.get_traced_memory()[1]
                         tracemalloc.stop()
@@ -128,7 +128,7 @@ class SimpleInfectionRunner(BaseModel):
                         tracemalloc.start() #track memory
                         t0 = time.perf_counter() #track time
                         for _ in range(iters):
-                            deltas = dispatcher.apply(state=arr_numba, col_idx= self.data_col, dt=1.0)
+                            deltas = dispatcher.apply(state=arr_numba, col_idx=self.col_idx_map, dt=1.0)
                         t1 = time.perf_counter()
                         peak = tracemalloc.get_traced_memory()[1]
                         tracemalloc.stop()

@@ -11,7 +11,7 @@ def STrans_Run_n_Visual():
         to_st='I',
         rate=0.1,
         stochastic=False,
-        data_col = {'InfState' : 0, 'N': 1},
+        col_idx_map = {'InfState' : 0, 'N': 1},
         state_map = {'S': 0, 'I': 1, 'R': 2},
         infstate_compartments = ['S', 'I', 'R']
     )

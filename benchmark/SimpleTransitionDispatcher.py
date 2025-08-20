@@ -67,10 +67,10 @@ class SimpleTransitionDispatcher(BaseModel):
         else:
             raise ValueError(f"Unknown structure: {self.structure}")
 
-    def get_deltas(self, current_state: pd.DataFrame | np.ndarray, data_col: Dict[str, int] = None, result_buffer: np.ndarray = None,  dt: int | float = 1.0) -> pd.DataFrame | np.ndarray:
+    def get_deltas(self, current_state: pd.DataFrame | np.ndarray, col_idx_map: Dict[str, int] = None, result_buffer: np.ndarray = None,  dt: int | float = 1.0) -> pd.DataFrame | np.ndarray:
         """
         @param current_state: a dataframe or numpy array (at the moment) representing the current epidemic state.
-        @param data_col: mapping of input data columns and their column index.
+        @param col_idx_map: mapping of input data columns and their column index.
         @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state.
         @param dt: size of the timestep.
         No need to add stochastic argument to dispatcher's get_deltas() method.
@@ -78,7 +78,7 @@ class SimpleTransitionDispatcher(BaseModel):
         if self.structure == 'Pandas' or self.structure == 'Numpy':
             return self._dispatcher.get_deltas(current_state=current_state, dt=dt)
         elif self.structure == 'Numpy_Encode':
-            return self._dispatcher.get_deltas(current_state=current_state, data_col=data_col, result_buffer=result_buffer, dt=dt)
+            return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt)
 
     def apply(self, state: np.ndarray, col_idx: Dict[str, int], dt: float) -> np.ndarray: #run Josh's code
             return self._dispatcher.apply(state=state, col_idx=col_idx, dt=dt)
