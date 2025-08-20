@@ -33,7 +33,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
 
     _from_code: int = PrivateAttr(default=None)
     _to_code: int = PrivateAttr(default=None)
-    _infto_code: int = PrivateAttr(default=None)
+    _inf_to_code: int = PrivateAttr(default=None)
 
     def model_post_init(self, _):
         infstate_to_int = {s: i for i, s in enumerate(self.infstate_compartments)} #encoding -> {'S': 0, 'I': 1, 'R': 2}
