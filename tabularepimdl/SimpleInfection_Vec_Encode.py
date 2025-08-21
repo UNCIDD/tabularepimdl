@@ -36,7 +36,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
     _inf_to_code: int = PrivateAttr(default=None)
 
     def model_post_init(self, _):
-        infstate_to_int = {s: i for i, s in enumerate(self.infstate_compartments)} #encoding -> {'S': 0, 'I': 1, 'R': 2}
+        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
         self._s_code = infstate_to_int.get(self.s_st)
         self._i_code = infstate_to_int.get(self.i_st)
         self._inf_to_code = infstate_to_int.get(self.i_st) #inf_to code might be defined in infstate_compartments as well if needed

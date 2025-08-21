@@ -31,7 +31,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     _to_code: int = PrivateAttr(default=None)
 
     def model_post_init(self, _):
-        infstate_to_int = {s: i for i, s in enumerate(self.infstate_compartments)}  #encode infstate strings to integers
+        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
         self._from_code = infstate_to_int.get(self.from_st)
         self._to_code = infstate_to_int.get(self.to_st)
         
