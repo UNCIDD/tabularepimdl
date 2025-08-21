@@ -50,38 +50,47 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         
         infstate_idx = col_idx_map[self.column]
         n_idx = col_idx_map['N']
+        print('input array\n', current_state)
+        print('_from_code:', self._from_code, '_to_code:', self._to_code)
+
         # Fast boolean mask for matching from-state
         mask = current_state[:, infstate_idx] == self._from_code
         if not np.any(mask):
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
             
         # Get indices where mask is true (faster than slicing twice)
-        row_idxs = np.flatnonzero(mask)
-        N = current_state[row_idxs, n_idx]  # assumed already float
+        from_row_idxs = np.flatnonzero(mask)
+        selected_from = current_state[from_row_idxs, :]
+        print('selected_from\n', selected_from)
+        N = selected_from[:, n_idx] #equivalent: current_state[from_row_idxs, n_idx]
+        print('from_code N:', N)
 
         # Compute transition amounts
         rate_const = 1 - np.exp(-dt * self.rate)
+        print('rate_const:', rate_const)
+
         if stochastic:
             changed_N = -np.random.binomial(N.astype(np.int32), rate_const)
         else:
             changed_N = -N * rate_const
+        print('change_N:', changed_N)
 
-        count = len(row_idxs)
+        count = len(from_row_idxs)
         #ncols = current_state.shape[1] #move num of columns out of class for now
 
         # Preallocate result: 2 rows per event (from & to)
         #result = np.empty((2 * count, ncols), dtype=current_state.dtype) #move pre-allocation out of class for now
 
         # Fill 'from' rows
-        result_buffer[:count] = self._from_code #current_state[idxs]
-        result_buffer[:count, n_idx] = changed_N  # delta_N is negative
+        result_buffer[:count, :] = selected_from #equivalent: self._from_code
+        result_buffer[:count, n_idx] = changed_N  #update column N with changed_N (negative value)
 
         # Fill 'to' rows
-        result_buffer[count:2 * count] = self._to_code
-        #result[count:, self.column_idx] = self.to_st
-        result_buffer[count:2 * count, n_idx] = -changed_N  # reverse delta_N
+        result_buffer[count:2*count, :] = selected_from
+        result_buffer[count:2*count, infstate_idx] = self._to_code #update col infstate
+        result_buffer[count:2*count, n_idx] = -changed_N  #update column N with inversed changed_N
 
-        return result_buffer[:2*count]
+        return result_buffer[:2*count, :]
 
     def __str__(self) -> str:
         return "SimpleTransition_Vec_Encode: {} --> {} at rate {}".format(self.from_st, self.to_st, self.rate)

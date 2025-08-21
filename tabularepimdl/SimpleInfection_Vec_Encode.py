@@ -56,8 +56,10 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         
         infstate_idx = col_idx_map[self.column]
         n_idx = col_idx_map['N']
-        
+        print('input array\n', current_state)
+
         total_population = np.sum(current_state[:, n_idx])
+        print('total population:', total_population)
 
         if total_population != 0:
             if self.freq_dep:
@@ -66,6 +68,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
                 beta = self.beta
         else:
             beta = self.beta
+        print('beta:', beta)
 
         # i_state
         mask_i = current_state[:, infstate_idx] == self._i_code
@@ -74,6 +77,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
             
         i_row_idxs = np.flatnonzero(mask_i)
         N_infectious_sum = np.sum(current_state[i_row_idxs, n_idx]) #number of infected individuals
+        print('N_infectious_sum:', N_infectious_sum)
 
         # s_state
         mask_s = current_state[:, infstate_idx] == self._s_code
@@ -81,26 +85,31 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
         
         s_row_idxs = np.flatnonzero(mask_s)
-        N_susceptible = current_state[s_row_idxs, n_idx]
+        selected_s = current_state[s_row_idxs, :]
+        N_susceptible = selected_s[:, n_idx] #equivalent: current_state[s_row_idxs, n_idx]
+        print('N_susceptible:', N_susceptible)
 
         # Compute transition amounts
         rate_const = 1 - np.power(np.exp(-dt*beta), N_infectious_sum)
+        print('rate_const:', rate_const)
         if stochastic:
             changed_N = -np.random.binomial(N_susceptible.astype(np.int32), rate_const)
         else:
             changed_N = -N_susceptible * rate_const
+        print('change_N:', changed_N)
 
         count = len(s_row_idxs)
         
         # Fill 'from' rows
-        result_buffer[:count] = self._s_code #current_state[idxs]
-        result_buffer[:count, n_idx] = changed_N  # delta_N is negative
+        result_buffer[:count, :] = selected_s #equivalent: self._s_code
+        result_buffer[:count, n_idx] = changed_N #update column N with changed_N (negative value)
 
         # Fill 'to' rows
-        result_buffer[count:2 * count] = self._inf_to_code
-        result_buffer[count:2 * count, n_idx] = -changed_N  # reverse delta_N
+        result_buffer[count:2*count, :] = selected_s 
+        result_buffer[count:2*count, infstate_idx] = self._inf_to_code #update col infstate
+        result_buffer[count:2*count, n_idx] = -changed_N  #update column N with inversed changed_N
 
-        return result_buffer[:2*count]
+        return result_buffer[:2*count, :]
     
     def to_yaml(self) -> dict:
         """
