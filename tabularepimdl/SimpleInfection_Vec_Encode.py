@@ -56,10 +56,10 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         
         infstate_idx = col_idx_map[self.column]
         n_idx = col_idx_map['N']
-        print('input array\n', current_state)
+        #print('input array\n', current_state)
 
         total_population = np.sum(current_state[:, n_idx])
-        print('total population:', total_population)
+        #print('total population:', total_population)
 
         if total_population != 0:
             if self.freq_dep:
@@ -68,7 +68,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
                 beta = self.beta
         else:
             beta = self.beta
-        print('beta:', beta)
+        #print('beta:', beta)
 
         # i_state
         mask_i = current_state[:, infstate_idx] == self._i_code
@@ -77,7 +77,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
             
         i_row_idxs = np.flatnonzero(mask_i)
         N_infectious_sum = np.sum(current_state[i_row_idxs, n_idx]) #number of infected individuals
-        print('N_infectious_sum:', N_infectious_sum)
+        #print('N_infectious_sum:', N_infectious_sum)
 
         # s_state
         mask_s = current_state[:, infstate_idx] == self._s_code
@@ -87,16 +87,16 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         s_row_idxs = np.flatnonzero(mask_s)
         selected_s = current_state[s_row_idxs, :]
         N_susceptible = selected_s[:, n_idx] #equivalent: current_state[s_row_idxs, n_idx]
-        print('N_susceptible:', N_susceptible)
+        #print('N_susceptible:', N_susceptible)
 
         # Compute transition amounts
         rate_const = 1 - np.power(np.exp(-dt*beta), N_infectious_sum)
-        print('rate_const:', rate_const)
+        #print('rate_const:', rate_const)
         if stochastic:
             changed_N = -np.random.binomial(N_susceptible.astype(np.int32), rate_const)
         else:
             changed_N = -N_susceptible * rate_const
-        print('change_N:', changed_N)
+        #print('change_N:', changed_N)
 
         count = len(s_row_idxs)
         
