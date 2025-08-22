@@ -4,7 +4,7 @@ from tabularepimdl.Rule import Rule
 from pydantic import BaseModel, field_validator, PrivateAttr, ConfigDict
 from typing import List, Optional, Dict, Literal, Any
 
-class EpiModel_Vec_Encode(BaseModel):
+class EpiModel_Vec_Encode_2(BaseModel):
     """! Class that that applies a list of rules to a changing current state through 
     some number of time steps to produce an epidemic. It has attributes representing the initial state,
     current state and the full epidemic thus far.
@@ -70,6 +70,12 @@ class EpiModel_Vec_Encode(BaseModel):
     #current result array pr-eallocation
     _current_result_preallocation: np.ndarray = PrivateAttr(default=None)
 
+    #total max rows returned by all rules within a ruleset
+    _total_max_rows_per_ruleset: int = PrivateAttr(default=None)
+
+    #ruleset deltas array pre-allocation, saving all deltas returned by each rule within a ruleset
+    _per_ruleset_deltas_array: np.ndarray = PrivateAttr(default=None) 
+
     #full epi list to contain full epi array
     _full_epi_list: List[np.ndarray] = PrivateAttr(default_factory=list)
     
@@ -122,7 +128,7 @@ class EpiModel_Vec_Encode(BaseModel):
         #collect column names for aggregating columns and rest grouping columns
         self._agg_cols = {'N', 'T'}
         self._grouping_cols = [c for c in self.init_state.columns if c not in self._agg_cols]
-        print('grouping col:', self._grouping_cols)
+        #print('grouping col:', self._grouping_cols)
 
         #domains per grouping column (excludes N and T) in init_state
         self._domains = {col: set(self.init_state[col].astype(str).tolist()) for col in self._grouping_cols}
@@ -134,7 +140,7 @@ class EpiModel_Vec_Encode(BaseModel):
                     if col in self._domains:
                         for s in rule.source_states: self._domains[col].add(str(s))
                         for s in rule.target_states: self._domains[col].add(str(s))
-        print('domains per column:', self._domains)
+        #print('domains per column:', self._domains)
 
         #The following block code is not needed since domains collects all values from each grouping column including 'InfState'
         #===#
@@ -162,7 +168,7 @@ class EpiModel_Vec_Encode(BaseModel):
         #print('infstate all comps:', infstate_all_comps)
         self._infstate_all_comps = sorted(self._domains[self.compartment_col]) #keep a variable to save column InfState's compartment values
         self._num_comps = len(self._infstate_all_comps) #keep a variable to save the number of compartments in column InfState
-        print('infstate_all_comps:', self._infstate_all_comps, 'num_comps:', self._num_comps)
+        #print('infstate_all_comps:', self._infstate_all_comps, 'num_comps:', self._num_comps)
 
          #create compartment and its associated index mapping, and reverse the mapping
          #used for converting column's string values to numbers
@@ -173,13 +179,13 @@ class EpiModel_Vec_Encode(BaseModel):
         
         #build encoding maps and inverse encoding maps for each grouping column's domain values including column infstate
         for col in self._grouping_cols:
-            print('col:', col)
+            #print('col:', col)
             vals = sorted(self._domains[col])
-            print('vals:', vals)
+            #print('vals:', vals)
             self._grouping_col_map[col] = {v: i for i, v in enumerate(vals)} #encode each grouping column's values
             self._inverse_grouping_col_map[col] = {i: v for v, i in self._grouping_col_map[col].items()} #reverse the above encoding
-        print('grouping col map:', self._grouping_col_map)
-        print('inverse grouping col map:', self._inverse_grouping_col_map)
+        #print('grouping col map:', self._grouping_col_map)
+        #print('inverse grouping col map:', self._inverse_grouping_col_map)
 
         #fetch column order of init_state
         self._init_state_col_order = [col for col in self.init_state.columns] #get all column names into a list, e.g. ['InfState', 'N', 'T']
@@ -191,7 +197,7 @@ class EpiModel_Vec_Encode(BaseModel):
         self._n_idx = self._col_idx_map['N'] #the code has to know/use a few fixed column names in order to get column indicies
         self._t_idx = self._col_idx_map['T']
         self._grouping_col_idx = [self._col_idx_map[c] for c in self._grouping_cols]
-        print('_infsate_idx:', self._infstate_idx, '_n_idx:', self._n_idx, '_t_idx:', self._t_idx, '_grouping_col_idx:', self._grouping_col_idx)
+        #print('_infsate_idx:', self._infstate_idx, '_n_idx:', self._n_idx, '_t_idx:', self._t_idx, '_grouping_col_idx:', self._grouping_col_idx)
         
 
     def _convert_init_df_to_cur_arrays(self) -> np.ndarray: #might be benificial to add array args to the method and return current_state and full_epi
@@ -224,7 +230,7 @@ class EpiModel_Vec_Encode(BaseModel):
             self.current_state_array = np.empty(0, len(self._init_state_col_order), dtype=np.float64)
         
         
-        #pre-allocation of result array -- to be checked/verified
+        #pre-allocation of result array -- to be checked/verified, may need to be moved inside for loop of do_timestep
         n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
         n_cols = self.current_state_array.shape[1]
         self._current_result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
@@ -270,29 +276,38 @@ class EpiModel_Vec_Encode(BaseModel):
         """
         
         for ruleset in self.rules:
-            ruleset_deltas_list = []
+            #ruleset_deltas_list = []
+            self._total_max_rows_per_ruleset = 2 * self.current_state_array.shape[0] * len(ruleset)  #assume each rule produces 2*n_rows as the worst case, used as upper bound
+            self._per_ruleset_deltas_array = np.empty((self._total_max_rows_per_ruleset + self.current_state_array.shape[0], self.current_state_array.shape[1]), dtype=np.float64) #ruleset_deltas_array equals to total number of rows produced by rules in a ruleset plus the number of rows in current_state_array
+            offset = 0 #starting row index where next array to be saved
+
             for rule in ruleset:
-                print('current rule:', rule)
+                #print('current rule:', rule)
                 if self.stoch_policy == "rule_based":
                     rule_deltas = rule.get_deltas(current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=self._current_result_preallocation, dt=dt)
                 else:
                     rule_deltas = rule.get_deltas(current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=self._current_result_preallocation, dt=dt, stochastic = (self.stoch_policy=="stochastic"))
-                print('rule detlas\n', rule_deltas)
+                #print('rule detlas\n', rule_deltas)
                 
-                print('before append, ruleset_deltas_list\n', ruleset_deltas_list)
+                #print('before append, ruleset_deltas_arr\n', self._per_ruleset_deltas_array)
                 if rule_deltas is not None and len(rule_deltas) > 0: #add non-None rule_deltas to the list
-                    ruleset_deltas_list.append(rule_deltas.copy())
-                print('after append, ruleset_deltas_list\n', ruleset_deltas_list)
+                    ruleset_deltas_num_rows = rule_deltas.shape[0] #obtain the number of rows in rule_deltas
+                    self._per_ruleset_deltas_array[offset:offset+ruleset_deltas_num_rows] = rule_deltas #assign rule_deltas to the corresponding rows in per_ruleset_deltas_array
+                    offset = offset + ruleset_deltas_num_rows #increase offset value by the number of rows in current rule_deltas
+                #print('after append, ruleset_deltas_arr\n', self._per_ruleset_deltas_array)
 
-            if len(ruleset_deltas_list) == 0: #if no data added to ruleset_deltas_list, go to next ruleset
-                print('go to next ruleset')
+            if offset == 0: #if no data added to ruleset_deltas_arr, go to next ruleset
+                #print('go to next ruleset')
                 continue
 
-            ruleset_deltas_list.append(self.current_state_array) #add current_state_array to the list
-            print('after append cur_state_array, ruleset_deltas_list\n', ruleset_deltas_list)
+            self._per_ruleset_deltas_array[offset:offset + self.current_state_array.shape[0], :] = self.current_state_array #add updated current_state_array to the each ruleset deltas arrays, used as buffer
+            #print('after append cur_state_array, ruleset_deltas_arr\n', self._per_ruleset_deltas_array)
 
-            self.current_state_array = np.vstack(ruleset_deltas_list) #convert list of arrays to array and save it to current_state_array
-            print('before grouping, cur_array\n', self.current_state_array)
+            offset = offset + self.current_state_array.shape[0] #increase the offset value by the number of rows in current_state_array
+
+            #self.current_state_array = np.vstack(ruleset_deltas_list) #convert list of arrays to array and save it to current_state_array
+            self.current_state_array = self._per_ruleset_deltas_array[:offset] #slice the per_ruleset_deltas_array by the offset and assign it to current_state_array
+            #print('before grouping, cur_array\n', self.current_state_array)
 
             #grouping columns, sum N for each group, pick max T out of all groups
             #process grouping columns
@@ -310,7 +325,7 @@ class EpiModel_Vec_Encode(BaseModel):
             max_col_T_per_group[:] = np.max(max_col_T_per_group) #global max T
 
             self.current_state_array = np.column_stack((unique_col_value, sum_col_N_per_group, max_col_T_per_group)) #order of cols is grouping_cols, N, T
-            print('after grouping, cur_array\n', self.current_state_array)
+            #print('after grouping, cur_array\n', self.current_state_array)
 
         self.current_state_array[:, self._t_idx] = self.current_state_array[:, self._t_idx] + dt #increase T value by dt
 
@@ -322,6 +337,7 @@ class EpiModel_Vec_Encode(BaseModel):
             
         # append the updated current state to the epidemic history.
         # corner case: all rules do not produce deltas, and ruleset_deltas_list is empty, full_epi_list will still append one more current_state_array, how to resolve this issue?
-        self._full_epi_list.append(self.current_state_array) #this is a list of arrays
+        if offset != 0: #resolve above corner case
+            self._full_epi_list.append(self.current_state_array) #this is a list of arrays
         
 
