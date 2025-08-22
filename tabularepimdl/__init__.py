@@ -17,5 +17,6 @@ from .WithFilters import WithFilters
 from .FunctionalTransition import FunctionalTransition
 from. SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
 from. SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
-from .EpiModel_Vec_Encode import EpiModel_Vec_Encode
+from .EpiModel_Vec_Encode2 import EpiModel_Vec_Encode_2
+from .EpiModel_Vec_Encode1 import EpiModel_Vec_Encode_1
 __version__ = "0.1.0"
