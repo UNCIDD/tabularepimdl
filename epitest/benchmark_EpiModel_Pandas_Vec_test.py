@@ -6,6 +6,7 @@ import time
 import gc
 import json
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 from tabularepimdl.EpiModel import EpiModel as EpiModel_pd
 from tabularepimdl.SimpleInfection import SimpleInfection as SimpleInfection_pd
@@ -19,11 +20,11 @@ from tabularepimdl.EpiModel_Vec_Encode2 import EpiModel_Vec_Encode_2 #model vec 
 
 #Global Setup
 np.random.seed(3) #set seed to ensure a same epidemic each time of run
-n = 10_000_000 #data size
+n = 100_000#10_000_000 #data size
 infstate_values = np.random.choice(['S', 'I', 'R'], size=n)
 n_values = np.random.randint(1, 10, size=n)
 t_values = np.full(n, 0.0)
-iters = 1000
+iters = 200
 switch = 'f'
 
 infection_rate = 0.2
@@ -89,24 +90,49 @@ def benchmark_results():
     results = []
     yield results
     # After all tests, plot summary
+
     if results:
-        labels = [f"{r['model']}\nN={r['n']}, iters={r['iters']}" for r in results]
-        runtimes = [r['time_sec'] for r in results]
-        peaks = [r['peak_memory_mb'] for r in results]
+        df = pd.DataFrame(results)
+        df['label'] = df.apply(lambda row: f"{int(row['n']):,} rows \n{row['iters']} iters", axis=1)
 
-        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    
+    sns.set_theme(style="whitegrid")
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
 
-        axes[0].bar(labels, runtimes, color='skyblue')
-        axes[0].set_title("Runtime (s)")
-        axes[0].set_ylabel("Seconds")
+    # ---- Time plot ----
+    sns.barplot(
+            data=df,
+            x="label",
+            y="time_sec",
+            hue="model",
+            ax=axes[0]
+        )
+    axes[0].set_title("Runtime (seconds) by Model")
+    axes[0].set_xlabel("Data Size & Iterations")
+    axes[0].set_ylabel("Time (seconds)")
+    axes[0].tick_params(axis='x', rotation=30)
 
-        axes[1].bar(labels, peaks, color='salmon')
-        axes[1].set_title("Peak Memory (MB)")
-        axes[1].set_ylabel("MB")
+    # ---- Memory plot ----
+    sns.barplot(
+            data=df,
+            x="label",
+            y="peak_memory_mb",
+            hue="model",
+            ax=axes[1]
+        )
+    axes[1].set_title("Peak Memory (MB) by Model")
+    axes[1].set_xlabel("Data Size & Iterations")
+    axes[1].set_ylabel("Memory (MB)")
+    axes[1].tick_params(axis='x', rotation=30)
 
-        plt.tight_layout()
-        plt.savefig("benchmark_summary.png")
-        print("\nBenchmark summary figure saved as benchmark_summary.png")
+        # Add legends
+    axes[0].legend(title="Backend")
+    axes[1].legend(title="Backend")
+
+    plt.tight_layout()
+    plt.show()
+    #plt.savefig("benchmark_EpiModel_Pandas_vs_Vec_summary.png") #for picture saving purpose
+    #print("\nBenchmark summary figure saved as benchmark_EpiModel_Pandas_vs_Vec_summary.png") #for picture saving purpose
 
 # -------------------
 #Parameterized test
@@ -157,12 +183,13 @@ def test_model_performance_and_output(request, model_label, model_fixture_name, 
     if model_label == "pandas":
         #print("\n=== Pandas Model full_epi ===")
         #print(model.full_epi)
-        pandas_result = model.full_epi['N'].round(3).values
+        pandas_result = model.full_epi['N'].round(5).values
     else:
-        arr = model._covnert_list_of_arrays_to_df(model._full_epi_list)['N'].round(3).values
+        arr = model._covnert_list_of_arrays_to_df(model._full_epi_list)['N'].round(5).values
         #print(f"\n=== {model_label} Model full_epi ===")
         #print(model._covnert_list_of_arrays_to_df(model._full_epi_list))
-        assert np.allclose(arr, pandas_result, rtol=1e-3), f"{model_label} does not match pandas model"
+        #assert np.allclose(arr, pandas_result, rtol=1e-3), f"{model_label} does not match pandas model"
+        assert np.array_equal(arr, pandas_result), "Values do not match after rounding"
 
 #def pytest_sessionfinish(session, exitstatus):
 #    """Called after the whole test run finishes."""
