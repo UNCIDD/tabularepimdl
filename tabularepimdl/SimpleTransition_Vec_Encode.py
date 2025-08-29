@@ -1,8 +1,10 @@
-from tabularepimdl.Rule import Rule
+from typing import Annotated
+
 import numpy as np
-import pandas as pd
 from pydantic import BaseModel, Field, PrivateAttr
-from typing import Annotated, Dict
+
+from tabularepimdl.Rule import Rule
+
 
 #Vectorization of Simple Transition
 class SimpleTransition_Vec_Encode(Rule, BaseModel):
@@ -36,7 +38,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         self._to_code = infstate_to_int.get(self.to_st)
         
 
-    def get_deltas(self, current_state: np.ndarray, col_idx_map: Dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool = None) -> np.ndarray:
+    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         @param current_state: a numpy array (at the moment) representing the current epidemic state. Must include population values (e.g. 'N' values).
         @param dt: size of the timestep.
@@ -93,7 +95,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         return result_buffer[:2*count, :]
 
     def __str__(self) -> str:
-        return "SimpleTransition_Vec_Encode: {} --> {} at rate {}".format(self.from_st, self.to_st, self.rate)
+        return f"SimpleTransition_Vec_Encode: {self.from_st} --> {self.to_st} at rate {self.rate}"
     
     def to_yaml(self) -> dict:
         rc = {

@@ -1,8 +1,11 @@
-import pandas as pd
-import numpy as np
-from tabularepimdl.Rule import Rule
-from pydantic import BaseModel, Field
 from typing import Annotated
+
+import numpy as np
+import pandas as pd
+from pydantic import BaseModel, Field
+
+from tabularepimdl.Rule import Rule
+
 
 class EnvironmentalTransmission(Rule, BaseModel):
     """!Class represents disease transmission that happens in nature environment without any human-to-human or cross-species infection.
@@ -25,7 +28,7 @@ class EnvironmentalTransmission(Rule, BaseModel):
     inf_to: str = "I"
     stochastic: bool = False
         
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float =1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float =1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.

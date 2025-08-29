@@ -1,8 +1,11 @@
-from tabularepimdl.Rule import Rule
+from typing import Annotated
+
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
-from typing import Annotated
+
+from tabularepimdl.Rule import Rule
+
 
 class SimpleObservationProcess(Rule, BaseModel):
     '''! This rule captures a simple generic observation process where people from a particular state are
@@ -28,7 +31,7 @@ class SimpleObservationProcess(Rule, BaseModel):
     prevobs_state: str = 'P'
     stochastic: bool = False
 
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a data frame (at the moment) w/ the current epidemic state.
         @param dt: the size of the timestep.

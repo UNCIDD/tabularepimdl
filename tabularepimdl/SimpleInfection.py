@@ -1,8 +1,11 @@
-from tabularepimdl.Rule import Rule
+from typing import Annotated
+
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
-from typing import Annotated
+
+from tabularepimdl.Rule import Rule
+
 
 class SimpleInfection(Rule, BaseModel):
     """!Class represents a simple infection process where people in one column are infected by people
@@ -25,7 +28,7 @@ class SimpleInfection(Rule, BaseModel):
     freq_dep: bool = True
     stochastic: bool = False
 
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float =1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float =1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.

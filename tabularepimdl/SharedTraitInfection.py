@@ -1,8 +1,11 @@
-import pandas as pd
-import numpy as np
-from tabularepimdl.Rule import Rule
-from pydantic import BaseModel, Field
 from typing import Annotated
+
+import numpy as np
+import pandas as pd
+from pydantic import BaseModel, Field
+
+from tabularepimdl.Rule import Rule
+
 
 class SharedTraitInfection(Rule, BaseModel):
 
@@ -27,7 +30,7 @@ class SharedTraitInfection(Rule, BaseModel):
     stochastic: bool = False
         
 
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.

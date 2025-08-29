@@ -1,12 +1,12 @@
 ## Define a class that represents a transition rule. Its simplest form is a rule just takes in the current state,
 ## and returns as set of deltas that will be applied to the appropriate parts of the current state. These deltas
 ## should specify the full row signature.
-from abc import ABC, abstractmethod
-import inspect
 import importlib
+import inspect
+from abc import ABC, abstractmethod
+
 import pandas as pd
-import numpy as np
-from typing import Dict
+
 
 class Rule(ABC):
 
@@ -16,7 +16,7 @@ class Rule(ABC):
     """
         
     @abstractmethod
-    def get_deltas(self, current_state: pd.DataFrame, dt: int|float, stochastic: bool) -> pd.DataFrame: #the original get_deltas()
+    def get_deltas(self, current_state: pd.DataFrame, dt: int|float, stochastic: bool | None = None) -> pd.DataFrame: #the original get_deltas()
         #get_deltas(self, current_state: np.ndarray, col_idx_map: Dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool = None) -> np.ndarray: #updated method definition
         """! Method should take in current state and return a series of deltas to that state.
         @param current_state: a data frame (at the moment) w/ the current epidemic state

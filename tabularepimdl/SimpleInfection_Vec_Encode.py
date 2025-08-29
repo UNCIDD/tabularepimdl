@@ -1,8 +1,10 @@
-from tabularepimdl.Rule import Rule
+from typing import Annotated
+
 import numpy as np
-import pandas as pd
 from pydantic import BaseModel, Field, PrivateAttr
-from typing import Annotated, Dict
+
+from tabularepimdl.Rule import Rule
+
 
 #Vectorization of Simple Infection
 class SimpleInfection_Vec_Encode(Rule, BaseModel):
@@ -42,7 +44,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         self._inf_to_code = infstate_to_int.get(self.i_st) #inf_to code might be defined in infstate_compartments as well if needed
         
 
-    def get_deltas(self, current_state: np.ndarray, col_idx_map: Dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool = None) -> np.ndarray:
+    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         @param current_state: a numpy array (at the moment) representing the current epidemic state. Must include population values (e.g. 'N' values).
         @param dt: size of the timestep.

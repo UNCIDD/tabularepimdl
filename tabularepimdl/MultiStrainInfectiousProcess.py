@@ -1,8 +1,10 @@
 
-from tabularepimdl.Rule import Rule
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator, model_validator
+
+from tabularepimdl.Rule import Rule
+
 
 class MultiStrainInfectiousProcess(Rule, BaseModel):
     """! Simple multi strain infectious process. Takes a cross protection matrix, a list of infection state 
@@ -77,7 +79,7 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         return parameter_values
    
     
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state, a data frame (at the moment) w/ the current epidemic state.
         @param dt, the size of the timestep.

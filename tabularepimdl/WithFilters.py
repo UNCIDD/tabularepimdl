@@ -1,6 +1,7 @@
 import pandas as pd
 
-class WithFilters():
+
+class WithFilters:
     """Mixin class to add filtering capability to other rules."""
     
     #def __init__(self, filter_column:str = None, filter_value: list[str] = None, *args, **kwargs) -> None: #allows the filter to accept extra arguments for other rules
@@ -29,7 +30,7 @@ class WithFilters():
             return current_state.loc[current_state[self.filter_column].isin(self.filter_value)]
         return current_state
 
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """Applies the filter before executing the rule logic.
         @para current_state: a dataframe (at the moment) representing the current epidemic state.
         @return: a pandas DataFrame containing changes after executing the rule logic.

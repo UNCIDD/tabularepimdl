@@ -1,8 +1,11 @@
-from tabularepimdl.Rule import Rule
+from typing import Annotated
+
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field, field_validator, ValidationInfo
-from typing import Annotated
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
+
+from tabularepimdl.Rule import Rule
+
 
 class StateBasedDeathProcess(Rule, BaseModel):
     """! 
@@ -27,7 +30,7 @@ class StateBasedDeathProcess(Rule, BaseModel):
             raise ValueError(f"{cls.__name__} expects a list for {field.field_name}, received {type(list_parameters)}")
         return list_parameters
     
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state, a data frame (at the moment) w/ the current epidemic state
         @param dt, the size of the timestep.
@@ -43,7 +46,7 @@ class StateBasedDeathProcess(Rule, BaseModel):
         ##first let's reduce to just the columns we need.
         
         #all satisfied records are wanted based on column and state values
-        state_mask = np.logical_or.reduce([current_state[column]==state for column, state in zip(self.columns, self.states)], axis=0)
+        state_mask = np.logical_or.reduce([current_state[column]==state for column, state in zip(self.columns, self.states, strict=True)], axis=0)
         deltas = current_state.loc[state_mask].copy()
 
         exp_change_rate = np.exp(-dt*self.rate)

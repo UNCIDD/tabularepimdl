@@ -1,8 +1,11 @@
-from tabularepimdl.Rule import Rule
+from typing import Annotated
+
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
-from typing import Annotated
+
+from tabularepimdl.Rule import Rule
+
 
 class SimpleTransition(Rule, BaseModel):
     """! Class is going to represent a simple transition from one state to another, 
@@ -24,7 +27,7 @@ class SimpleTransition(Rule, BaseModel):
     stochastic: bool = False
     #print('end simple transition init')
 
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.
@@ -52,7 +55,7 @@ class SimpleTransition(Rule, BaseModel):
         return pd.concat([deltas, deltas_add]).reset_index(drop=True)
     
     def __str__(self) -> str:
-        return "SimpleTransition: {} --> {} at rate {}".format(self.from_st, self.to_st, self.rate)
+        return f"SimpleTransition: {self.from_st} --> {self.to_st} at rate {self.rate}"
     
     def to_yaml(self) -> dict:
         rc = {

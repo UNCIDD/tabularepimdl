@@ -1,9 +1,10 @@
-from tabularepimdl.Rule import Rule
 import numpy as np
 import pandas as pd
 from numba import njit
-from pydantic import BaseModel, field_validator, ValidationInfo, ConfigDict
-from typing import List
+from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
+
+from tabularepimdl.Rule import Rule
+
 
 class WAIFWTransmission(Rule, BaseModel):
     """!
@@ -24,7 +25,7 @@ class WAIFWTransmission(Rule, BaseModel):
     # Pydantic Configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    waifw_matrix: List[List] | np.ndarray
+    waifw_matrix: list[list] | np.ndarray
     inf_col: str
     group_col: str
     s_st: str = "S"
@@ -37,7 +38,7 @@ class WAIFWTransmission(Rule, BaseModel):
     def validate_waifw_matrix(cls, matrix_parameters, field: ValidationInfo):
         """Ensure the input matrix is a 2-diemnsional array with sqaure shape and all elements are non-negative values."""
         #1. check list or array type.
-        if isinstance(matrix_parameters, List): #convert list to array
+        if isinstance(matrix_parameters, list): #convert list to array
             matrix_parameters = np.array(matrix_parameters)
         elif isinstance(matrix_parameters, np.ndarray):
             matrix_parameters = matrix_parameters
@@ -97,7 +98,7 @@ class WAIFWTransmission(Rule, BaseModel):
         
 
 
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a data frame (at the moment) w/ the current epidemic state.
         @param dt: the size of the timestep.

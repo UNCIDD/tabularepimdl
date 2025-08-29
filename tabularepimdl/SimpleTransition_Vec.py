@@ -1,8 +1,11 @@
-from tabularepimdl.Rule import Rule
+from typing import Annotated
+
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field, PrivateAttr
-from typing import Annotated
+
+from tabularepimdl.Rule import Rule
+
 
 #Vectorization of Simple Transition
 class SimpleTransition_Vec(Rule, BaseModel):
@@ -27,7 +30,7 @@ class SimpleTransition_Vec(Rule, BaseModel):
     _count_initial: int = PrivateAttr(default=None)
     _buffers: dict = PrivateAttr(default_factory=dict)
 
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.
@@ -98,7 +101,7 @@ class SimpleTransition_Vec(Rule, BaseModel):
         return result
 
     def __str__(self) -> str:
-        return "SimpleTransition_Vec: {} --> {} at rate {}".format(self.from_st, self.to_st, self.rate)
+        return f"SimpleTransition_Vec: {self.from_st} --> {self.to_st} at rate {self.rate}"
     
     def to_yaml(self) -> dict:
         rc = {

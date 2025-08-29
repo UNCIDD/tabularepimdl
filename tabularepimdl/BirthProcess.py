@@ -1,9 +1,12 @@
-from tabularepimdl.Rule import Rule
+from collections.abc import Iterable
+from typing import Annotated
+
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from typing import Annotated, Optional
-from collections.abc import Iterable
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from tabularepimdl.Rule import Rule
+
 
 class BirthProcess(Rule, BaseModel):
     """!
@@ -38,7 +41,7 @@ class BirthProcess(Rule, BaseModel):
             raise ValueError (f"start_state_sig must be either a dictionary or a pandas DataFrame, received {type(start_state_sig)}.")
         return start_state_sig
         
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: Optional[bool] = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.

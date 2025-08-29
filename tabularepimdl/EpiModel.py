@@ -237,7 +237,7 @@ class EpiModel(BaseModel):
             #print('before concat cur_state and all_deltas, cur_state is\n', self.cur_state)
             #print('before concat cur_state and all_deltas, all_deltas is\n', all_deltas)
             nw_state = pd.concat([self.cur_state, all_deltas])#.reset_index(drop=True) #1st change, confirmed this reset_index is not needed for MultiStrainSI 
-            #print('after concat but before grouping nw_state is\n', nw_state) #debug
+            #print('after concatenation but before grouping nw_state is\n', nw_state) #debug
 
             # Get grouping columns
             agg_col = {'N','T'} #rename the variable from tbr to agg_col
