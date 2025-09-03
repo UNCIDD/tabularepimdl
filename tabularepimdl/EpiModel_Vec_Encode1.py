@@ -1,8 +1,11 @@
-import pandas as pd
+from typing import Any
+
 import numpy as np
+import pandas as pd
+from pydantic import BaseModel, ConfigDict, PrivateAttr, field_validator
+
 from tabularepimdl.Rule import Rule
-from pydantic import BaseModel, field_validator, PrivateAttr, ConfigDict
-from typing import List, Optional, Dict, Literal, Any
+
 
 class EpiModel_Vec_Encode_1(BaseModel):
     """! Class that that applies a list of rules to a changing current state through 
@@ -33,19 +36,19 @@ class EpiModel_Vec_Encode_1(BaseModel):
     init_state: pd.DataFrame
     current_state_array: np.ndarray = None
     full_epi_array: np.ndarray = None
-    rules: List[List[Rule]]
+    rules: list[list[Rule]]
     stoch_policy: str = "rule_based"
     compartment_col: str = 'InfState'
 
     #columns listed in the input data, separating column N and T from other columns
     _agg_cols: set[str] = PrivateAttr(default_factory = lambda:{'N', 'T'})
-    _grouping_cols: List[str] = PrivateAttr(default_factory = lambda:['InfState']) #e.g. ['InfState', 'Age', 'Location']
+    _grouping_cols: list[str] = PrivateAttr(default_factory = lambda:['InfState']) #e.g. ['InfState', 'Age', 'Location']
 
     #domains for each column
-    _domains: Dict[str, Any] = PrivateAttr(default_factory=dict) #e.g. {'InfState': {'I', 'R', 'S'}, 'Location': {'A', 'B'}, 'Age': {'adult', 'child'}}
+    _domains: dict[str, Any] = PrivateAttr(default_factory=dict) #e.g. {'InfState': {'I', 'R', 'S'}, 'Location': {'A', 'B'}, 'Age': {'adult', 'child'}}
 
     #domains for column InfState
-    _infstate_all_comps: List[str] = PrivateAttr(default_factory=list) #e.g. ['S', 'I', 'R']
+    _infstate_all_comps: list[str] = PrivateAttr(default_factory=list) #e.g. ['S', 'I', 'R']
     _num_comps: int = PrivateAttr(default=None) #e.g. 3
 
     #encoding map and inverse encoding map for infstate comp, not needed, keep them here for now
@@ -54,24 +57,24 @@ class EpiModel_Vec_Encode_1(BaseModel):
     #_inverse_infstate_comp_map: Dict[int, str] = PrivateAttr(default_factory=dict) #e.g. {0: 'S', 1: 'I', 2: 'R'}
 
     #encoding maps and inverse encoding maps for each grouping column
-    _grouping_col_map: Dict[str, Dict[str, int]] = PrivateAttr(default_factory=dict) #e.g. { 'InfState': {'I': 0, 'S': 1}, 'Age': {'adult': 0, 'child': 1} }
-    _inverse_grouping_col_map: Dict[str, Dict[int, str]] = PrivateAttr(default_factory=dict) #e.g. { 'InfState': {0: 'I', 1: 'S'}, 'Age': {0: 'adult', 1: 'child'} }
+    _grouping_col_map: dict[str, dict[str, int]] = PrivateAttr(default_factory=dict) #e.g. { 'InfState': {'I': 0, 'S': 1}, 'Age': {'adult': 0, 'child': 1} }
+    _inverse_grouping_col_map: dict[str, dict[int, str]] = PrivateAttr(default_factory=dict) #e.g. { 'InfState': {0: 'I', 1: 'S'}, 'Age': {0: 'adult', 1: 'child'} }
     
     #column names order in init_state
-    _init_state_col_order: List[str] = PrivateAttr(default_factory=list) #e.g. ['InfState', 'N', 'T', 'Group']
-    _col_idx_map: Dict[str, int] = PrivateAttr(default_factory=dict) #e.g. {'InfState' : 0, 'N': 1, 'T': 2}
+    _init_state_col_order: list[str] = PrivateAttr(default_factory=list) #e.g. ['InfState', 'N', 'T', 'Group']
+    _col_idx_map: dict[str, int] = PrivateAttr(default_factory=dict) #e.g. {'InfState' : 0, 'N': 1, 'T': 2}
 
     #column index value of InfState, N, T and all grouping columns including InfState
     _infstate_idx: int = PrivateAttr(default=None) #e.g. _infstate_idx=0
     _n_idx: int = PrivateAttr(default=None) #e.g. _n_idx=1
     _t_idx: int = PrivateAttr(default=None) #e.g. _t_idx=2
-    _grouping_col_idx: List[int] = PrivateAttr(default_factory=list) #e.g. infstate, x, y, z = [0, 3, 4, 5]
+    _grouping_col_idx: list[int] = PrivateAttr(default_factory=list) #e.g. infstate, x, y, z = [0, 3, 4, 5]
 
     #current result array pr-eallocation
     _current_result_preallocation: np.ndarray = PrivateAttr(default=None)
 
     #full epi list to contain full epi array
-    _full_epi_list: List[np.ndarray] = PrivateAttr(default_factory=list)
+    _full_epi_list: list[np.ndarray] = PrivateAttr(default_factory=list)
     
     @field_validator("init_state", mode="before") #by default, column N and T should be numerical values, if not then should raise ValueError and let users check
     @classmethod
@@ -132,8 +135,10 @@ class EpiModel_Vec_Encode_1(BaseModel):
                 if hasattr(rule, 'column') and hasattr(rule, 'source_states') and hasattr(rule, 'target_states'):
                     col = rule.column #specicifally operate on column 'InfState'
                     if col in self._domains:
-                        for s in rule.source_states: self._domains[col].add(str(s))
-                        for s in rule.target_states: self._domains[col].add(str(s))
+                        for s in rule.source_states:
+                            self._domains[col].add(str(s))
+                        for s in rule.target_states:
+                            self._domains[col].add(str(s))
         #print('domains per column:', self._domains)
 
         #The following block code is not needed since domains collects all values from each grouping column including 'InfState'
@@ -238,7 +243,7 @@ class EpiModel_Vec_Encode_1(BaseModel):
         self.full_epi_array = np.vstack(self._full_epi_list)
         return self.full_epi_array
     
-    def _covnert_list_of_arrays_to_df(self, list_of_arr: List[np.ndarray]) -> pd.DataFrame:
+    def _covnert_list_of_arrays_to_df(self, list_of_arr: list[np.ndarray]) -> pd.DataFrame:
         """
         Convert list of arrays returned from do_timestep() to a dataframe as full epidemic history.
         @param list_of_arr: a list of arrays, each array is a epidemic historical data.
