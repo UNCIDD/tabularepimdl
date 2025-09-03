@@ -34,8 +34,8 @@ class EpiModel_Vec_Encode_2(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     init_state: pd.DataFrame
-    current_state_array: np.ndarray = None
-    full_epi_array: np.ndarray = None
+    current_state_array: np.ndarray = np.array([])
+    full_epi_array: np.ndarray = np.array([])
     rules: list[list[Rule]]
     stoch_policy: str = "rule_based"
     compartment_col: str = 'InfState'
@@ -232,7 +232,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
         if encoded_columns: #check encoded columns empty or not
             self.current_state_array = np.column_stack(encoded_columns).astype(np.float64)
         else:
-            self.current_state_array = np.empty(0, len(self._init_state_col_order), dtype=np.float64)
+            self.current_state_array = np.empty((0, len(self._init_state_col_order)), dtype=np.float64)
         
         
         #pre-allocation of result array -- to be checked/verified, may need to be moved inside for loop of do_timestep

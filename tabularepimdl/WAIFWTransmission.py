@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from numba import njit
 from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
+from numpy.typing import NDArray
 
 from tabularepimdl.Rule import Rule
 
@@ -25,7 +26,7 @@ class WAIFWTransmission(Rule, BaseModel):
     # Pydantic Configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    waifw_matrix: list[list] | np.ndarray
+    waifw_matrix: NDArray[np.float64] #list[list] | np.ndarray
     inf_col: str
     group_col: str
     s_st: str = "S"
@@ -39,9 +40,9 @@ class WAIFWTransmission(Rule, BaseModel):
         """Ensure the input matrix is a 2-diemnsional array with sqaure shape and all elements are non-negative values."""
         #1. check list or array type.
         if isinstance(matrix_parameters, list): #convert list to array
-            matrix_parameters = np.array(matrix_parameters)
+            matrix_parameters = np.array(matrix_parameters, dtype = np.float64)
         elif isinstance(matrix_parameters, np.ndarray):
-            matrix_parameters = matrix_parameters
+            matrix_parameters = matrix_parameters.astype(np.float64, copy = False)
         else:
             raise TypeError(f"{cls.__name__} expects a NumPy array for {field.field_name}, received {type(matrix_parameters)}.")
         
@@ -85,7 +86,7 @@ class WAIFWTransmission(Rule, BaseModel):
         #Computes probabilities of infection using numba.
         #Equivalent to: prI = 1 - np.power(np.exp(-dt*self.waifw_matrix), inf_array)
         matrix_size = len(waifw_matrix)
-        prI = np.ones(matrix_size, dtype=np.float64) #initialize prI with 1s
+        prI: np.ndarray = np.ones(matrix_size, dtype=np.float64) #initialize prI with 1s
 
         expo = np.exp(-dt * waifw_matrix)
         infection_power = np.power(expo, inf_array)
@@ -167,9 +168,10 @@ class WAIFWTransmission(Rule, BaseModel):
         """
         return the rule's attributes to a dictionary.
         """
+                
         rc = {
             'tabularepimdl.WAIFWTransmission' : {
-                'waifw_matrix' : self.waifw_matrix.T, #transpose waifw matrix back to its initial order before writting the attributes to yaml file
+                'waifw_matrix' : self.waifw_matrix.T, #transpose waifw matrix back to its initial order before writting the attributes to dict
                 'inf_col' : self.inf_col,
                 'group_col' : self.group_col,
                 's_st': self.s_st,

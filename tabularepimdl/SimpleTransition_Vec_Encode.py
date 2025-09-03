@@ -29,8 +29,8 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     stochastic: bool = False
     infstate_compartments: list[str]
 
-    _from_code: int = PrivateAttr(default=None)
-    _to_code: int = PrivateAttr(default=None)
+    _from_code: int | None = PrivateAttr(default=None)
+    _to_code: int | None = PrivateAttr(default=None)
 
     def model_post_init(self, _):
         infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
@@ -38,7 +38,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         self._to_code = infstate_to_int.get(self.to_st)
         
 
-    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
+    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         @param current_state: a numpy array (at the moment) representing the current epidemic state. Must include population values (e.g. 'N' values).
         @param dt: size of the timestep.

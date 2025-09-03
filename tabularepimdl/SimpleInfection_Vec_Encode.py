@@ -20,11 +20,11 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
     @param freq_dep: whether this model is a frequency dependent model.
     @param stochastic: whether the process is stochastic or deterministic.
     @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R']. 
-    @param _from_code: encoded from_st.
-    @param _to_code: encoded to_st.
+    @param _s_code: encoded s_st.
+    @param _i_code: encoded i_st.
     @para _inf_to_code: encoded infected to state.
     """
-    beta: Annotated[int | float, Field(ge=0)]
+    beta: Annotated[float, Field(ge=0)]
     column: str
     s_st: str
     i_st: str
@@ -33,9 +33,9 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
     stochastic: bool = False
     infstate_compartments: list[str]
 
-    _from_code: int = PrivateAttr(default=None)
-    _to_code: int = PrivateAttr(default=None)
-    _inf_to_code: int = PrivateAttr(default=None)
+    _s_code: int | None = PrivateAttr(default=None)
+    _i_code: int | None = PrivateAttr(default=None)
+    _inf_to_code: int | None = PrivateAttr(default=None)
 
     def model_post_init(self, _):
         infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
@@ -44,7 +44,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         self._inf_to_code = infstate_to_int.get(self.i_st) #inf_to code might be defined in infstate_compartments as well if needed
         
 
-    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int] = None, result_buffer: np.ndarray = None, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
+    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         @param current_state: a numpy array (at the moment) representing the current epidemic state. Must include population values (e.g. 'N' values).
         @param dt: size of the timestep.
@@ -53,6 +53,8 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. E.g. result_buffer = np.empty((2 * count, ncols), dtype=current_state.dtype)
         return: an array containing changes in s_st and inf_to.
         """
+        beta: float
+
         if stochastic is None:
             stochastic = self.stochastic
         
@@ -60,7 +62,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         n_idx = col_idx_map['N']
         #print('input array\n', current_state)
 
-        total_population = np.sum(current_state[:, n_idx])
+        total_population: float = np.sum(current_state[:, n_idx])
         #print('total population:', total_population)
 
         if total_population != 0:
@@ -78,7 +80,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
             
         i_row_idxs = np.flatnonzero(mask_i)
-        N_infectious_sum = np.sum(current_state[i_row_idxs, n_idx]) #number of infected individuals
+        N_infectious_sum: float = np.sum(current_state[i_row_idxs, n_idx]) #number of infected individuals
         #print('N_infectious_sum:', N_infectious_sum)
 
         # s_state
