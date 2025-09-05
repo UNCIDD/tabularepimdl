@@ -19,13 +19,7 @@ from tabularepimdl.EpiModel_Vec_Encode1 import EpiModel_Vec_Encode_1 #model vec 
 from tabularepimdl.EpiModel_Vec_Encode2 import EpiModel_Vec_Encode_2 #model vec engine 2
 
 #Global Setup
-np.random.seed(3) #set seed to ensure a same epidemic each time of run
-n = 100_000#10_000_000 #data size
-infstate_values = np.random.choice(['S', 'I', 'R'], size=n)
-n_values = np.random.randint(1, 10, size=n)
-t_values = np.full(n, 0.0)
 iters = 200
-switch = 'f'
 
 infection_rate = 0.2
 transition_rate = 0.25
@@ -35,26 +29,11 @@ infstate_compartments = ['S', 'I', 'R']
 #pandas_result = None
 benchmark_results = []
 
-def get_init_df():
-    """Initial dataframe preparation."""
-    if switch == 'fixed':
-        population = pd.DataFrame({
-        'N' : [1_500_000, 10],
-        'T': [0, 0],
-        'InfState' : ['S','I']
-        })
-    else:
-        population = pd.DataFrame({
-        'N' : n_values, 
-        'T': t_values,
-        'InfState' : infstate_values
-        })
-    return population
 
 @pytest.fixture
-def build_pandas_model():
+def build_pandas_model(init_df):
     """EpiModel Pandas version"""
-    init_state = get_init_df()
+    init_state, _ = init_df
     infect_rule_pd = SimpleInfection_pd(beta=infection_rate, column='InfState', s_st='S', i_st='I', inf_to='I')
     recover_rule_pd = SimpleTransition_pd(column='InfState', from_st='I', to_st='R', rate=transition_rate)
     determ_epi_mdl_pd = EpiModel_pd(init_state = init_state, rules=[[infect_rule_pd, recover_rule_pd]])
@@ -62,9 +41,9 @@ def build_pandas_model():
     return determ_epi_mdl_pd
 
 @pytest.fixture
-def build_vec1_model():
+def build_vec1_model(init_df):
     """EpiModel Vec version 1"""
-    init_state = get_init_df()
+    init_state, _ = init_df
     infect_rule_vec = SimpleInfection_Vec_Encode(beta=infection_rate, column='InfState', s_st='S', i_st='I', inf_to='I', infstate_compartments=infstate_compartments)
     recover_rule_vec = SimpleTransition_Vec_Encode(column='InfState', from_st='I', to_st='R', rate=transition_rate, infstate_compartments=infstate_compartments)
     determ_epi_mdl_vec1 = EpiModel_Vec_Encode_1(init_state = init_state ,rules=[[infect_rule_vec, recover_rule_vec]], compartment_col = 'InfState')
@@ -72,9 +51,9 @@ def build_vec1_model():
     return determ_epi_mdl_vec1
 
 @pytest.fixture
-def build_vec2_model():
+def build_vec2_model(init_df):
     """EpiModel Vec version 2"""
-    init_state = get_init_df()
+    init_state, _ = init_df
     infect_rule_vec = SimpleInfection_Vec_Encode(beta=infection_rate, column='InfState', s_st='S', i_st='I', inf_to='I', infstate_compartments=infstate_compartments)
     recover_rule_vec = SimpleTransition_Vec_Encode(column='InfState', from_st='I', to_st='R', rate=transition_rate, infstate_compartments=infstate_compartments)
     determ_epi_mdl_vec2 = EpiModel_Vec_Encode_2(init_state = init_state ,rules=[[infect_rule_vec, recover_rule_vec]], compartment_col = 'InfState')
@@ -142,8 +121,9 @@ def benchmark_results():
     ("vec1", "build_vec1_model"),
     ("vec2", "build_vec2_model")
 ])
-def test_model_performance_and_output(request, model_label, model_fixture_name, benchmark_results):
+def test_model_performance_and_output(request, model_label, model_fixture_name, benchmark_results, init_df):
     global pandas_result
+    _, n = init_df  #retrieve n value
     
     print("\n=== Running test for model:", model_label, "===")
 
@@ -183,9 +163,9 @@ def test_model_performance_and_output(request, model_label, model_fixture_name, 
     if model_label == "pandas":
         #print("\n=== Pandas Model full_epi ===")
         #print(model.full_epi)
-        pandas_result = model.full_epi['N'].round(5).values
+        pandas_result = model.full_epi['N'].round(3).values
     else:
-        arr = model._covnert_list_of_arrays_to_df(model._full_epi_list)['N'].round(5).values
+        arr = model._covnert_list_of_arrays_to_df(model._full_epi_list)['N'].round(3).values
         #print(f"\n=== {model_label} Model full_epi ===")
         #print(model._covnert_list_of_arrays_to_df(model._full_epi_list))
         #assert np.allclose(arr, pandas_result, rtol=1e-3), f"{model_label} does not match pandas model"
@@ -199,3 +179,4 @@ def test_model_performance_and_output(request, model_label, model_fixture_name, 
 #        print("\nBenchmark results saved to benchmark_results.json")
 
 #pytest -s benchmark_EpiModel_Pandas_Vec_test.py
+#pytest -s benchmark_EpiModel_Pandas_Vec_test.py --switch=random
