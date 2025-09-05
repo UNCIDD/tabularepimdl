@@ -12,7 +12,7 @@ def STrans_Run_n_Visual():
         rate=0.1,
         stochastic=False,
         col_idx_map = {'InfState' : 0, 'N': 1},
-        state_map = {'I': 0, 'R': 1, 'S': 2},
+        #state_map = {'I': 0, 'R': 1, 'S': 2},
         infstate_compartments = ['S', 'I', 'R']
     )
     results = runner.run()

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, PrivateAttr
-from typing import Literal, Union, Dict
+from typing import Literal, Union
 import pandas as pd
 import numpy as np
 
@@ -24,7 +24,7 @@ class SimpleTransitionDispatcher(BaseModel):
     from_st: str
     to_st: str
     rate: float = Field(ge=0)
-    infstate_compartments: list[str] = None
+    infstate_compartments: list[str] = Field(default_factory=list)
     stochastic: bool = False
 
     #Dispatcher
@@ -67,11 +67,11 @@ class SimpleTransitionDispatcher(BaseModel):
         else:
             raise ValueError(f"Unknown structure: {self.structure}")
 
-    def get_deltas(self, current_state: pd.DataFrame | np.ndarray, col_idx_map: Dict[str, int] = None, result_buffer: np.ndarray = None,  dt: int | float = 1.0) -> pd.DataFrame | np.ndarray:
+    def get_deltas(self, current_state: pd.DataFrame | np.ndarray, col_idx_map: dict[str, int] | None = None, result_buffer: np.ndarray | None = None,  dt: int | float = 1.0) -> pd.DataFrame | np.ndarray:
         """
         @param current_state: a dataframe or numpy array (at the moment) representing the current epidemic state.
-        @param col_idx_map: mapping of input data columns and their column index.
-        @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state.
+        @param col_idx_map: mapping of input data columns and their column index. Default is None so Pandas version's get_deltas() can invoke dispather's get_deltas().
+        @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. Default is None so Pandas version's get_deltas() can invoke dispather's get_deltas().
         @param dt: size of the timestep.
         No need to add stochastic argument to dispatcher's get_deltas() method.
         """
@@ -80,9 +80,9 @@ class SimpleTransitionDispatcher(BaseModel):
         elif self.structure == 'Numpy_Encode':
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt)
 
-    def apply(self, state: np.ndarray, col_idx: Dict[str, int], dt: float) -> np.ndarray: #run Josh's code
+    def apply(self, state: np.ndarray, col_idx: dict[str, int], dt: float) -> np.ndarray: #run Josh's code
             return self._dispatcher.apply(state=state, col_idx=col_idx, dt=dt)
     
-    def compile(self, comp_map: Dict[str, int]) -> None: #for Josh's class
+    def compile(self, comp_map: dict[str, int]) -> None: #for Josh's class
         """Resolve compartment string labels to integer codes."""
         return self._dispatcher.compile(comp_map=comp_map)

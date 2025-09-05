@@ -1,6 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, PrivateAttr
 from benchmark.SimpleTransitionDispatcher import SimpleTransitionDispatcher
-from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -20,7 +19,7 @@ class SimpleTransitionRunner(BaseModel):
     @param rate: transition rate per unit time.
     @param stochastic: whether the process is stochastic or deterministic.
     @param col_idx_map: mapping of input data columns and their column index. E.g. col_idx_map = {'InfState': 0, 'N': 1}.
-    @param state_map: mapping between infectin states values and their categorical values. E.g. state_map = {'I': 0, 'R': 1, 'S': 2}.
+    @param _infstate_comp_map: mapping between infectin states values and their categorical values. E.g. state_map = {'I': 0, 'R': 1, 'S': 2}.
     @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R'].
     return: the time and memory usage of the rule with different data sizes, structures and iterations.
     """
@@ -32,13 +31,17 @@ class SimpleTransitionRunner(BaseModel):
     to_st: str
     rate: float
     stochastic: bool = False
-    col_idx_map: Dict[str, int] = None
-    state_map: Dict[str, int] = None
-    infstate_compartments: list[str] = None
+    col_idx_map: dict[str, int] = Field(default_factory=dict)
+    infstate_compartments: list[str] = Field(default_factory=list)
 
     time_mem_results: list[dict] = []
 
-    def run(self) -> list[Dict]:
+    _infstate_comp_map: dict[str, int] = PrivateAttr(default_factory=dict)
+
+    def model_post_init(self, _):
+        self._infstate_comp_map = {comp: i for i, comp in enumerate(sorted(self.infstate_compartments))}
+
+    def run(self) -> list[dict]:
         """
         Creates input data with different sizes and runs deltas calculation with different data structures in different iterations.
         Tracks each combination's time and memory usage.
@@ -69,7 +72,7 @@ class SimpleTransitionRunner(BaseModel):
                         arr_numba = arr.copy()
                         infstate_idx = self.col_idx_map[self.column]
                         #print('infstate_idx:', infstate_idx)
-                        arr_numba[:, infstate_idx] = [self.state_map[val] for val in arr[:, infstate_idx]]
+                        arr_numba[:, infstate_idx] = [self._infstate_comp_map[val] for val in arr[:, infstate_idx]]
                         arr_numba = arr_numba.astype(np.float32)
                         #print('arr_numba\n', arr_numba)
                         n_rows = arr_numba.shape[0] #detect the number of rows and columns in input array
