@@ -73,11 +73,11 @@ class SimpleTransitionRunner(BaseModel):
                         infstate_idx = self.col_idx_map[self.column]
                         #print('infstate_idx:', infstate_idx)
                         arr_numba[:, infstate_idx] = [self._infstate_comp_map[val] for val in arr[:, infstate_idx]]
-                        arr_numba = arr_numba.astype(np.float32)
+                        arr_numba = arr_numba.astype(np.float64)
                         #print('arr_numba\n', arr_numba)
                         n_rows = arr_numba.shape[0] #detect the number of rows and columns in input array
                         n_cols = arr_numba.shape[1]
-                        result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float32) #preallocate a result array
+                        result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
                     elif struct == 'Josh_Encode_Vec': #speical value creation for Josh's class
                         arr = np.column_stack((infstate_values, n_values))
                         arr_numba = arr.copy()
@@ -85,7 +85,7 @@ class SimpleTransitionRunner(BaseModel):
                         comp_map = {label: i for i, label in enumerate(sorted(self.infstate_compartments))}
                         #print('comp_map:', comp_map)
                         arr_numba[:, infstate_idx] = [comp_map[val] for val in arr[:, infstate_idx]]
-                        arr_numba = arr_numba.astype(np.float32)
+                        arr_numba = arr_numba.astype(np.float64)
                         #print('arr_numba for J\n', arr_numba)
                     dispatcher = SimpleTransitionDispatcher(
                         structure=struct,
@@ -129,7 +129,7 @@ class SimpleTransitionRunner(BaseModel):
                         peak = tracemalloc.get_traced_memory()[1]
                         tracemalloc.stop()
 
-                    print(f"Sample deltas for {struct}:\n{deltas}\n, data length: {len(deltas)}\n, non-zero counts: {np.count_nonzero(deltas[:, 1] if isinstance(deltas, np.ndarray) else deltas.iloc[:, 1])}") #debug
+                    print(f"Sample deltas for {struct}:\n{deltas}\n, data length: {len(deltas)}\n, non-zero counts: {np.count_nonzero(deltas[:, self.col_idx_map['N']] if isinstance(deltas, np.ndarray) else deltas.loc[:, 'N'])}") #debug
 
                     #concatenate each iteration's result
                     self.time_mem_results.append({

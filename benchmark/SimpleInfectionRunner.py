@@ -137,7 +137,7 @@ class SimpleInfectionRunner(BaseModel):
                         peak = tracemalloc.get_traced_memory()[1]
                         tracemalloc.stop()
 
-                    print(f"Sample deltas for {struct}:\n{deltas}\n, data length: {len(deltas)}\n, non-zero counts: {np.count_nonzero(deltas[:, 1] if isinstance(deltas, np.ndarray) else deltas.iloc[:, 1])}") #debug
+                    print(f"Sample deltas for {struct}:\n{deltas}\n, data length: {len(deltas)}\n, non-zero counts: {np.count_nonzero(deltas[:, self.col_idx_map['N']] if isinstance(deltas, np.ndarray) else deltas.loc[:, 'N'])}") #debug
 
                     #concatenate each iteration's result
                     self.time_mem_results.append({
