@@ -71,7 +71,7 @@ class EpiModel_Vec_Encode_1(BaseModel):
     _grouping_col_idx: list[int] = PrivateAttr(default_factory=list) #e.g. infstate, x, y, z = [0, 3, 4, 5]
 
     #current result array pr-eallocation
-    _current_result_preallocation: np.ndarray = PrivateAttr(default=None)
+    _current_result_preallocation: np.ndarray = PrivateAttr(default_factory=lambda: np.array([]))
 
     #full epi list to contain full epi array
     _full_epi_list: list[np.ndarray] = PrivateAttr(default_factory=list)
