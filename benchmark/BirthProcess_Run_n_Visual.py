@@ -5,7 +5,7 @@ def SInfect_Run_n_Visual():
     runner = BirthProcessRunner(
         data_sizes= [15],
         structures= ['Pandas', 'Numpy_Encode'],
-        iterations= [1],#[100, 300, 500, 700],
+        iterations= [700],#[100, 300, 500, 700],
         rate=0.01,
         stochastic=False,
         col_idx_map = {'InfState': 0, 'AgeCat': 1, 'N': 2, 'T': 3},
