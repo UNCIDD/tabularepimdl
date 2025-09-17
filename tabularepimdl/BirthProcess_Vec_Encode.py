@@ -31,6 +31,8 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         
         Args:
             current_state (np.ndarray): A structured array representing the current epidemic state. Must include a column `'N'`, which indicates the population count.
+            col_idx_map (dict): mapping of column names to their index positions.
+            result_buffer (np.ndarray): A pre-allocated array that will be populated with the computed deltas. This array is modified in-place and returned.
             dt (float): The size of the time step. Defaults to 1.0.
             stochastic (bool, optional): Whether to apply stochastic modeling. If `None`, the class-level `self.stochastic` attribute is used.
         
