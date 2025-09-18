@@ -22,7 +22,7 @@ class EnvironmentalTransmission(Rule, BaseModel):
     '''
     beta: Annotated[int | float, Field(ge=0)]
     inf_col: str
-    trait_col:str
+    #trait_col:str
     s_st: str = "S"
     i_st: str = "I"
     inf_to: str = "I"
