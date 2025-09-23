@@ -9,7 +9,7 @@ import gc
 
 class BirthProcessRunner(BaseModel):
     """
-    Benchmarks time and memory usage of the SimpleTransition Pandas and NumPy versions.
+    Benchmarks time and memory usage of the BirthProcess Pandas and NumPy versions.
     @param data_sizes: the number of records/rows in a input data.
     @param structure: data structure used for rules. E.g. Pandas, Numpy, Numpy_Encode
     @param iterations: the number of iterations to run the rule.

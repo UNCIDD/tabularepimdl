@@ -45,7 +45,6 @@ class BirthProcessDispatcher(BaseModel):
         @param col_idx_map: mapping of input data columns and their column index. Default is None so Pandas version's get_deltas() can invoke dispather's get_deltas().
         @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. Default is None so Pandas version's get_deltas() can invoke dispather's get_deltas().
         @param dt: size of the timestep.
-        No need to add stochastic argument to dispatcher's get_deltas() method.
         """
         if self.structure == 'Pandas':
             return self._dispatcher.get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)

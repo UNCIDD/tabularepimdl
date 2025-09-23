@@ -1,7 +1,7 @@
 from benchmark.BirthProcessRunner import BirthProcessRunner
 from benchmark.Visualizer import Visualizer
 
-def SInfect_Run_n_Visual():
+def BirthProcess_Run_n_Visual():
     runner = BirthProcessRunner(
         data_sizes= [15],
         structures= ['Pandas', 'Numpy_Encode'],
@@ -17,5 +17,5 @@ def SInfect_Run_n_Visual():
     viz.plot()
 
 if __name__ == "__main__":
-    SInfect_Run_n_Visual()
+    BirthProcess_Run_n_Visual()
 #python -m benchmark.BirthProcess_Run_n_Visual
