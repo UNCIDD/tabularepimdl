@@ -15,7 +15,8 @@ class WAIFWTransmission_Vec_Encode(Rule, BaseModel):
         waifw_martrix: the waifw transmission rate matrix, a square matrix is required.
         inf_col: the infection state column for this infectious process.
         group_col: the group where infection is applied, different group values are specified in this column. The number of possible unique values in the column should match the waifw matrix size,
-                   and the unique values should have an order (i.e., it should be a pd.categorical).
+                   and the unique values should have an order (i.e., the group_col should be a categorical datatype).
+        group_col_all_categories: all the categories the group column should have.
         s_st: the state for susceptibles, assumed to be S.
         i_st: the state for infectious, assumed to be I.
         inf_to: the state susceptible population go to, assumed to be I.
@@ -30,6 +31,7 @@ class WAIFWTransmission_Vec_Encode(Rule, BaseModel):
     waifw_matrix: NDArray[np.float64] = Field(description = "the waifw transmission rate matrix.")
     inf_col: str = Field(description = "the infection state column for this infectious process.")
     group_col: str = Field(description = "the group where infection is applied.")
+    group_col_all_categories: list[str | int] = Field(description = "all the categories the group column should have.")
     s_st: str = Field(default="S", description = "the state for susceptibles.")
     i_st: str = Field(default="I", description = "the state for infectious.")
     inf_to: str = Field(default="I", description = "the state susceptible population go to.")
@@ -39,6 +41,7 @@ class WAIFWTransmission_Vec_Encode(Rule, BaseModel):
     _s_code: int | None = PrivateAttr(default=None)
     _i_code: int | None = PrivateAttr(default=None)
     _inf_to_code: int | None = PrivateAttr(default=None)
+    _group_col_all_categories_code: list[int] | None = PrivateAttr(default=None)
 
     @field_validator("waifw_matrix", mode="before") #validate array type and its element sign
     @classmethod
@@ -74,11 +77,29 @@ class WAIFWTransmission_Vec_Encode(Rule, BaseModel):
         
         return matrix_parameters.T #transpose the input matrix
     
+    @field_validator("group_col_all_categories", mode='before')
+    @classmethod
+    def validate_group_col_all_categories(cls, category_vals):
+        if not category_vals:
+            raise ValueError("The group_col_all_categories values must not be empty.")
+        
+        first_element_type = type(category_vals[0])
+        for item in category_vals[1:]:
+            if type(item) != first_element_type:
+                raise ValueError(
+                    f"All elements in group_col_all_categories must be of the same datatype. "
+                    f"Found both {first_element_type.__name__} and {type(item).__name__}."
+                )
+        return category_vals
+    
     def model_post_init(self, _):
         infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
         self._s_code = infstate_to_int.get(self.s_st)
         self._i_code = infstate_to_int.get(self.i_st)
         self._inf_to_code = infstate_to_int.get(self.inf_to)
+
+        self.group_col_all_categories = sorted(self.group_col_all_categories) #sort the group_col's all categories
+        self._group_col_all_categories_code = [i for i, v in enumerate(self.group_col_all_categories)] #encode each category, keeping numbers only
 
     @staticmethod    
     @njit
@@ -144,17 +165,17 @@ class WAIFWTransmission_Vec_Encode(Rule, BaseModel):
         #    current_state[self.group_col]=pd.Categorical(current_state[self.group_col])
 
         #Check if the number of unique categories in current_state's group_col matches waifw matrix's size
-        unique_val_group_col = np.unique(current_state[:, group_col_idx])
-        if len(unique_val_group_col) != len(self.waifw_matrix):
+        #unique_val_group_col = np.unique(current_state[:, group_col_idx])
+        if len(self._group_col_all_categories_code) != len(self.waifw_matrix):
             raise ValueError(f"Mismatch between the number of unique categories of input data and WAIFW matrix size. "
-                             f"Expected {len(self.waifw_matrix)} categories, but found {len(unique_val_group_col)}. "
-                             f"Categories: {unique_val_group_col}."
+                             f"Expected {len(self.waifw_matrix)} categories, but found {len(self._group_col_all_categories_code)}. "
+                             f"Categories: {self._group_col_all_categories_code}."
                             )
 
         ##create an array for the total number of infections in each unique group. Only records with i_st are sumed, other records's N are filled with 0.
         #inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col, observed=False)['N'].sum(numeric_only=True).values #moved ['N'] position #groupby approach
         
-        num_of_categories = len(unique_val_group_col)
+        num_of_categories = len(self._group_col_all_categories_code)
         print('num of cate:', num_of_categories)
         present_category_codes = current_state[:, group_col_idx] #what if the actual number of rows is less than the number of categories? -> no impact
         print('present cate code:', present_category_codes)
