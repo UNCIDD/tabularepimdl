@@ -133,7 +133,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
         self._grouping_cols = [c for c in self.init_state.columns if c not in self._agg_cols]
         #print('grouping col:', self._grouping_cols)
 
-        #domains per grouping column (excludes N and T) in init_state
+        #unique domain values per grouping column (excludes N and T) in init_state
         self._domains = {col: set(self.init_state[col].astype(str).tolist()) for col in self._grouping_cols}
         #collect domains that exist in each rule's source and target states but not in init_state
         for ruleset in self.rules:
@@ -142,7 +142,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
                     col = rule.column #specicifally operate on column 'InfState'
                     if col in self._domains:
                         for s in rule.source_states:
-                            self._domains[col].add(str(s))
+                            self._domains[col].add(str(s)) #only add non-present element
                         for s in rule.target_states:
                             self._domains[col].add(str(s))
         #print('domains per column:', self._domains)
@@ -185,7 +185,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
         #build encoding maps and inverse encoding maps for each grouping column's domain values including column infstate
         for col in self._grouping_cols:
             #print('col:', col)
-            vals = sorted(self._domains[col])
+            vals = sorted(self._domains[col]) #sort each grouping column's unique domain values
             #print('vals:', vals)
             self._grouping_col_map[col] = {v: i for i, v in enumerate(vals)} #encode each grouping column's values
             self._inverse_grouping_col_map[col] = {i: v for v, i in self._grouping_col_map[col].items()} #reverse the above encoding
