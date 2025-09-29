@@ -106,7 +106,7 @@ class WAIFWTransmission_Vec_Encode(Rule, BaseModel):
     def compute_infection_array(present_cat_codes, weights, num_of_categories) -> np.ndarray:
         
         #Optimized function using numba to compute the number of infected individuals per group.
-        
+        #inf_array can be pre-allocated using attribute group_col_all_categories
         inf_array = np.zeros(num_of_categories, dtype=np.float64)  # Initialize array with zeros
         for i in range(len(present_cat_codes)):
             inf_array[present_cat_codes[i]] = inf_array[present_cat_codes[i]] + weights[i]
@@ -118,6 +118,7 @@ class WAIFWTransmission_Vec_Encode(Rule, BaseModel):
         
         #Computes probabilities of infection using numba.
         #Equivalent to: prI = 1 - np.power(np.exp(-dt*self.waifw_matrix), inf_array)
+        #prI array can be pre-allocated using attribute waifw_matrix
         matrix_size = len(waifw_matrix)
         prI: np.ndarray = np.ones(matrix_size, dtype=np.float64) #initialize prI with 1s
 
@@ -198,13 +199,13 @@ class WAIFWTransmission_Vec_Encode(Rule, BaseModel):
 
         ##get folks in susceptible states which link to all unique groups
         is_susceptible = current_state[:, infstate_idx] == self._s_code
-        deltas_susceptable = current_state[is_susceptible]
+        deltas_susceptible = current_state[is_susceptible]
         print('is suscpet:', is_susceptible) #debug
-        print('deltas suscept\n', deltas_susceptable, '\n') #debug
+        print('deltas suscept\n', deltas_susceptible, '\n') #debug
         
 
-        N = deltas_susceptable[:, n_idx]
-        print('N:', N)
+        N_susceptible = deltas_susceptible[:, n_idx]
+        print('N_susceptible:', N_susceptible)
 
         #infectious process, getting the number of individuals who get infected from susceptible status
         susceptible_group_codes = present_category_codes[is_susceptible]
@@ -212,20 +213,20 @@ class WAIFWTransmission_Vec_Encode(Rule, BaseModel):
         print('prI per group:', prI_per_group)
 
         if stochastic:
-            changed_N = -np.random.binomial(N, prI_per_group)
+            changed_N = -np.random.binomial(N_susceptible, prI_per_group)
         else:
-            changed_N = -N * prI_per_group
+            changed_N = -N_susceptible * prI_per_group
 
         print('changed N:', changed_N)
 
-        count = len(N)
+        count = len(N_susceptible)
         print('count:', count)
         # Fill 'from' rows
-        result_buffer[:count, :] = deltas_susceptable #equivalent: self._from_code
+        result_buffer[:count, :] = deltas_susceptible #equivalent: self._from_code
         result_buffer[:count, n_idx] = changed_N  #update column N with changed_N (negative value)
 
         # Fill 'to' rows
-        result_buffer[count:2*count, :] = deltas_susceptable
+        result_buffer[count:2*count, :] = deltas_susceptible
         result_buffer[count:2*count, infstate_idx] = self._inf_to_code #update col infstate
         result_buffer[count:2*count, n_idx] = -changed_N  #update column N with inversed changed_N
 
