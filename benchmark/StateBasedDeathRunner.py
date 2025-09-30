@@ -93,7 +93,7 @@ class StateBasedDeathProcessRunner(BaseModel):
                         tracemalloc.start() #track memory
                         t0 = time.perf_counter() #track time
                         for _ in range(iters):
-                            deltas = dispatcher.get_deltas(current_state=data)
+                            deltas = dispatcher.get_deltas(current_state=data, stochastic=self.stochastic)
                         t1 = time.perf_counter()
                         peak = tracemalloc.get_traced_memory()[1]
                         tracemalloc.stop()
@@ -102,7 +102,7 @@ class StateBasedDeathProcessRunner(BaseModel):
                         tracemalloc.start() #track memory
                         t0 = time.perf_counter() #track time
                         for _ in range(iters):
-                            deltas = dispatcher.get_deltas(current_state=age_array, col_idx_map=self.col_idx_map, result_buffer=result_preallocation)
+                            deltas = dispatcher.get_deltas(current_state=age_array, col_idx_map=self.col_idx_map, result_buffer=result_preallocation, stochastic=self.stochastic)
                         t1 = time.perf_counter()
                         peak = tracemalloc.get_traced_memory()[1]
                         tracemalloc.stop()
