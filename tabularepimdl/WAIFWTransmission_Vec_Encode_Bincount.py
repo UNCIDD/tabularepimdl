@@ -156,8 +156,8 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
 
         #print('inf_array is\n', inf_array) #debug
 
-        prI = np.power(np.exp(-dt*self.waifw_matrix), inf_array)
-        prI = 1-prI.prod(axis=1)
+        prI_per_group = np.power(np.exp(-dt*self.waifw_matrix), inf_array)
+        prI_per_group = 1-prI_per_group.prod(axis=1)
         
         
         ##get folks in susceptible states which link to all unique groups
@@ -172,13 +172,13 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
 
         #infectious process, getting the number of individuals who get infected from susceptible status
         susceptible_group_codes = present_category_codes[is_susceptible]
-        prI_per_group = prI[susceptible_group_codes]
+        prI_per_s_group = prI_per_group[susceptible_group_codes]
         #print('prI per group:', prI_per_group)
 
         if stochastic:
-            changed_N = -np.random.binomial(N_susceptible, prI_per_group)
+            changed_N = -np.random.binomial(N_susceptible, prI_per_s_group)
         else:
-            changed_N = -N_susceptible * prI_per_group
+            changed_N = -N_susceptible * prI_per_s_group
 
         #print('changed N:', changed_N)
 

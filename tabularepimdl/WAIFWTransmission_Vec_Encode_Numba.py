@@ -38,10 +38,14 @@ class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
     infstate_compartments: list[str] = Field("the infection compartments used in epidemics.")
 
-    _s_code: int | None = PrivateAttr(default=None)
-    _i_code: int | None = PrivateAttr(default=None)
-    _inf_to_code: int | None = PrivateAttr(default=None)
-    _group_col_all_categories_code: list[int] | None = PrivateAttr(default=None)
+    _s_code: int | None = PrivateAttr(default=None) #encoded s_st
+    _i_code: int | None = PrivateAttr(default=None) #encoded i_st
+    _inf_to_code: int | None = PrivateAttr(default=None) #encoded inf_to
+    _group_col_all_categories_code: list[int] | None = PrivateAttr(default=None) #encoded group_col_all_categories
+    _inf_array_pre_allocate: np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) #pre-allocate inf_array
+    _prI_pre_allocate: np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) #pre-allocate prI
+    _matrix_length: int = PrivateAttr(default=0) #total number of elements in waifw matrix
+    
 
     @field_validator("waifw_matrix", mode="before") #validate array type and its element sign
     @classmethod
@@ -101,35 +105,41 @@ class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
         self.group_col_all_categories = sorted(self.group_col_all_categories) #sort the group_col's all categories
         self._group_col_all_categories_code = [i for i, v in enumerate(self.group_col_all_categories)] #encode each category, keeping numbers only
 
+        num_of_categories = len(self.group_col_all_categories)
+        self._inf_array_pre_allocate = np.zeros(num_of_categories, dtype=np.float64) #pre-allocate inf_array with zeros based on number of categories, zero guarantees later addition calculation
+
+        self._matrix_length = len(self.waifw_matrix) #number of elements in a row or column given matrix is square
+        self._prI_pre_allocate = np.ones(self._matrix_length, dtype=np.float64) #initialize prI with 1s that guarantees later multiplication calculation
+
     @staticmethod    
     @njit
-    def compute_infection_array(present_cat_codes, weights, num_of_categories) -> np.ndarray:
+    def compute_infection_array(inf_array: np.ndarray, present_cat_codes: np.ndarray, weights: np.ndarray) -> np.ndarray:
         
         #Optimized function using numba to compute the number of infected individuals per group.
         #inf_array can be pre-allocated using attribute group_col_all_categories
-        inf_array = np.zeros(num_of_categories, dtype=np.float64)  # Initialize array with zeros
+        #inf_array = np.zeros(num_of_categories, dtype=np.float64)  # Initialize array with zeros
         for i in range(len(present_cat_codes)):
             inf_array[present_cat_codes[i]] = inf_array[present_cat_codes[i]] + weights[i]
         return inf_array
     
     @staticmethod
     @njit
-    def compute_prI(waifw_matrix, inf_array, dt) -> np.ndarray:
+    def compute_prI(prI_per_group, waifw_matrix, matrix_length, inf_array, dt) -> np.ndarray:
         
         #Computes probabilities of infection using numba.
         #Equivalent to: prI = 1 - np.power(np.exp(-dt*self.waifw_matrix), inf_array)
         #prI array can be pre-allocated using attribute waifw_matrix
-        matrix_size = len(waifw_matrix)
-        prI: np.ndarray = np.ones(matrix_size, dtype=np.float64) #initialize prI with 1s
+        #matrix_length = len(waifw_matrix)
+        #prI: np.ndarray = np.ones(matrix_length, dtype=np.float64) #initialize prI with 1s
 
         expo = np.exp(-dt * waifw_matrix)
         infection_power = np.power(expo, inf_array)
         
-        for i in range(matrix_size):
-            for j in range(matrix_size):
-                prI[i] = prI[i] * infection_power[i, j]
-            prI[i] = 1 - prI[i]
-        return prI
+        for i in range(matrix_length):
+            for j in range(matrix_length):
+                prI_per_group[i] = prI_per_group[i] * infection_power[i, j]
+            prI_per_group[i] = 1 - prI_per_group[i]
+        return prI_per_group
         
 
 
@@ -176,7 +186,7 @@ class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
         ##create an array for the total number of infections in each unique group. Only records with i_st are sumed, other records's N are filled with 0.
         #inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col, observed=False)['N'].sum(numeric_only=True).values #moved ['N'] position #groupby approach
         
-        num_of_categories = len(self._group_col_all_categories_code)
+        #num_of_categories = len(self._group_col_all_categories_code)
         #print('num of cate:', num_of_categories)
         present_category_codes = current_state[:, group_col_idx].astype(np.int64) #what if the actual number of rows is less than the number of categories? -> no impact
         #print('present cate code:', present_category_codes)
@@ -186,16 +196,18 @@ class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
         #print('infected group codes:', infected_group_codes)
         infected_weights = current_state[infected_mask, n_idx]
         #print('infected weights:', infected_weights)
+        
         #---------------------------------------------------------
-        inf_array = self.compute_infection_array(infected_group_codes, infected_weights, num_of_categories) #numba approach
+        #inf_array = self.compute_infection_array(infected_group_codes, infected_weights, num_of_categories) #numba approach
+        inf_array = self.compute_infection_array(self._inf_array_pre_allocate, infected_group_codes, infected_weights) #numba approach
 
         #print('inf_array is\n', inf_array) #debug
 
         #prI = np.power(np.exp(-dt*self.waifw_matrix), inf_array)
         #prI = 1-prI.prod(axis=1)
         
-        prI = self.compute_prI(self.waifw_matrix, inf_array, dt) #numba approach
-
+        prI_per_group = self.compute_prI(self._prI_pre_allocate, self.waifw_matrix, self._matrix_length, inf_array, dt) #numba approach
+        #print('prI per group:', prI_per_group)
 
         ##get folks in susceptible states which link to all unique groups
         is_susceptible = current_state[:, infstate_idx] == self._s_code
@@ -209,13 +221,13 @@ class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
 
         #infectious process, getting the number of individuals who get infected from susceptible status
         susceptible_group_codes = present_category_codes[is_susceptible]
-        prI_per_group = prI[susceptible_group_codes]
+        prI_per_s_group = prI_per_group[susceptible_group_codes]
         #print('prI per group:', prI_per_group)
 
         if stochastic:
-            changed_N = -np.random.binomial(N_susceptible, prI_per_group)
+            changed_N = -np.random.binomial(N_susceptible, prI_per_s_group)
         else:
-            changed_N = -N_susceptible * prI_per_group
+            changed_N = -N_susceptible * prI_per_s_group
 
         #print('changed N:', changed_N)
 
