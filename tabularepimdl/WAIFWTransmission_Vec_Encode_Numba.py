@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 from tabularepimdl.Rule import Rule
 
 
-class WAIFWTransmission_Vec_Encode(Rule, BaseModel):
+class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
     """!
     Rule that does transmission based on a simple WAIFW transmission matrix.
 
@@ -177,19 +177,19 @@ class WAIFWTransmission_Vec_Encode(Rule, BaseModel):
         #inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col, observed=False)['N'].sum(numeric_only=True).values #moved ['N'] position #groupby approach
         
         num_of_categories = len(self._group_col_all_categories_code)
-        print('num of cate:', num_of_categories)
-        present_category_codes = current_state[:, group_col_idx] #what if the actual number of rows is less than the number of categories? -> no impact
-        print('present cate code:', present_category_codes)
+        #print('num of cate:', num_of_categories)
+        present_category_codes = current_state[:, group_col_idx].astype(np.int64) #what if the actual number of rows is less than the number of categories? -> no impact
+        #print('present cate code:', present_category_codes)
         infected_mask = current_state[:, infstate_idx] == self._i_code
-        print('infected mask:', infected_mask)
+        #print('infected mask:', infected_mask)
         infected_group_codes = present_category_codes[infected_mask]
-        print('infected group codes:', infected_group_codes)
+        #print('infected group codes:', infected_group_codes)
         infected_weights = current_state[infected_mask, n_idx]
-        print('infected weights:', infected_weights)
+        #print('infected weights:', infected_weights)
         #---------------------------------------------------------
         inf_array = self.compute_infection_array(infected_group_codes, infected_weights, num_of_categories) #numba approach
 
-        print('inf_array is\n', inf_array) #debug
+        #print('inf_array is\n', inf_array) #debug
 
         #prI = np.power(np.exp(-dt*self.waifw_matrix), inf_array)
         #prI = 1-prI.prod(axis=1)
@@ -200,27 +200,27 @@ class WAIFWTransmission_Vec_Encode(Rule, BaseModel):
         ##get folks in susceptible states which link to all unique groups
         is_susceptible = current_state[:, infstate_idx] == self._s_code
         deltas_susceptible = current_state[is_susceptible]
-        print('is suscpet:', is_susceptible) #debug
-        print('deltas suscept\n', deltas_susceptible, '\n') #debug
+        #print('is suscpet:', is_susceptible) #debug
+        #print('deltas suscept\n', deltas_susceptible, '\n') #debug
         
 
         N_susceptible = deltas_susceptible[:, n_idx]
-        print('N_susceptible:', N_susceptible)
+        #print('N_susceptible:', N_susceptible)
 
         #infectious process, getting the number of individuals who get infected from susceptible status
         susceptible_group_codes = present_category_codes[is_susceptible]
         prI_per_group = prI[susceptible_group_codes]
-        print('prI per group:', prI_per_group)
+        #print('prI per group:', prI_per_group)
 
         if stochastic:
             changed_N = -np.random.binomial(N_susceptible, prI_per_group)
         else:
             changed_N = -N_susceptible * prI_per_group
 
-        print('changed N:', changed_N)
+        #print('changed N:', changed_N)
 
         count = len(N_susceptible)
-        print('count:', count)
+        #print('count:', count)
         # Fill 'from' rows
         result_buffer[:count, :] = deltas_susceptible #equivalent: self._from_code
         result_buffer[:count, n_idx] = changed_N  #update column N with changed_N (negative value)
