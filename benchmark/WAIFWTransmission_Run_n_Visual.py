@@ -16,7 +16,7 @@ def WTrans_Run_n_Visual():
     runner = WAIFWTransmissionRunner(
         data_sizes= [1],
         structures= ["Pandas", "Pandas_Numba", "Numpy_Vec_Encode_Numba", "Numpy_Vec_Encode_Bincount"],
-        iterations= [1],#[100, 300, 500, 700],
+        iterations= [700],#[100, 300, 500, 700],
         waifw_matrix=waiwf,
         inf_col = "InfState",
         group_col = "AgeCat",
