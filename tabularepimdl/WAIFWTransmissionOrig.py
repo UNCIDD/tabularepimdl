@@ -58,20 +58,20 @@ class WAIFWTransmissionOrig(Rule):
         #print('is it category?', isinstance(current_state[self.group_col].dtype, pd.CategoricalDtype)) #is_categorical_dtype is deprecated, replaced with the isinstance function
         #print(current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col).sum(numeric_only=True)) #debug
         #print("))))") #debug
-        print('inf_array is', inf_array) #debug
+        #print('inf_array is', inf_array) #debug
 
         #get the probability of being infected in each unique group
         prI = np.power(np.exp(-dt*self.waifw_matrix),inf_array)
-        print('powered prI is', prI) #debug
+        #print('powered prI is', prI) #debug
         prI = 1-prI.prod(axis=1)
-        print('1-prI prod', prI) #debug
+        #print('1-prI prod', prI) #debug
 
         ##get folks in susceptible states which link to all unique groups
         deltas = current_state.loc[current_state[self.inf_col]==self.s_st]
-        print('deltas is', deltas, '\n') #debug
+        #print('deltas is', deltas, '\n') #debug
 
         prI_per_group = prI[deltas[self.group_col].cat.codes]
-        print('prI codes are', prI_per_group, '\n') #debug
+        #print('prI codes are', prI_per_group, '\n') #debug
 
         ##do infectious process, getting the number of individuals who get infected from susceptible status
         if not stochastic:
