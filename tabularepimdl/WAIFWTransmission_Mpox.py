@@ -133,8 +133,22 @@ class WAIFWTransmissionMpox(Rule, BaseModel):
         infected_weights = current_state.loc[infected_mask, "N"].to_numpy()
         
         inf_array = self.compute_infection_array(infected_group_codes, infected_weights, num_of_categories) #numba approach
+        
+        current_state['BaseCounty'] = current_state[self.group_col].str.extract(r'(^[^_]+)') #Captures everything from the start of the string until the first underscore
+        current_state['CountyTotal'] = current_state.groupby('BaseCounty')['N'].transform('sum')
+        population_per_group = (
+                                current_state
+                                .drop_duplicates(subset=self.group_col) #One row per County
+                                .sort_values(self.group_col) #Respect categorical order
+                                ['CountyTotal'] #Select the column
+                                .to_numpy() #Convert to array
+                               )
+        #print('pre-inf_array is\n', inf_array) #debug
+        #print('population per group\n', population_per_group)
 
-        #print('inf_array is\n', inf_array) #debug
+        #update inf_array with each current state's group population
+        inf_array = inf_array / population_per_group
+        #print('post-inf_array is\n', inf_array) #debug
 
         #prI = np.power(np.exp(-dt*self.waifw_matrix), inf_array)
         #prI = 1-prI.prod(axis=1)
@@ -151,6 +165,7 @@ class WAIFWTransmissionMpox(Rule, BaseModel):
         #infectious process, getting the number of individuals who get infected from susceptible status
         susceptible_group_codes = present_category_codes[is_susceptible.to_numpy()]
         prI_per_group = prI[susceptible_group_codes]
+        #print('prI per group:', prI_per_group)
 
         if not stochastic:
             deltas["N"] = -deltas["N"] * prI_per_group
