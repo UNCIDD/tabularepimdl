@@ -194,7 +194,7 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         result_buffer[count:2*count, n_idx] = -changed_N  #update column N with inversed changed_N
 
         filtered_result_buffer = result_buffer[:2*count, :]
-        result = filtered_result_buffer[filtered_result_buffer[:, n_idx] != 0]
+        result = filtered_result_buffer[filtered_result_buffer[:, n_idx] != 0] #remove rows with N=0
         
         return result
 
