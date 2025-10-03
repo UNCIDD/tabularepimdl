@@ -31,6 +31,7 @@ class WAIFWTransmissionRunner(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     data_sizes: list[int]
+    data_input: pd.DataFrame
     structures: list[str]
     iterations: list[int]
     waifw_matrix: NDArray[np.float64] #list[list] | np.ndarray
@@ -55,6 +56,7 @@ class WAIFWTransmissionRunner(BaseModel):
     def encode_column_sorted(self, df_col):
         unique_vals = sorted(df_col.unique())  # Sorted to ensure consistent index
         mapping = {val: idx for idx, val in enumerate(unique_vals)}
+        #print('mapping\n', mapping) #debug
         return df_col.map(mapping)
     
     def run(self) -> list[dict]:
@@ -63,36 +65,22 @@ class WAIFWTransmissionRunner(BaseModel):
         Tracks each combination's time and memory usage.
         """
         for size in self.data_sizes:
-            age_c0 = '0 to 9'
-            age_c1 = '10 to 19'
-            age_c_rest = ['20 to 29', '30 to 39', '40 to 49', '50 to 59', '60 to 69', '70+']
-            age_categories = self.group_col_all_categories
-            v0 = 1140000
-            v1 = 1320000
-            v_rest = [1320000,1290000,1280000, 1280000,1185000,1175000, 3, 4, 99, 1]
-            n_values = [v1, v0] + v_rest
-            t_values = [2023]*12
             
-            pop_catg = pd.DataFrame({
-                'InfState' : ["S"]*8 + ['I', 'I', 'I', 'R'],
-                'AgeCat': pd.Categorical([age_c1, age_c0] + age_c_rest + ["10 to 19", "50 to 59", "50 to 59", '70+'], categories=age_categories),
-                'N' : n_values,
-                'T' : t_values
-                })
             #print('populaton\n', pop_catg)
 
-            self.waifw_matrix = self.waifw_matrix * 18 * 26 / pop_catg['N'].sum()
+            self.waifw_matrix = self.waifw_matrix * 18 * 26 / self.data_input['N'].sum()
 
             for struct in self.structures:
                 for iters in self.iterations:
-                    print(f"\nRunning {struct} | size={len(pop_catg)} | iterations={iters}") #replace size with pop_catg
+                    print(f"\nRunning {struct} | size={len(self.data_input)} | iterations={iters}") #replace size with pop_catg
 
                     if struct == 'Pandas' or struct == 'Pandas_Numba': #provide dataframe to Pandas
-                        data = pop_catg
+                        data = self.data_input
                     elif struct == 'Numpy_Vec_Encode_Numba' or struct == 'Numpy_Vec_Encode_Bincount': #provide true Numpy array to Numpy_Encode
-                        InfState_encode = self.encode_column_sorted(pop_catg[self.inf_col])
-                        AgeCat_encode = self.encode_column_sorted(pop_catg[self.group_col])
-                        arr_numba = np.column_stack((InfState_encode, AgeCat_encode, n_values, t_values))
+                        InfState_encode = self.encode_column_sorted(self.data_input[self.inf_col]) #infstate column is sorted
+                        AgeCat_encode = self.encode_column_sorted(self.data_input[self.group_col]) #categorical column is sorted
+                        #print('AgeCat sorted code\n', AgeCat_encode)
+                        arr_numba = np.column_stack((InfState_encode, AgeCat_encode, self.data_input['N'], self.data_input['T']))
                         arr_numba = arr_numba.astype(np.float64) #this makes all columns a float number, it will later cause float indexing error for Numba, but WAIFW rule will convert group_col category back to integers.
                         #print('arr_numba\n', arr_numba)
                         n_rows = arr_numba.shape[0] #detect the number of rows and columns in input array
@@ -136,7 +124,7 @@ class WAIFWTransmissionRunner(BaseModel):
                     #concatenate each iteration's result
                     self.time_mem_results.append({
                         'structure': struct,
-                        'size': len(pop_catg), #replace size with pop_catg for WAIFW benchmark
+                        'size': len(self.data_input), #replace size with pop_catg for WAIFW benchmark
                         'iterations': iters,
                         'time_sec': round(t1 - t0, 3),
                         'peak_memory_MB': round(peak / 1024**2, 2)
