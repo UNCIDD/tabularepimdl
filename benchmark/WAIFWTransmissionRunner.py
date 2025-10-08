@@ -12,6 +12,7 @@ class WAIFWTransmissionRunner(BaseModel):
     """
     Benchmarks time and memory usage of the WAIFWTransmission Pandas and NumPy versions.
     @param data_sizes: the number of records/rows in a input data.
+    @param data_input: the test data for rules.
     @param structure: data structure used for rules. E.g. Pandas, Numpy, Numpy_Encode
     @param iterations: the number of iterations to run the rule.
     @param waifw_martrix: the waifw transmission rate matrix, a square matrix is required.
