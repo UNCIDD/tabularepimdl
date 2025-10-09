@@ -94,6 +94,9 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         trait_col_idx = col_idx_map[self.trait_col]
         n_idx = col_idx_map['N']
 
+        if len(set(self.trait_col_all_categories)) < len(set(current_state[:, trait_col_idx])):
+            raise ValueError(f"Number of elements in trait_col_all_categories is less than the number of categories of input data, please check trait_col_all_categories and input data.")
+
         s_mask = current_state[:, infstate_idx] == self._s_code
         if not np.any(s_mask):
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)

@@ -171,6 +171,9 @@ class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
         group_col_idx = col_idx_map[self.group_col]
         n_idx = col_idx_map['N']
 
+        if len(set(self.group_col_all_categories)) < len(set(current_state[:, group_col_idx])):
+            raise ValueError(f"Number of elements in group_col_all_categories is less than the number of categories of input data, please check group_col_all_categories and input data.")
+
         #convert group_col to categorical type first, so groupby observed=False generate full list of array values
         #if not isinstance(current_state[self.group_col].dtype, pd.CategoricalDtype):
         #    current_state[self.group_col]=pd.Categorical(current_state[self.group_col])
