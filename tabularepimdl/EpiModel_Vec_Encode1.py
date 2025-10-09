@@ -2,7 +2,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, PrivateAttr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 from tabularepimdl.Rule import Rule
 
@@ -33,9 +33,9 @@ class EpiModel_Vec_Encode_1(BaseModel):
     # Pydantic Configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    init_state: pd.DataFrame
-    current_state_array: np.ndarray = np.array([])
-    full_epi_array: np.ndarray = np.array([])
+    init_state: pd.DataFrame = Field(default_factory=pd.DataFrame)
+    current_state_array: np.ndarray = Field(default_factory=lambda: np.array([]))
+    full_epi_array: np.ndarray = Field(default_factory=lambda: np.array([]))
     rules: list[list[Rule]]
     stoch_policy: str = "rule_based"
     compartment_col: str = 'InfState'
