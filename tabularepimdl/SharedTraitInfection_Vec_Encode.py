@@ -1,17 +1,15 @@
 from typing import Annotated
 
 import numpy as np
-import pandas as pd
 from pydantic import BaseModel, Field, field_validator, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 
 
-class SharedTraitInfection(Rule, BaseModel):
+class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     """!
     Rule that does transmission based on if a trait is shared across different populations.
-    Use np.bincount to generate inf_array.
-
+    
     Attributes:
         inf_col: the infection state column for this infectious process.
         in_beta: transmission rate if trait shared.
@@ -103,6 +101,7 @@ class SharedTraitInfection(Rule, BaseModel):
         s_row_idxs = np.flatnonzero(s_mask)
         selected_s = current_state[s_row_idxs, :]
         N_susceptible = selected_s[:, n_idx]
+        #print('N susceptible:', N_susceptible) #debug
 
         i_mask = current_state[:, infstate_idx] == self._i_code
         i_row_idxs = np.flatnonzero(i_mask)
@@ -128,11 +127,12 @@ class SharedTraitInfection(Rule, BaseModel):
         count = len(N_susceptible)
         #print('count:', count)
         # Fill 'from' rows
-        result_buffer[:count, :] = N_susceptible #equivalent: self._from_code
+        
+        result_buffer[:count, :] = selected_s
         result_buffer[:count, n_idx] = changed_N  #update column N with changed_N (negative value)
 
         # Fill 'to' rows
-        result_buffer[count:2*count, :] = N_susceptible
+        result_buffer[count:2*count, :] = selected_s
         result_buffer[count:2*count, infstate_idx] = self._inf_to_code #update col infstate
         result_buffer[count:2*count, n_idx] = -changed_N  #update column N with inversed changed_N
 
@@ -141,3 +141,12 @@ class SharedTraitInfection(Rule, BaseModel):
         
         return result
 
+
+    def to_yaml(self) -> dict:
+        """
+        return the rule's attributes to a dictionary.
+        """
+        rc = {
+            'tabularepimdl.SharedTraitInfection_Vec_Encode': self.model_dump()
+        }
+        return rc
