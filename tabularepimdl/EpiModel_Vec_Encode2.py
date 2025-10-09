@@ -99,10 +99,25 @@ class EpiModel_Vec_Encode_2(BaseModel):
         """
         Initialization of init_state column order, internal attributes, current_state_arrays and full_epi_array.
         """
+        self._init_state_column_values_grouping() #grouping init_state column values
         self._init_state_column_order_shuffle() #shuffle init_state column order
         self._setup_internal_attributes() #set up all internal attributes
         self._convert_init_df_to_cur_arrays() #initalize current_state_array only
         self._initalize_full_epi_array() #initalize full_epi_array only
+
+
+    def _init_state_column_values_grouping(self):
+        """
+        Grouping each column of init_state and aggregate column N and T in case the input raw data has duplicate rows.
+        This ensures rules that have categorical column(s) can accurately check the input raw data aginst their input categories.
+        """
+        #collect column names for aggregating columns and rest grouping columns
+        self._agg_cols = {'N', 'T'}
+        self._grouping_cols = [c for c in self.init_state.columns if c not in self._agg_cols]
+        #print('grouping col:', self._grouping_cols)
+
+        #grouping column values, only the categories that are actually present in the data will be included in the groups.
+        self.init_state = self.init_state.groupby(self._grouping_cols, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
 
 
     def _init_state_column_order_shuffle(self):
@@ -118,21 +133,16 @@ class EpiModel_Vec_Encode_2(BaseModel):
         remaining_cols = [col for col in cols if col not in cols_to_move]
 
         # Build the new column order
-        new_order = remaining_cols + cols_to_move
+        new_col_order = remaining_cols + cols_to_move
 
         # Reorder the DataFrame init_state
-        self.init_state = self.init_state[new_order]
+        self.init_state = self.init_state[new_col_order]
 
 
     def _setup_internal_attributes(self):
         """
         Set up internal attributes with values from init_state and rule list.
         """
-        #collect column names for aggregating columns and rest grouping columns
-        self._agg_cols = {'N', 'T'}
-        self._grouping_cols = [c for c in self.init_state.columns if c not in self._agg_cols]
-        #print('grouping col:', self._grouping_cols)
-
         #unique domain values per grouping column (excludes N and T) in init_state
         self._domains = {col: set(self.init_state[col].astype(str).tolist()) for col in self._grouping_cols}
         #collect domains that exist in each rule's source and target states but not in init_state
