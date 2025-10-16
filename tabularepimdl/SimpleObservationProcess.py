@@ -60,17 +60,21 @@ class SimpleObservationProcess(Rule, BaseModel):
             out_of_unobs["N"] = -out_of_unobs["N"] * (1-exp_change_rate)
         else:
             out_of_unobs["N"] = -np.random.binomial(out_of_unobs["N"], 1-exp_change_rate)
+        print('out of unobs\n', out_of_unobs) #debug
             
         #additions, changes in in_ and out_ incobs and prevobs only require deterministic process
         into_incobs = out_of_unobs.assign(**{self.obs_col: self.incobs_state, "N": -out_of_unobs["N"]})
-        
+        print('into incobs\n', into_incobs) #debug
+
         #move folks out of current_state incobs state
         out_of_incobs = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
         out_of_incobs["N"] = -out_of_incobs["N"]
+        print('out of incobs\n', out_of_incobs) #debug
 
         #move folks out of the incident state and into the previous state
         into_prev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
         into_prev[self.obs_col] = self.prevobs_state
+        print('into prev\n', into_prev)
         
         return(pd.concat([out_of_unobs, into_incobs, out_of_incobs, into_prev]).reset_index(drop=True)) 
 
