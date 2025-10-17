@@ -122,9 +122,9 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         #into_incobs[:, n_idx] *= -1
         
         #into_incobs
-        result_buffer[count_out_Unobs:2*count_out_Unobs, :] = result_buffer[:count_out_Unobs, :]
+        result_buffer[count_out_Unobs:2*count_out_Unobs, :] = out_of_unobs
+        result_buffer[count_out_Unobs:2*count_out_Unobs, n_idx] = -changed_N
         result_buffer[count_out_Unobs:2*count_out_Unobs, obs_col_idx] = self._incobs_code
-        result_buffer[count_out_Unobs:2*count_out_Unobs, n_idx] *= -1
         #print('result buffer2:', result_buffer) #debug
 
         #move folks out of current_state incobs state, out_of_incobs
