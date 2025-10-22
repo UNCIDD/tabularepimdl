@@ -22,7 +22,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         prevobs_state: previously-observed state, listed in obs_col.
         stochastic: whether the process is stochastic or deterministic.
         infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
-        observation_compartments: the observation compartments used in epidemics. e.g. ['U', 'P', 'I'], U=unobserved, P=previously-observed, I=incident-observed
+        obs_col_all_categories: all the observation categories used in epidemics. e.g. ['U', 'P', 'I'], U=unobserved, P=previously-observed, I=incident-observed
     """
 
     source_col: str = Field(description = "the column containing source_state for the observation process.")
@@ -34,11 +34,11 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
     prevobs_state: str = Field(default='P', description = "previously-observed state.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
     infstate_compartments: list[str] = Field("the infection compartments used in epidemics.")
-    observation_compartments: list[str] = Field("the observation compartments used in epidemics.") #new attribute is needed for encoding
+    obs_col_all_categories: list[str] = Field("all the observation categories used in epidemics.") #new attribute is needed for encoding
 
     _source_state_code: int | None = PrivateAttr(default=None)
     
-    _observation_all_categories_code: list[int] | None = PrivateAttr(default=None)
+    #_observation_all_categories_code: list[int] | None = PrivateAttr(default=None) #unused
     _unobs_code: int | None = PrivateAttr(default=None)
     _incobs_code: int | None = PrivateAttr(default=None)
     _prevobs_code: int | None = PrivateAttr(default=None)
@@ -48,7 +48,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         self._source_state_code = infstate_to_int.get(self.source_state)
         
         
-        observation_to_int = {obs: i for i, obs in enumerate(sorted(self.observation_compartments))} #encode observation strings to integer
+        observation_to_int = {obs: i for i, obs in enumerate(sorted(self.obs_col_all_categories))} #encode observation strings to integer
         self._unobs_code = observation_to_int.get(self.unobs_state)
         self._incobs_code = observation_to_int.get(self.incobs_state)
         self._prevobs_code = observation_to_int.get(self.prevobs_state)
@@ -154,3 +154,14 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
             'tabularepimdl.SimpleObservationProcess_Vec_Encode': self.model_dump()
         }
         return rc
+    
+
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]: 
+        return self.infstate_compartments
+    
+    #set up a property to return all the required categories used in obs_col
+    @property
+    def obs_col_all(self) -> list[str]: 
+        return self.obs_col_all_categories
