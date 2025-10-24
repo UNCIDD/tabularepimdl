@@ -52,7 +52,7 @@ class SimpleObservationProcess(Rule, BaseModel):
 
         #out_of_unobs supports deterministic and stochastic
         out_of_unobs = current_state.loc[(current_state[self.source_col]==self.source_state) & (current_state[self.obs_col]==self.unobs_state)].copy() #un-observed individuals with source_state
-        print('out of unobs\n', out_of_unobs) #debug
+        #print('out of unobs\n', out_of_unobs) #debug
 
         if out_of_unobs.empty: #no rows meet the InfState and Obs_col requirements
             return current_state.iloc[0:0] #return an empty dataframe with the same columns and types
