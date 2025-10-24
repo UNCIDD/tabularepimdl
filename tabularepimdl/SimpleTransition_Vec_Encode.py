@@ -104,10 +104,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
 
         return rc
     
+    #set up a property to return all the required compartments used in infstate column
     @property
-    def source_states(self) -> list[str]:
-        return [self.from_st]
-
-    @property
-    def target_states(self) -> list[str]:
-        return [self.to_st]
+    def infstate_all(self) -> list[str]: 
+        return self.infstate_compartments
