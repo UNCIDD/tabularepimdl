@@ -44,7 +44,7 @@ class SimpleObservationProcessRunner(BaseModel):
     stochastic: bool = False
     col_idx_map: dict[str, int] = Field(default_factory=dict)
     infstate_compartments: list[str] = Field(default_factory=list)
-    observation_compartments: list[str] = Field(default_factory=list)
+    obs_col_all_categories: list[str] = Field(default_factory=list)
 
     time_mem_results: list[dict] = Field(default_factory=list)
 
@@ -55,11 +55,11 @@ class SimpleObservationProcessRunner(BaseModel):
 
 
     def encode_column_sorted(self, compartment_list, df_col):
-        print('comp list:', compartment_list)
+        #print('comp list:', compartment_list)
         unique_vals = list(sorted(set(compartment_list)))  # Sorted to ensure consistent index, set needs to be inside sorted because the order in a set is not guranteed
-        print('unique values:', unique_vals)
+        #print('unique values:', unique_vals)
         mapping = {val: idx for idx, val in enumerate(unique_vals)}
-        print('mapping\n', mapping) #debug
+        #print('mapping\n', mapping) #debug
         return df_col.map(mapping)
     
     def run(self) -> list[dict]:
@@ -79,11 +79,11 @@ class SimpleObservationProcessRunner(BaseModel):
                     elif struct == 'Numpy_Vec_Encode': #provide true Numpy array to Numpy_Encode
                         #print('input data\n', self.data_input)
                         InfState_encode = self.encode_column_sorted(self.infstate_compartments, self.data_input[self.source_col]) #infstate column is sorted
-                        Obs_encode = self.encode_column_sorted(self.observation_compartments, self.data_input[self.obs_col]) #categorical column is sorted
+                        Obs_encode = self.encode_column_sorted(self.obs_col_all_categories, self.data_input[self.obs_col]) #categorical column is sorted
                         #print('Trait sorted code\n', Trait_encode)
                         arr_numba = np.column_stack((InfState_encode, Obs_encode, self.data_input['N'], self.data_input['T']))
                         arr_numba = arr_numba.astype(np.float64) #this makes all columns a float number, it will later cause float indexing error for Numba, but WAIFW rule will convert group_col category back to integers.
-                        print('arr_numba\n', arr_numba)
+                        #print('arr_numba\n', arr_numba)
                         n_rows = arr_numba.shape[0] #detect the number of rows and columns in input array
                         n_cols = arr_numba.shape[1]
                         result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
@@ -99,7 +99,7 @@ class SimpleObservationProcessRunner(BaseModel):
                         prevobs_state=self.prevobs_state,
                         stochastic=self.stochastic,
                         infstate_compartments=self.infstate_compartments,
-                        observation_compartments=self.observation_compartments
+                        obs_col_all_categories=self.obs_col_all_categories
                     )
                     
                     if struct  == 'Pandas':

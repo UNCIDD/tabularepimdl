@@ -32,7 +32,7 @@ class SimpleObservationProcessDispatcher(BaseModel):
     prevobs_state: str
     stochastic: bool
     infstate_compartments: list[str]
-    observation_compartments: list[str]
+    obs_col_all_categories: list[str]
 
     #Dispatcher
     _dispatcher: Union[SimpleObservationProcess_Pandas, SimpleObservationProcess_Vec_Encode] = PrivateAttr(default=None)
@@ -60,7 +60,7 @@ class SimpleObservationProcessDispatcher(BaseModel):
                 prevobs_state=self.prevobs_state,
                 stochastic=self.stochastic,
                 infstate_compartments=self.infstate_compartments,
-                observation_compartments=self.observation_compartments
+                obs_col_all_categories=self.obs_col_all_categories
             )
         else:
             raise ValueError(f"Unknown structure: {self.structure}")
