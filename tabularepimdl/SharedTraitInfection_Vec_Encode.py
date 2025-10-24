@@ -153,3 +153,14 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
             'tabularepimdl.SharedTraitInfection_Vec_Encode': self.model_dump()
         }
         return rc
+    
+
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]: 
+        return self.infstate_compartments
+    
+    #set up a property to return all the required categories used in trait_col
+    @property
+    def trait_col_all(self) -> list[str]: 
+        return self.trait_col_all_categories
