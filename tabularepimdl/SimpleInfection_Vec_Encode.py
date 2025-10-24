@@ -124,10 +124,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         }
         return rc
     
+    #set up a property to return all the required compartments used in infstate column
     @property
-    def source_states(self):
-        return [self.s_st]
-
-    @property
-    def target_states(self):
-        return [self.inf_to]
+    def infstate_all(self) -> list[str]: 
+        return self.infstate_compartments
