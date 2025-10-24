@@ -122,3 +122,9 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
             'tabularepimdl.StateBasedDeathProcess' : self.model_dump()
         }
         return rc
+    
+
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]: 
+        return self.infstate_compartments
