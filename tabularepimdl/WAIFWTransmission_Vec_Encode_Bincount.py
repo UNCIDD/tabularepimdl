@@ -220,3 +220,14 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         }
         
         return rc
+    
+
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]: 
+        return self.infstate_compartments
+    
+    #set up a property to return all the required categories used in group_col
+    @property
+    def obs_col_all(self) -> list[str]: 
+        return self.group_col_all_categories
