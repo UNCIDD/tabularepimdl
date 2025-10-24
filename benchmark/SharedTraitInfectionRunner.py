@@ -54,8 +54,10 @@ class SharedTraitInfectionRunner(BaseModel):
         self._infstate_comp_map = {comp: i for i, comp in enumerate(sorted(self.infstate_compartments))}
 
 
-    def encode_column_sorted(self, df_col):
-        unique_vals = sorted(df_col.unique())  # Sorted to ensure consistent index
+    def encode_column_sorted(self, compartment_list, df_col):
+        #print('comp list:', compartment_list)
+        unique_vals = list(sorted(set(compartment_list)))  # Sorted to ensure consistent index, set needs to be inside sorted because the order in a set is not guranteed
+        #print('unique values:', unique_vals)
         mapping = {val: idx for idx, val in enumerate(unique_vals)}
         #print('mapping\n', mapping) #debug
         return df_col.map(mapping)
@@ -76,9 +78,9 @@ class SharedTraitInfectionRunner(BaseModel):
                         data = self.data_input
                     elif struct == 'Numpy_Vec_Encode': #provide true Numpy array to Numpy_Encode
                         #print('input data\n', self.data_input)
-                        InfState_encode = self.encode_column_sorted(self.data_input[self.inf_col]) #infstate column is sorted
+                        InfState_encode = self.encode_column_sorted(self.infstate_compartments, self.data_input[self.inf_col]) #infstate column is sorted
                         #print('input trait val\n', self.data_input[self.trait_col])
-                        Trait_encode = self.encode_column_sorted(self.data_input[self.trait_col]) #categorical column is sorted
+                        Trait_encode = self.encode_column_sorted(self.trait_col_all_categories, self.data_input[self.trait_col]) #categorical column is sorted
                         #print('Trait sorted code\n', Trait_encode)
                         arr_numba = np.column_stack((InfState_encode, Trait_encode, self.data_input['N'], self.data_input['T']))
                         arr_numba = arr_numba.astype(np.float64) #this makes all columns a float number, it will later cause float indexing error for Numba, but WAIFW rule will convert group_col category back to integers.
