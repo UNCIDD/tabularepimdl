@@ -96,7 +96,7 @@ class EpiModel_Vec_Encode_1(BaseModel):
         """
         self._init_state_column_values_grouping() #grouping init_state column values
         self._init_state_column_order_shuffle() #shuffle init_state column order
-        self._update_col_domain_values_from_rules() #
+        self._update_col_domain_values_from_rules() #update each rule's selected column's unique domain values
         self._setup_internal_attributes() #set up all internal attributes
         self._convert_init_df_to_cur_arrays() #initalize current_state_array only
         self._initalize_full_epi_array() #initalize full_epi_array only
@@ -133,6 +133,7 @@ class EpiModel_Vec_Encode_1(BaseModel):
 
         # Reorder the DataFrame init_state
         self.init_state = self.init_state[new_col_order]
+
 
     def _find_domain_key(self, col_name: str) -> str | None:
         """Case-insensitive lookup: return the matching key for column names of input data or None."""
