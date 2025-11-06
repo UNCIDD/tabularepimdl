@@ -38,7 +38,7 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     _s_code: int | None = PrivateAttr(default=None)
     _i_code: int | None = PrivateAttr(default=None)
     _inf_to_code: int | None = PrivateAttr(default=None)
-    _trait_col_all_categories_code: list[int] | None = PrivateAttr(default=None)
+    _trait_col_all_categories_code: list[int] = PrivateAttr(default_factory=list)
 
     @field_validator("trait_col_all_categories", mode='before')
     @classmethod
