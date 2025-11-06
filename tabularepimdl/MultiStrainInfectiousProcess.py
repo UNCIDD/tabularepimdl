@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator, model_validator
@@ -69,7 +68,7 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         cross_protect = parameter_values.cross_protect
 
         if len(columns) != len(betas):
-            raise ValueError(f"'columns' length ({len(columns)}) must match 'betas' length ({len(betas)}).")
+            raise ValueError(f"The number of 'columns' ({len(columns)}) must match the number of 'betas' ({len(betas)}).")
 
         if cross_protect.shape[0] != cross_protect.shape[1] or cross_protect.shape[0] != len(betas):
             raise ValueError(
@@ -111,7 +110,7 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
 
         #first get the cross protections
         recovered_mask = (current_state[self.columns] == self.r_st).values #extract R folks only from each strain column
-        row_beta_mult = 1 - np.max(recovered_mask[:, np.newaxis] * self.cross_protect, axis=2)
+        row_beta_mult = 1 - np.max(recovered_mask[:, np.newaxis, :] * self.cross_protect, axis=2)
         row_beta_mult = pd.DataFrame(row_beta_mult)
         #print('row beta mult is\n', row_beta_mult) #debug
         #now we turn that into a strain specific probablity of infection
@@ -146,7 +145,10 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
             #now allocate those cases proportional to prI
             tmp = pd.DataFrame()
             for col in self.columns:
+                #print('col:', col)
+                #print('proportion of PrI:', prI[col]/prI.sum(axis=1))
                 tmp2 = deltas.assign(**{col: self.inf_to, "N": -deltas['N'] * (prI[col]/prI.sum(axis=1))})
+                #print('tmp2\n', tmp2)
                 tmp = pd.concat([tmp, tmp2])
             deltas = pd.concat([deltas, tmp])
             
@@ -165,7 +167,7 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
                     toadd = toadd.assign(**{self.columns[j]: self.inf_to, "N": tmp[j]})
                     deltas = pd.concat([deltas, toadd])
             
-        deltas = deltas[deltas["N"] != 0].reset_index(drop=True)
+        #deltas = deltas[deltas["N"] != 0].reset_index(drop=True) #keep all rows with 0 for now, final code should remove 0 records
         #print('multirule final delta is\n', deltas) #debug
         return deltas
 
