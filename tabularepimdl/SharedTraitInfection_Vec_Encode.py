@@ -43,6 +43,7 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     @field_validator("trait_col_all_categories", mode='before')
     @classmethod
     def validate_group_col_all_categories(cls, category_vals):
+        """Validate all elements in the list have the same data type."""
         if not category_vals:
             raise ValueError("The trait_col_all_categories values must not be empty.")
         
@@ -50,7 +51,7 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         for item in category_vals[1:]:
             if type(item) != first_element_type:
                 raise ValueError(
-                    f"All elements in group_col_all_categories must be of the same datatype. "
+                    f"All elements in trait_col_all_categories must be of the same datatype. "
                     f"Found both {first_element_type.__name__} and {type(item).__name__}."
                 )
         return category_vals
