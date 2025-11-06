@@ -271,7 +271,7 @@ class EpiModel_Vec_Encode_1(BaseModel):
                 col_array = self.init_state[col].to_numpy()
             encoded_columns.append(col_array)
         
-        if encoded_columns: #check encoded columns empty or not
+        if encoded_columns: #check encoded columns empty or not and convert all values to float64
             self.current_state_array = np.column_stack(encoded_columns).astype(np.float64)
         else:
             self.current_state_array = np.empty((0, len(self._init_state_col_order)), dtype=np.float64)
