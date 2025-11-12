@@ -204,8 +204,8 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
             np.random.seed(3)
 
             # Preallocate a reusable temporary buffer
-            tmp_arr = np.empty_like(deltas[0])
-
+            tmp_arr = np.empty_like(deltas[0]) #save data from deltas
+            tmp_local = np.empty_like(deltas[0]) #save data from tmp_arr
             for i in range(prI_filter.shape[0]):
                 # Copy only once into reusable buffer
                 np.copyto(tmp_arr, deltas[i])
@@ -222,13 +222,13 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
                 for j in range(prI_filter.shape[1]): #positive records
                     count_start = count_end
                     count_end = count_start + 1
-                    
+                    np.copyto(tmp_local, tmp_arr) #data copied into preexisting tmp_local
                     # Modify the same tmp_arr in-place for reuse
-                    tmp_arr[self._columns_idx[j]] = self._inf_to_code
-                    tmp_arr[n_idx] = changed_N[j]
-                    print('2nd new tmp_arr\n', tmp_arr)
+                    tmp_local[self._columns_idx[j]] = self._inf_to_code
+                    tmp_local[n_idx] = changed_N[j]
+                    print('tmp_local\n', tmp_local)
                     
-                    result_buffer[count_start:count_end, :] = tmp_arr
+                    result_buffer[count_start:count_end, :] = tmp_local
                     print('final result_buffer\n', result_buffer)
         
         else:
