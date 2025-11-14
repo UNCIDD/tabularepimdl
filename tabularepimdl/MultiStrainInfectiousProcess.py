@@ -153,7 +153,7 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
             deltas = pd.concat([deltas, tmp])
             
         else:
-            np.random.seed(3)
+            #np.random.seed(3) #test purpose
             N_index = deltas.columns.get_loc("N")
             #multinomial draw for each delta and create the appropriate deltas.
             for i in range(prI.shape[0]):

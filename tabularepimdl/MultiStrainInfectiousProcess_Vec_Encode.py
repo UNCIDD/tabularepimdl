@@ -201,7 +201,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
             count = deltas.shape[0] #need to verify if ndim is the always-workable way to get the correct num of rows from deltas_vec
             count_start = 0
             count_end = 0
-            np.random.seed(3)
+            #np.random.seed(3) #test purpose
             for i in range(prI_filter.shape[0]):
                 tmp_arr = deltas[i].copy()
                 #print('tmp_arr\n', tmp_arr)
