@@ -75,12 +75,12 @@ class MultiStrainInfectiousProcessRunner(BaseModel):
                     if struct == 'Pandas': #provide dataframe to Pandas
                         data = self.data_input
                     elif struct == 'Numpy_Vec_Encode_1' or struct == 'Numpy_Vec_Encode_2': #provide true Numpy array to Numpy_Encode
-                        print('input data\n', self.data_input)
+                        #print('input data\n', self.data_input)
                         encoded_cols = [self.encode_column_sorted(self.columns_all_categories, self.data_input[col]).to_numpy() for col in self.columns] #put each encoded col in a list
-                        print('encoded\n', encoded_cols)
+                        #print('encoded\n', encoded_cols)
                         arr_numba = np.column_stack((*encoded_cols, self.data_input['N'], self.data_input['T']))
                         arr_numba = arr_numba.astype(np.float64) #this makes all columns a float number, it will later cause float indexing error for Numba, but WAIFW rule will convert group_col category back to integers.
-                        print('arr_numba\n', arr_numba)
+                        #print('arr_numba\n', arr_numba)
                         n_rows = arr_numba.shape[0] #detect the number of rows and columns in input array
                         n_cols = arr_numba.shape[1]
                         result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array

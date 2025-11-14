@@ -6,7 +6,7 @@ import random
 
 compartments = ['S', 'I', 'R']
 columns_all_categories = ['S', 'I', 'R']
-size = 5 #data size
+size = 100 #data size
 
 ###===fixed data===###
 """
@@ -62,7 +62,7 @@ def MultiStrainInfectious_Run_n_Visual():
         data_sizes= [size],
         data_input = current_state,
         structures= ["Pandas", "Numpy_Vec_Encode_1", "Numpy_Vec_Encode_2"],
-        iterations= [1],#[100, 300, 500, 700],
+        iterations= [500],#[100, 300, 500, 700],
         
         betas = betas_orig,
         columns = columns,
@@ -71,7 +71,7 @@ def MultiStrainInfectious_Run_n_Visual():
         i_st = 'I',
         r_st = 'R',
         inf_to = 'I',
-        stochastic=False,
+        stochastic = False,
         freq_dep = True,
         col_idx_map = col_idx_map,
         infstate_compartments = compartments,
