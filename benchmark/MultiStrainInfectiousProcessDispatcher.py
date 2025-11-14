@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from typing import Literal, Union
 import pandas as pd
 import numpy as np
@@ -7,7 +7,7 @@ from tabularepimdl.MultiStrainInfectiousProcess import MultiStrainInfectiousProc
 from tabularepimdl.MultiStrainInfectiousProcess_Vec_Encode import MultiStrainInfectiousProcess_Vec_Encode as MultiStrainInfectiousProcess_Vec_Encode_1
 from tabularepimdl.MultiStrainInfectiousProcess_Vec_Encode_2 import MultiStrainInfectiousProcess_Vec_Encode_2 as MultiStrainInfectiousProcess_Vec_Encode_2
 
-class SimpleObservationProcessDispatcher(BaseModel):
+class MultiStrainInfectiousProcessDispatcher(BaseModel):
     """
     Dispatches Pandas and various Numpy versions with Numba feature of SimpleObservationProcess rule at backend.
     @param structure: data structure used for rules.
@@ -23,6 +23,7 @@ class SimpleObservationProcessDispatcher(BaseModel):
     @param freq_dep: whether this model is a frequency dependent model.
     @param infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
     """
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     structure: Literal["Pandas", "Numpy_Vec_Encode_1", "Numpy_Vec_Encode_2"]
     betas: np.ndarray
@@ -96,5 +97,5 @@ class SimpleObservationProcessDispatcher(BaseModel):
             return self._dispatcher.get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
         elif self.structure == 'Numpy_Vec_Encode_1':
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)
-        elif self.structure == 'Numpy_Vec_Encode_1':
+        elif self.structure == 'Numpy_Vec_Encode_2':
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)
