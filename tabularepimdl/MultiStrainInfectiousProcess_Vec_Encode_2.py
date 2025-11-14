@@ -143,7 +143,7 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
         if not self._columns_idx: #fill in the columns index 
             for col in self.columns:
                 self._columns_idx.append(col_idx_map[col])
-        print('columns idx:', self._columns_idx) #debug
+        #print('columns idx:', self._columns_idx) #debug
 
         n_idx = col_idx_map['N']
         total_population: float = np.sum(current_state[:, n_idx])
@@ -156,11 +156,11 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
         else:
             betas = self.betas
 
-        print('betas:', betas) #debug
+        #print('betas:', betas) #debug
 
         #get number of infections for each strain type
         i_mask = current_state[:, self._columns_idx] == self._i_code
-        print('i_mask:', i_mask) #debug
+        #print('i_mask:', i_mask) #debug
 
         infectious_each_type = np.sum((i_mask * current_state[:, n_idx, np.newaxis]), axis=0)
 
@@ -168,34 +168,34 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
         
         r_mask = (current_state[:, self._columns_idx] == self._r_code)
-        print('r_mask:', r_mask) #debug
+        #print('r_mask:', r_mask) #debug
 
         row_beta_mult = 1- np.max(r_mask[:, np.newaxis, :] * self.cross_protect, axis=2) #pull the max from axis=2, along the rows
-        print('row_beta_mult:', row_beta_mult)
+        #print('row_beta_mult:', row_beta_mult)
 
         s_mask = (current_state[:, self._columns_idx] == self._s_code)
-        print('s_mask:', s_mask) #debug
+        #print('s_mask:', s_mask) #debug
 
         row_beta = row_beta_mult * betas * s_mask
-        print('row beta before is\n ', row_beta) #debug
+        #print('row beta before is\n ', row_beta) #debug
 
         row_beta = row_beta * (1 - np.max((current_state[:, self._columns_idx] == self._i_code), axis=1))[:, np.newaxis]
-        print('row beta after is\n ', row_beta) #debug
+        #print('row beta after is\n ', row_beta) #debug
 
         prI = 1 - np.power(np.exp(-dt * row_beta), infectious_each_type)
-        print('prI is\n', prI) #debug
+        #print('prI is\n', prI) #debug
 
         prI_sum_mask = np.sum(prI[:, :], axis=1) > 0
-        print('prI_sum_mask:', prI_sum_mask) #debug
+        #print('prI_sum_mask:', prI_sum_mask) #debug
 
         deltas = current_state[prI_sum_mask]
-        print('deltas\n', deltas) #debug
+        #print('deltas\n', deltas) #debug
 
         prI_filter = prI[prI_sum_mask]
-        print('prI_filter\n', prI_filter) #debug
+        #print('prI_filter\n', prI_filter) #debug
 
         prI_filter_sum = np.sum(prI_filter, axis=1)
-        print('prI_filter_sum\n', prI_filter_sum)
+        #print('prI_filter_sum\n', prI_filter_sum)
 
         if stochastic:
             count = deltas.shape[0] #need to verify if ndim is the always-workable way to get the correct num of rows from deltas_vec
@@ -210,15 +210,15 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
                 # Copy only once into reusable buffer
                 np.copyto(tmp_arr, deltas[i])
                 
-                print('tmp_arr\n', tmp_arr)
-                print('prI_filter', prI_filter[i])
+                #print('tmp_arr\n', tmp_arr)
+                #print('prI_filter', prI_filter[i])
     
                 changed_N = np.random.multinomial(deltas[i, n_idx], np.append(prI_filter[i], 0))
-                print('changed_N:', changed_N)
+                #print('changed_N:', changed_N)
                 tmp_arr[n_idx] = np.sum(-changed_N[:-1]) #the negative records, excluding the last value
-                print('1st new tmp_arr\n', tmp_arr)
+                #print('1st new tmp_arr\n', tmp_arr)
                 result_buffer[i:i+1, :] = tmp_arr#consider to remove tmp_arr but use preallocation directly to save memory usage
-                print('result_buffer\n', result_buffer)
+                #print('result_buffer\n', result_buffer)
                 for j in range(prI_filter.shape[1]): #positive records
                     count_start = count_end
                     count_end = count_start + 1
@@ -226,10 +226,10 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
                     # Modify the same tmp_arr in-place for reuse
                     tmp_local[self._columns_idx[j]] = self._inf_to_code
                     tmp_local[n_idx] = changed_N[j]
-                    print('tmp_local\n', tmp_local)
+                    #print('tmp_local\n', tmp_local)
                     
                     result_buffer[count_start:count_end, :] = tmp_local
-                    print('final result_buffer\n', result_buffer)
+                    #print('final result_buffer\n', result_buffer)
         
         else:
             changed_N = -deltas[:, n_idx] * (1 - np.prod(1 - prI_filter, axis=1))
@@ -241,7 +241,7 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
             np.copyto(result_buffer[count_start:count_end, :], deltas)
             #result_buffer[count_start:count_end, :] = deltas
             result_buffer[count_start:count_end, n_idx] = changed_N
-            print('result buffer\n', result_buffer)
+            #print('result buffer\n', result_buffer)
 
             # Preallocate a temporary working buffer (same shape as deltas)
             tmp_arr = np.empty_like(deltas)
@@ -251,23 +251,23 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
                 np.copyto(tmp_arr, deltas)
 
                 tmp_arr[:, col] = self._inf_to_code
-                print('tmp arr\n', tmp_arr)
+                #print('tmp arr\n', tmp_arr)
                 
                 # Compute comp in place (reuse a 1D scratch buffer)
                 comp = np.empty_like(changed_N)
                 np.divide(prI_filter[:, i], prI_filter_sum, out=comp)
                 np.multiply(-changed_N, comp, out=comp)
                 #comp = -changed_N * (prI_filter[:, i]/prI_filter_sum)
-                print('comp:', comp)
+                #print('comp:', comp)
                 
                 tmp_arr[:, n_idx] = comp
                 count_start = count_end
                 count_end = count_end + count
-                print('new tmp_arr\n', tmp_arr)
+                #print('new tmp_arr\n', tmp_arr)
                 #result_buffer[count_start:count_end, :] = tmp_arr
                 np.copyto(result_buffer[count_start:count_end, :], tmp_arr)
 
-                print('result_buffer\n', result_buffer)
+                #print('result_buffer\n', result_buffer)
 
 
         return result_buffer[:count_end, :] #include all rows with 0 for now
