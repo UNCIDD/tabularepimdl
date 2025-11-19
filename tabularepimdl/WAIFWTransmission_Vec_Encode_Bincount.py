@@ -229,5 +229,5 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
     
     #set up a property to return all the required categories used in group_col
     @property
-    def obs_col_all(self) -> list[str]: 
+    def group_col_all(self) -> list[str]: 
         return self.group_col_all_categories
