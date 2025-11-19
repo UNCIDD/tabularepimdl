@@ -181,8 +181,8 @@ class EpiModel_Vec_Encode_2(BaseModel):
 
         #infstate_all_comps = sorted(set(init_state_comps + unique_rule_comps)) #sort all unique compartments by ascending
         #print('infstate all comps:', infstate_all_comps)
-        self._infstate_all_comps = sorted(self._domains[self.compartment_col]) #keep a variable to save column InfState's compartment values
-        self._num_comps = len(self._infstate_all_comps) #keep a variable to save the number of compartments in column InfState
+        #self._infstate_all_comps = sorted(self._domains[self.compartment_col]) #keep a variable to save column InfState's compartment values
+        #self._num_comps = len(self._infstate_all_comps) #keep a variable to save the number of compartments in column InfState
         #print('infstate_all_comps:', self._infstate_all_comps, 'num_comps:', self._num_comps)
 
          #create compartment and its associated index mapping, and reverse the mapping
