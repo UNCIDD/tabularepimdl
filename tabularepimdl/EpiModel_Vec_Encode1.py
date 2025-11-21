@@ -319,12 +319,9 @@ class EpiModel_Vec_Encode_1(BaseModel):
         # _full_epi_list could be used to replace list_of_arr and remove the this argument from method definition
         if len(list_of_arr) == 0: #return empty dataframe if input list of arrays is empty
             return pd.DataFrame(columns=self._init_state_col_order)
-        full_epi_array = np.vstack(list_of_arr)
-        print('full epi\n', full_epi_array)
-        df_reconstructed = pd.DataFrame(full_epi_array, columns=self._init_state_col_order)
-        print('full epi post\n', full_epi_array)
-        print('epi df\n', df_reconstructed)
-
+        self.full_epi_array = np.vstack(list_of_arr)
+        df_reconstructed = pd.DataFrame(self.full_epi_array, columns=self._init_state_col_order)
+        
         for col in self._inverse_grouping_col_map: #convert grouping col's numeric values to domain values (not including N and T)
             df_reconstructed[col] = df_reconstructed[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
         return df_reconstructed
