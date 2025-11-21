@@ -161,7 +161,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
         """
         #unique domain values per grouping column (excludes N and T) in init_state
         self._domains = {col: set(self.init_state[col].astype(str).tolist()) for col in self._grouping_cols}
-        print('initial domain value:', self._domains)
+        #print('initial domain value:', self._domains)
         #collect domain values that exist in each rule's properties but not in init_state data columns
         for ruleset in self.rules:
             for rule in ruleset:
@@ -173,7 +173,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
 
                     try:
                         attribute_value = getattr(rule, attribute_name) #if attribute_name has 'col', then obtain its value
-                        print(attribute_name, 'value :', attribute_value)
+                        #print(attribute_name, 'value :', attribute_value)
                     except Exception:
                         continue
 
@@ -188,7 +188,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
                     
                     for col in col_names:
                         data_col_name = self._match_domain_key(col_name = col) #check if attribute value exists in domain keys
-                        print('found data col name in domain:', data_col_name)
+                        #print('found data col name in domain:', data_col_name)
 
                         if data_col_name is None: #attribute name has 'col' but its value is not in domain keys
                             continue
@@ -196,30 +196,30 @@ class EpiModel_Vec_Encode_2(BaseModel):
                         if data_col_name.lower() == "infstate": #Special case: if column value equals 'infstate' (case-insensitive)
                             try:
                                 infstate_all_compartments = getattr(rule, 'infstate_all')
-                                print('infstate full:', infstate_all_compartments)
+                                #print('infstate full:', infstate_all_compartments)
                             except Exception:
                                 infstate_all_compartments = None
 
                             if infstate_all_compartments:
                                 if isinstance(infstate_all_compartments, (list, set, tuple, Iterable)):
                                     self._domains[data_col_name].update(infstate_all_compartments)
-                                    print('domain_values:', self._domains)
+                                    #print('domain_values:', self._domains)
 
                         else: #Generic case: look for property named "<data_col_name>_all"
                             property_name = f"{attribute_name}_all"
                             if hasattr(rule, property_name):
                                 try:
                                     property_value = getattr(rule, property_name)
-                                    print('property_value:', property_value)
+                                    #print('property_value:', property_value)
                                 except Exception:
                                     property_value = None
             
                                 if property_value:
                                     if isinstance(property_value, (list, set, tuple, Iterable)):
                                         self._domains[data_col_name].update(property_value)
-                                        print('domain_values:', self._domains)
+                                        #print('domain_values:', self._domains)
        
-        print('final domains per column:', self._domains)
+        #print('final domains per column:', self._domains)
 
 
     def _setup_internal_attributes(self):
