@@ -76,6 +76,9 @@ class EpiModel_Vec_Encode_1(BaseModel):
 
     #full epi list to contain full epi array
     _full_epi_list: list[np.ndarray] = PrivateAttr(default_factory=list)
+
+    #initial current_state_array, used to save the converted initial current_state_array
+    _initial_current_state_array: np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) 
     
     @field_validator("init_state", mode="before") #by default, column N and T should be numerical values, if not then should raise ValueError and let users check
     @classmethod
@@ -99,6 +102,7 @@ class EpiModel_Vec_Encode_1(BaseModel):
         self._update_col_domain_values_from_rules() #update each rule's selected column's unique domain values
         self._setup_internal_attributes() #set up all internal attributes
         self._convert_init_df_to_cur_arrays() #initalize current_state_array only
+        self._save_initial_current_state_array()
         self._initalize_full_epi_array() #initalize full_epi_array only
 
 
@@ -284,8 +288,7 @@ class EpiModel_Vec_Encode_1(BaseModel):
             self.current_state_array = np.column_stack(encoded_columns).astype(np.float64)
         else:
             self.current_state_array = np.empty((0, len(self._init_state_col_order)), dtype=np.float64)
-        
-        
+
         #pre-allocation of result array -- to be checked/verified
         n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
         n_cols = self.current_state_array.shape[1]
@@ -293,10 +296,17 @@ class EpiModel_Vec_Encode_1(BaseModel):
 
         return self.current_state_array #return current_state_array only
     
+    def _save_initial_current_state_array(self) -> np.ndarray:
+            """
+            After init_state dataframe is converted to current_state_array, save the array's initial values.
+            """
+            self._initial_current_state_array = self.current_state_array.copy()
+            
     def _initalize_full_epi_array(self) -> np.ndarray:
-        """initialize full_epi_array with current_state_array
         """
-        self._full_epi_list = [self.current_state_array] #make current_state_array the 1st elment in full_epi_array
+        Initialize full_epi_array with current_state_array.
+        """
+        self._full_epi_list = [self._initial_current_state_array] #make current_state_array the 1st elment in full_epi_array
         self.full_epi_array = np.vstack(self._full_epi_list)
         return self.full_epi_array
     
@@ -310,7 +320,10 @@ class EpiModel_Vec_Encode_1(BaseModel):
         if len(list_of_arr) == 0: #return empty dataframe if input list of arrays is empty
             return pd.DataFrame(columns=self._init_state_col_order)
         full_epi_array = np.vstack(list_of_arr)
+        print('full epi\n', full_epi_array)
         df_reconstructed = pd.DataFrame(full_epi_array, columns=self._init_state_col_order)
+        print('full epi post\n', full_epi_array)
+        print('epi df\n', df_reconstructed)
 
         for col in self._inverse_grouping_col_map: #convert grouping col's numeric values to domain values (not including N and T)
             df_reconstructed[col] = df_reconstructed[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
@@ -319,9 +332,9 @@ class EpiModel_Vec_Encode_1(BaseModel):
     def Reset(self):
         """
         Reset the values of current_state_array and full_epi_array to be init_state values.
-        only invoke _convert_init_df_to_cur_arrays() and _initalize_full_epi_array().
+        only call back initial_current_state_array value and invoke _initalize_full_epi_array().
         """
-        self._convert_init_df_to_cur_arrays()
+        self.current_state_array = self._initial_current_state_array.copy()
         self._initalize_full_epi_array()
 
     def do_timestep(self, dt: int | float =1.0):
