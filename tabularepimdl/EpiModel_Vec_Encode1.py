@@ -111,9 +111,10 @@ class EpiModel_Vec_Encode_1(BaseModel):
         self._agg_cols = {'N', 'T'}
         self._grouping_cols = [c for c in self.init_state.columns if c not in self._agg_cols]
         #print('grouping col:', self._grouping_cols)
-
+        #print('before grouping init state\n', self.init_state) #debug
         #grouping column values, only the categories that are actually present in the data will be included in the groups.
         self.init_state = self.init_state.groupby(self._grouping_cols, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
+        #print('after grouping init state\n', self.init_state) #debug
 
 
     def _init_state_column_order_shuffle(self):
@@ -133,6 +134,7 @@ class EpiModel_Vec_Encode_1(BaseModel):
 
         # Reorder the DataFrame init_state
         self.init_state = self.init_state[new_col_order]
+        #print('shuffle init state\n', self.init_state) #debug
 
 
     def _match_domain_key(self, col_name: str) -> str | None:
@@ -383,5 +385,6 @@ class EpiModel_Vec_Encode_1(BaseModel):
         # append the updated current state to the epidemic history.
         if len(ruleset_deltas_list) != 0:
             self._full_epi_list.append(self.current_state_array) #this is a list of arrays
+            #print('full epi list\n', self._full_epi_list)
         
 

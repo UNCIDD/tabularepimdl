@@ -5,6 +5,7 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 from tabularepimdl.Rule import Rule
+from typing import Iterable
 
 
 class EpiModel_Vec_Encode_2(BaseModel):
@@ -38,7 +39,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
     full_epi_array: np.ndarray = Field(default_factory=lambda: np.array([]))
     rules: list[list[Rule]]
     stoch_policy: str = "rule_based"
-    compartment_col: str = 'InfState'
+    #compartment_col: str = 'InfState' #model engine does not need this attribute
 
     #columns listed in the input data, separating column N and T from other columns
     _agg_cols: set[str] = PrivateAttr(default_factory = lambda:{'N', 'T'})
@@ -65,7 +66,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
     _col_idx_map: dict[str, int] = PrivateAttr(default_factory=dict) #e.g. {'InfState' : 0, 'N': 1, 'T': 2}
 
     #column index value of InfState, N, T and all grouping columns including InfState
-    _infstate_idx: int = PrivateAttr(default=None) #e.g. _infstate_idx=0
+    #_infstate_idx: int = PrivateAttr(default=None) #e.g. _infstate_idx=0 #model engine does not need this attribute
     _n_idx: int = PrivateAttr(default=None) #e.g. _n_idx=1
     _t_idx: int = PrivateAttr(default=None) #e.g. _t_idx=2
     _grouping_col_idx: list[int] = PrivateAttr(default_factory=list) #e.g. infstate, x, y, z = [0, 3, 4, 5]
@@ -90,7 +91,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
         required_cols = {'N', 'T'}
         missing = required_cols - set(initial_state.columns)
         if missing: #check if column T and N are in the dataframe
-            raise ValueError(f"init_state is missing required columns: {missing}")
+            raise ValueError(f"init_state is missing required columns: {missing}.")
         return initial_state
     
     #Omitting rules list check for now
@@ -101,6 +102,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
         """
         self._init_state_column_values_grouping() #grouping init_state column values
         self._init_state_column_order_shuffle() #shuffle init_state column order
+        self._update_col_domain_values_from_rules() #update each rule's selected column's unique domain values
         self._setup_internal_attributes() #set up all internal attributes
         self._convert_init_df_to_cur_arrays() #initalize current_state_array only
         self._initalize_full_epi_array() #initalize full_epi_array only
@@ -139,48 +141,92 @@ class EpiModel_Vec_Encode_2(BaseModel):
         self.init_state = self.init_state[new_col_order]
 
 
+    def _match_domain_key(self, col_name: str) -> str | None:
+        """Case-insensitive lookup: return the matching key for column names of input data or None."""
+        if col_name is None:
+            return None
+        col_name_lower = col_name.lower()
+        for key in self._domains.keys():
+            if key.lower() == col_name_lower:
+                return key
+        return None
+
+
+    def _update_col_domain_values_from_rules(self) -> None:
+        """
+        Walk through rules list and update each rule's selected column's unique domain values in place.
+
+        Rules must be instances of BaseModel (Pydantic), and rule attributes
+        that include keyword 'col' in the attribute name will be inspected.
+        """
+        #unique domain values per grouping column (excludes N and T) in init_state
+        self._domains = {col: set(self.init_state[col].astype(str).tolist()) for col in self._grouping_cols}
+        print('initial domain value:', self._domains)
+        #collect domain values that exist in each rule's properties but not in init_state data columns
+        for ruleset in self.rules:
+            for rule in ruleset:
+                rule_field_name_set = list(rule.model_fields_set) #return the set of fields that have been explicitly set on the rule instance
+                
+                for attribute_name in rule_field_name_set: #iterate all attributes that have been explicitly set in the rule instance
+                    if 'col' not in attribute_name.lower(): #search keyword 'col' in rule's attribute names
+                        continue
+
+                    try:
+                        attribute_value = getattr(rule, attribute_name) #if attribute_name has 'col', then obtain its value
+                        print(attribute_name, 'value :', attribute_value)
+                    except Exception:
+                        continue
+
+                    # Normalize: always work with a list of column names
+                    if isinstance(attribute_value, str):
+                        col_names = [attribute_value]
+                    elif isinstance(attribute_value, list):
+                        col_names = attribute_value
+                    else:
+                        raise ValueError(f"Expect attribute value to be a string or list, received {type(attribute_value)}.")
+                        
+                    
+                    for col in col_names:
+                        data_col_name = self._match_domain_key(col_name = col) #check if attribute value exists in domain keys
+                        print('found data col name in domain:', data_col_name)
+
+                        if data_col_name is None: #attribute name has 'col' but its value is not in domain keys
+                            continue
+
+                        if data_col_name.lower() == "infstate": #Special case: if column value equals 'infstate' (case-insensitive)
+                            try:
+                                infstate_all_compartments = getattr(rule, 'infstate_all')
+                                print('infstate full:', infstate_all_compartments)
+                            except Exception:
+                                infstate_all_compartments = None
+
+                            if infstate_all_compartments:
+                                if isinstance(infstate_all_compartments, (list, set, tuple, Iterable)):
+                                    self._domains[data_col_name].update(infstate_all_compartments)
+                                    print('domain_values:', self._domains)
+
+                        else: #Generic case: look for property named "<data_col_name>_all"
+                            property_name = f"{attribute_name}_all"
+                            if hasattr(rule, property_name):
+                                try:
+                                    property_value = getattr(rule, property_name)
+                                    print('property_value:', property_value)
+                                except Exception:
+                                    property_value = None
+            
+                                if property_value:
+                                    if isinstance(property_value, (list, set, tuple, Iterable)):
+                                        self._domains[data_col_name].update(property_value)
+                                        print('domain_values:', self._domains)
+       
+        print('final domains per column:', self._domains)
+
+
     def _setup_internal_attributes(self):
         """
         Set up internal attributes with values from init_state and rule list.
         """
-        #unique domain values per grouping column (excludes N and T) in init_state
-        self._domains = {col: set(self.init_state[col].astype(str).tolist()) for col in self._grouping_cols}
-        #collect domains that exist in each rule's source and target states but not in init_state
-        for ruleset in self.rules:
-            for rule in ruleset:
-                if hasattr(rule, 'column') and hasattr(rule, 'source_states') and hasattr(rule, 'target_states'):
-                    col = rule.column #specicifally operate on column 'InfState'
-                    if col in self._domains:
-                        for s in rule.source_states:
-                            self._domains[col].add(str(s)) #only add non-present element
-                        for s in rule.target_states:
-                            self._domains[col].add(str(s))
-        #print('domains per column:', self._domains)
-
-        #The following block code is not needed since domains collects all values from each grouping column including 'InfState'
-        #===#
-        #Collect compartments from init_state and rules
-        #init_state_comps = self.init_state[self.compartment_col].astype(str).unique().tolist() #get the unique compartments from input data
-        #print('init_state_comps:', init_state_comps)
         
-        #Assume all rule classes inherit from BaseModel and implement source_states and/or target_states
-        #unique_rule_comps = set()
-        #for ruleset in self.rules: #get the unique compartments from all rules
-        #    for rule in ruleset:
-                # Check and extract source_states
-        #        if hasattr(rule, 'source_states'):
-        #             unique_rule_comps.add(str(rule.source_states))
-                # Check and extract target_states (if exists)
-        #        if hasattr(rule, 'target_states'):
-        #             unique_rule_comps.add(str(rule.target_states))
-
-        # Convert set to list
-        #unique_states_list = list(unique_rule_comps)
-        #print('unique_states_list:', unique_states_list)
-        #===#
-
-        #infstate_all_comps = sorted(set(init_state_comps + unique_rule_comps)) #sort all unique compartments by ascending
-        #print('infstate all comps:', infstate_all_comps)
         #self._infstate_all_comps = sorted(self._domains[self.compartment_col]) #keep a variable to save column InfState's compartment values
         #self._num_comps = len(self._infstate_all_comps) #keep a variable to save the number of compartments in column InfState
         #print('infstate_all_comps:', self._infstate_all_comps, 'num_comps:', self._num_comps)
@@ -208,7 +254,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
 
         #all columns indicies are included in _col_idx_map, extract invidual ones for separate use
         #Locate each column's index of init_state, used in array column operation.
-        self._infstate_idx = self._col_idx_map[self.compartment_col]
+        #self._infstate_idx = self._col_idx_map[self.compartment_col] #unused/unneeded attribute
         self._n_idx = self._col_idx_map['N'] #the code has to know/use a few fixed column names in order to get column indicies
         self._t_idx = self._col_idx_map['T']
         self._grouping_col_idx = [self._col_idx_map[c] for c in self._grouping_cols]
@@ -255,7 +301,7 @@ class EpiModel_Vec_Encode_2(BaseModel):
     def _initalize_full_epi_array(self) -> np.ndarray:
         """initialize full_epi_array with current_state_array
         """
-        self._full_epi_list = [self.current_state_array]
+        self._full_epi_list = [self.current_state_array] #make current_state_array the 1st elment in full_epi_array
         self.full_epi_array = np.vstack(self._full_epi_list)
         return self.full_epi_array
     

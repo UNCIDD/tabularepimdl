@@ -267,7 +267,7 @@ class EpiModel(BaseModel):
         
         # append the updated current state to the epidemic history.
         self.full_epi = pd.concat([self.full_epi, self.cur_state]).reset_index(drop=True)
-        #print('full epi is\n', self.full_epi)#debug
+        #print('pandas full epi is\n', self.full_epi)#debug
         #print('----') #debug
 
         if ret_cur_state:
