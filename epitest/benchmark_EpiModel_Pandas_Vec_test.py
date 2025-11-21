@@ -19,7 +19,7 @@ from tabularepimdl.EpiModel_Vec_Encode1 import EpiModel_Vec_Encode_1 #model vec 
 from tabularepimdl.EpiModel_Vec_Encode2 import EpiModel_Vec_Encode_2 #model vec engine 2
 
 #Global Setup
-iters = 1
+iters = 200
 
 infection_rate = 0.2
 transition_rate = 0.25
