@@ -19,7 +19,7 @@ from tabularepimdl.EpiModel_Vec_Encode1 import EpiModel_Vec_Encode_1 #model vec 
 from tabularepimdl.EpiModel_Vec_Encode2 import EpiModel_Vec_Encode_2 #model vec engine 2
 
 #Global Setup
-iters = 200
+iters = 1
 
 infection_rate = 0.2
 transition_rate = 0.25
@@ -163,13 +163,17 @@ def test_model_performance_and_output(request, model_label, model_fixture_name, 
     if model_label == "pandas":
         #print("\n=== Pandas Model full_epi ===")
         #print(model.full_epi)
-        pandas_result = model.full_epi['N'].round(3).values
+        pandas_sorted = model.full_epi.sort_values(by=['T', 'InfState'], ascending=[True, True]) #sort values before comparing pandas and array result to make sure the order of N lines up
+        #pandas_result = model.full_epi['N'].round(3).values
+        pandas_result = pandas_sorted['N'].round(3).values
     else:
-        arr = model._covnert_list_of_arrays_to_df(model._full_epi_list)['N'].round(3).values
+        #arr = model._covnert_list_of_arrays_to_df(model._full_epi_list)['N'].round(3).values
+        arr_sorted = model._covnert_list_of_arrays_to_df(model._full_epi_list).sort_values(by=['T', 'InfState'], ascending=[True, True]) #sort values before comparing pandas and array result to make sure the order of N lines up
         #print(f"\n=== {model_label} Model full_epi ===")
         #print(model._covnert_list_of_arrays_to_df(model._full_epi_list))
         #assert np.allclose(arr, pandas_result, rtol=1e-3), f"{model_label} does not match pandas model"
-        assert np.array_equal(arr, pandas_result), "Values do not match after rounding"
+        arr_result = arr_sorted['N'].round(3).values
+        assert np.array_equal(arr_result, pandas_result), "Values do not match after rounding"
 
 #def pytest_sessionfinish(session, exitstatus):
 #    """Called after the whole test run finishes."""

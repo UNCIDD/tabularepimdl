@@ -34,9 +34,9 @@ def init_df(switch):
     if switch == 'fixed':
         n = 2 #two rows of fixed data
         df = pd.DataFrame({
+            'InfState': ['S', 'I'],
             'N': [1_500_000, 10],
-            'T': [0, 0],
-            'InfState': ['S', 'I']
+            'T': [0, 0]
         })
     else:
         n = 1_000_000
@@ -44,9 +44,9 @@ def init_df(switch):
         n_values = np.random.randint(1, 10, size=n)
         t_values = np.full(n, 0.0)
         df = pd.DataFrame({
+            'InfState': infstate_values,
             'N': n_values,
-            'T': t_values,
-            'InfState': infstate_values
+            'T': t_values
         })
     
     return df, n
