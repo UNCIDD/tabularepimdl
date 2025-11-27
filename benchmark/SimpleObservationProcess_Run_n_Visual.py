@@ -6,7 +6,7 @@ import random
 
 compartments = ['S', 'I', 'R']
 observations = ['U', 'P', 'I']
-size = 1000 #data size
+size = 100 #data size
 
 ###===fixed data===###
 """
@@ -19,8 +19,8 @@ current_state = pd.DataFrame({
     'N': n_values,
     'T': t_values
 })
-"""
 
+"""
 ###===random data===###
 
 #n_samples = size
@@ -40,14 +40,14 @@ current_state = pd.DataFrame({
                 'T' : t_values
                 })
 
-current_state = current_state.groupby(['InfState', 'Hosp'], observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
+#current_state = current_state.groupby(['InfState', 'Hosp'], observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
 #print('current_state\n', current_state)
 
 def SimpleObservation_Run_n_Visual():
     runner = SimpleObservationProcessRunner(
         data_sizes= [size],
         data_input = current_state,
-        structures= ["Pandas", "Numpy_Vec_Encode"],
+        structures= ["Pandas", "Numpy_Vec_Encode", "Numpy_Vec_Encode_nobuffer"],
         iterations= [500],#[100, 300, 500, 700],
         
         source_col = "InfState",

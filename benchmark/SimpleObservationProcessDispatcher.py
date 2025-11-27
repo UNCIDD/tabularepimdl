@@ -5,6 +5,7 @@ import numpy as np
 
 from tabularepimdl.SimpleObservationProcess import SimpleObservationProcess as SimpleObservationProcess_Pandas
 from tabularepimdl.SimpleObservationProcess_Vec_Encode import SimpleObservationProcess_Vec_Encode as SimpleObservationProcess_Vec_Encode
+from tabularepimdl.SimpleObservationProcess_Vec_Encode_nobuffer import SimpleObservationProcess_Vec_Encode_nobuffer
 
 class SimpleObservationProcessDispatcher(BaseModel):
     """
@@ -22,7 +23,7 @@ class SimpleObservationProcessDispatcher(BaseModel):
     @param observation_compartments: the observation compartments used in epidemics. e.g. ['U', 'P', 'I'], U=unobserved, P=previously-observed, I=incident-observed
     """
 
-    structure: Literal["Pandas", "Numpy_Vec_Encode"]
+    structure: Literal["Pandas", "Numpy_Vec_Encode", "Numpy_Vec_Encode_nobuffer"]
     source_col: str
     source_state: str
     obs_col: str
@@ -35,7 +36,7 @@ class SimpleObservationProcessDispatcher(BaseModel):
     obs_col_all_categories: list[str]
 
     #Dispatcher
-    _dispatcher: Union[SimpleObservationProcess_Pandas, SimpleObservationProcess_Vec_Encode] = PrivateAttr(default=None)
+    _dispatcher: Union[SimpleObservationProcess_Pandas, SimpleObservationProcess_Vec_Encode, SimpleObservationProcess_Vec_Encode_nobuffer] = PrivateAttr(default=None)
 
     def model_post_init(self, _): #initialize dispatcher based on data structures
         if self.structure == 'Pandas':
@@ -62,6 +63,19 @@ class SimpleObservationProcessDispatcher(BaseModel):
                 infstate_compartments=self.infstate_compartments,
                 obs_col_all_categories=self.obs_col_all_categories
             )
+        elif self.structure == 'Numpy_Vec_Encode_nobuffer':
+            self._dispatcher = SimpleObservationProcess_Vec_Encode_nobuffer(
+                source_col=self.source_col,
+                source_state=self.source_state,
+                obs_col=self.obs_col,
+                rate=self.rate,
+                unobs_state=self.unobs_state,
+                incobs_state=self.incobs_state,
+                prevobs_state=self.prevobs_state,
+                stochastic=self.stochastic,
+                infstate_compartments=self.infstate_compartments,
+                obs_col_all_categories=self.obs_col_all_categories
+            )
         else:
             raise ValueError(f"Unknown structure: {self.structure}")
     
@@ -76,3 +90,5 @@ class SimpleObservationProcessDispatcher(BaseModel):
             return self._dispatcher.get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
         elif self.structure == 'Numpy_Vec_Encode':
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)
+        elif self.structure == 'Numpy_Vec_Encode_nobuffer':
+            return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, dt=dt, stochastic=stochastic)

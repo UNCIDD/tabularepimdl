@@ -76,7 +76,7 @@ class SimpleObservationProcessRunner(BaseModel):
 
                     if struct == 'Pandas': #provide dataframe to Pandas
                         data = self.data_input
-                    elif struct == 'Numpy_Vec_Encode': #provide true Numpy array to Numpy_Encode
+                    elif struct == 'Numpy_Vec_Encode' or struct == 'Numpy_Vec_Encode_nobuffer': #provide true Numpy array to Numpy_Encode
                         #print('input data\n', self.data_input)
                         InfState_encode = self.encode_column_sorted(self.infstate_compartments, self.data_input[self.source_col]) #infstate column is sorted
                         Obs_encode = self.encode_column_sorted(self.obs_col_all_categories, self.data_input[self.obs_col]) #categorical column is sorted
@@ -117,6 +117,15 @@ class SimpleObservationProcessRunner(BaseModel):
                         t0 = time.perf_counter() #track time
                         for _ in range(iters):
                             deltas = dispatcher.get_deltas(current_state=arr_numba, col_idx_map=self.col_idx_map, result_buffer=result_preallocation, stochastic=self.stochastic)
+                        t1 = time.perf_counter()
+                        peak = tracemalloc.get_traced_memory()[1]
+                        tracemalloc.stop()
+                    elif struct == 'Numpy_Vec_Encode_nobuffer':
+                        gc.collect()
+                        tracemalloc.start() #track memory
+                        t0 = time.perf_counter() #track time
+                        for _ in range(iters):
+                            deltas = dispatcher.get_deltas(current_state=arr_numba, col_idx_map=self.col_idx_map, stochastic=self.stochastic)
                         t1 = time.perf_counter()
                         peak = tracemalloc.get_traced_memory()[1]
                         tracemalloc.stop()
