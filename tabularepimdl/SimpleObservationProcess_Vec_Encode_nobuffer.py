@@ -55,7 +55,7 @@ class SimpleObservationProcess_Vec_Encode_nobuffer(Rule, BaseModel):
         self._prevobs_code = observation_to_int.get(self.prevobs_state)
 
 
-    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
+    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray | None = None, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         Compute the population deltas for the current state at a given time step.
 
