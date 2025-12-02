@@ -219,7 +219,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
                                         self._domains[data_col_name].update(property_value)
                                         #print('domain_values:', self._domains)
        
-        print('final domains per column:', self._domains) #debug
+        #print('final domains per column:', self._domains) #debug
 
 
     def _setup_internal_attributes(self):
@@ -244,13 +244,13 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
             #print('vals:', vals)
             self._grouping_col_map[col] = {v: i for i, v in enumerate(vals)} #encode each grouping column's values
             self._inverse_grouping_col_map[col] = {i: v for v, i in self._grouping_col_map[col].items()} #reverse the above encoding
-        print('grouping col map:', self._grouping_col_map) #debug
+        #print('grouping col map:', self._grouping_col_map) #debug
         #print('inverse grouping col map:', self._inverse_grouping_col_map)
 
         #fetch column order of init_state
         self._init_state_col_order = [col for col in self.init_state.columns] #get all column names into a list, e.g. ['InfState', 'N', 'T']
         self._col_idx_map = {col: i for i, col in enumerate(self._init_state_col_order)} #e.g. {'Location': 0, 'Age': 1, 'InfState': 2, 'N': 3, 'T': 4}
-        print('col_idx_map:', self._col_idx_map) #debug
+        #print('col_idx_map:', self._col_idx_map) #debug
 
         #all columns indicies are included in _col_idx_map, extract invidual ones for separate use
         #Locate each column's index of init_state, used in array column operation.
@@ -345,18 +345,18 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         for ruleset in self.rules:
             ruleset_deltas_list = []
             for rule in ruleset:
-                print('current rule:', rule)
+                #print('current rule:', rule)
                 n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
                 n_cols = self.current_state_array.shape[1]
                 self._current_result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
                 
-                print('in rule Before loop preallocation buffer\n', self._current_result_preallocation)
+                #print('in rule Before loop preallocation buffer\n', self._current_result_preallocation)
                 if self.stoch_policy == "rule_based":
                     rule_deltas = rule.get_deltas(current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=self._current_result_preallocation, dt=dt)
                 else:
                     rule_deltas = rule.get_deltas(current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=self._current_result_preallocation, dt=dt, stochastic = (self.stoch_policy=="stochastic"))
                 #print('rule detlas\n', rule_deltas)
-                print('in rule After loop preallocation buffer\n', self._current_result_preallocation)
+                #print('in rule After loop preallocation buffer\n', self._current_result_preallocation)
                 #print('before append, ruleset_deltas_list\n', ruleset_deltas_list)
                 if rule_deltas is not None and len(rule_deltas) > 0: #add non-None rule_deltas to the list
                     ruleset_deltas_list.append(rule_deltas.copy())
@@ -401,6 +401,6 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         # append the updated current state to the epidemic history.
         if len(ruleset_deltas_list) != 0:
             self._full_epi_list.append(self.current_state_array) #this is a list of arrays
-            print('full epi list\n', self._full_epi_list)
+            #print('full epi list\n', self._full_epi_list)
         
 
