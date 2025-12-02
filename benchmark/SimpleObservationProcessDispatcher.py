@@ -91,4 +91,4 @@ class SimpleObservationProcessDispatcher(BaseModel):
         elif self.structure == 'Numpy_Vec_Encode':
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)
         elif self.structure == 'Numpy_Vec_Encode_nobuffer':
-            return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, dt=dt, stochastic=stochastic)
+            return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)

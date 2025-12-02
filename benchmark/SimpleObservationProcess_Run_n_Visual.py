@@ -6,7 +6,7 @@ import random
 
 compartments = ['S', 'I', 'R']
 observations = ['U', 'P', 'I']
-size = 100 #data size
+size = 100000 #data size
 
 ###===fixed data===###
 """
