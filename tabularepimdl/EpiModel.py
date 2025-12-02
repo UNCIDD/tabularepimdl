@@ -73,10 +73,44 @@ class EpiModel(BaseModel):
         return normalized_list
             
     def model_post_init(self, _) -> pd.DataFrame:
+        self._init_state_column_values_grouping() #grouping init_state column values
+        self._init_state_column_order_shuffle() #shuffle init_state column order
         if self.cur_state is None:
             self.cur_state = copy.deepcopy(self.init_state)
         if self.full_epi is None:
-            self.full_epi = copy.deepcopy(self.init_state)    
+            self.full_epi = copy.deepcopy(self.init_state)
+
+    def _init_state_column_values_grouping(self):
+        """
+        Grouping each column of init_state and aggregate column N and T in case the input raw data has duplicate rows.
+        This ensures rules that have categorical column(s) can accurately check the input raw data aginst their input categories.
+        """
+        #collect column names for aggregating columns and rest grouping columns
+        agg_cols = {'N', 'T'}
+        grouping_cols = [c for c in self.init_state.columns if c not in agg_cols]
+        #print('grouping col:', self._grouping_cols)
+        #print('before grouping init state\n', self.init_state) #debug
+        #grouping column values, only the categories that are actually present in the data will be included in the groups.
+        self.init_state = self.init_state.groupby(grouping_cols, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
+        #print('after grouping init state\n', self.init_state) #debug
+    
+    def _init_state_column_order_shuffle(self):
+        """
+        Move column N and T to the last two columns in init_state before all internal attributes and data processing steps occure.
+        """
+        cols = self.init_state.columns.tolist()
+
+        # Define the target columns to move
+        cols_to_move = ['N', 'T']
+
+        # Filter out the columns to move from the list (preserves order of others)
+        remaining_cols = [col for col in cols if col not in cols_to_move]
+
+        # Build the new column order
+        new_col_order = remaining_cols + cols_to_move
+
+        # Reorder the DataFrame init_state
+        self.init_state = self.init_state[new_col_order]
 
     def reset(self) -> pd.DataFrame:
         '''! Resets the class state to have the initial state. 
