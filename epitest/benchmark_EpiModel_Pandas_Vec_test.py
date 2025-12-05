@@ -17,9 +17,10 @@ from tabularepimdl.SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encod
 
 from tabularepimdl.EpiModel_Vec_Encode1 import EpiModel_Vec_Encode_1 #model vec engine 1
 from tabularepimdl.EpiModel_Vec_Encode2 import EpiModel_Vec_Encode_2 #model vec engine 2
+from tabularepimdl.EpiModel_Vec_Encode1_2 import EpiModel_Vec_Encode_1_2 #model vec engine 1 with pre-allocated buffer moved to do_timestep
 
 #Global Setup
-iters = 200
+iters = 10
 
 infection_rate = 0.2
 transition_rate = 0.25
@@ -60,6 +61,16 @@ def build_vec2_model(init_df):
 
     return determ_epi_mdl_vec2
 
+@pytest.fixture
+def build_vec1_2_model(init_df):
+    """EpiModel Vec version 1_2"""
+    init_state, _ = init_df
+    infect_rule_vec = SimpleInfection_Vec_Encode(beta=infection_rate, column='InfState', s_st='S', i_st='I', inf_to='I', infstate_compartments=infstate_compartments)
+    recover_rule_vec = SimpleTransition_Vec_Encode(column='InfState', from_st='I', to_st='R', rate=transition_rate, infstate_compartments=infstate_compartments)
+    determ_epi_mdl_vec1_2 = EpiModel_Vec_Encode_1_2(init_state = init_state ,rules=[[infect_rule_vec, recover_rule_vec]], compartment_col = 'InfState')
+
+    return determ_epi_mdl_vec1_2
+
 # -------------------
 # Benchmark collector fixture
 # -------------------
@@ -73,6 +84,7 @@ def benchmark_results():
     if results:
         df = pd.DataFrame(results)
         df['label'] = df.apply(lambda row: f"{int(row['n']):,} rows \n{row['iters']} iters", axis=1)
+        #print('\ndf_plot:\n', df)
 
     
     sns.set_theme(style="whitegrid")
@@ -119,12 +131,14 @@ def benchmark_results():
 @pytest.mark.parametrize("model_label, model_fixture_name", [
     ("pandas", "build_pandas_model"),
     ("vec1", "build_vec1_model"),
-    ("vec2", "build_vec2_model")
+    ("vec2", "build_vec2_model"),
+    ("vec1_2", "build_vec1_2_model")
 ])
 def test_model_performance_and_output(request, model_label, model_fixture_name, benchmark_results, init_df):
     global pandas_result
-    _, n = init_df  #retrieve n value
+    _, n = init_df  #retrieve n value, used in benchmark_results
     
+    #print('\ndata:\n', _, '\nn_value:', n)
     print("\n=== Running test for model:", model_label, "===")
 
     # Load the model using the name of the fixture
@@ -155,22 +169,22 @@ def test_model_performance_and_output(request, model_label, model_fixture_name, 
         "model": model_label,
         "time_sec": runtime,
         "peak_memory_mb": peak_mb,
-        "n" : n,
+        "n" : len(model.init_state), #n,
         "iters": iters
     })
 
     # Output comparison
     if model_label == "pandas":
         #print("\n=== Pandas Model full_epi ===")
-        #print(model.full_epi)
-        pandas_sorted = model.full_epi.sort_values(by=['T', 'InfState'], ascending=[True, True]) #sort values before comparing pandas and array result to make sure the order of N lines up
+        #print('pandas epi\n', model.full_epi)
+        pandas_sorted = model.full_epi.sort_values(by=['T', 'InfState', 'N'], ascending=[True, True, True]) #sort values before comparing pandas and array result to make sure the order of N lines up
         #pandas_result = model.full_epi['N'].round(3).values
         pandas_result = pandas_sorted['N'].round(3).values
     else:
         #arr = model._covnert_list_of_arrays_to_df(model._full_epi_list)['N'].round(3).values
-        arr_sorted = model._covnert_list_of_arrays_to_df(model._full_epi_list).sort_values(by=['T', 'InfState'], ascending=[True, True]) #sort values before comparing pandas and array result to make sure the order of N lines up
+        arr_sorted = model._covnert_list_of_arrays_to_df(model._full_epi_list).sort_values(by=['T', 'InfState', 'N'], ascending=[True, True, True]) #sort values before comparing pandas and array result to make sure the order of N lines up
         #print(f"\n=== {model_label} Model full_epi ===")
-        #print(model._covnert_list_of_arrays_to_df(model._full_epi_list))
+        #print('arr epi\n', model._covnert_list_of_arrays_to_df(model._full_epi_list))
         #assert np.allclose(arr, pandas_result, rtol=1e-3), f"{model_label} does not match pandas model"
         arr_result = arr_sorted['N'].round(3).values
         assert np.array_equal(arr_result, pandas_result), "Values do not match after rounding"
