@@ -13,7 +13,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
 
     Attributes:
         column: single column that we will check states against. Changing columns to column based on the AgingPopulation example.
-        all_states: all the states of single column. All the state values are required as input, otherwise the encoding logic cannot assign the correct mapping.
+        column_states: all the states of single column. All the state values are required as input, otherwise the encoding logic cannot assign the correct mapping.
         target_states: targeted states of single column.
         rate: the rate at whihc people will die from.
         stochastic: whether the process is stochastic or deterministic.
@@ -27,7 +27,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
     })
 
     column = 'InfState' #one column only
-    all_states = ['I', 'R', 'S']
+    column_states = ['I', 'R', 'S']
     target_states = ['I', 'S'] #values from single column
 
     selected_data = pd.DataFrame({
@@ -38,7 +38,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
     """
 
     column: str = Field(description = "one column that we will check states against.")
-    all_states: list[str] = Field(description = "all the states of single column.")
+    column_states: list[str] = Field(description = "all the states of single column.")
     target_states: list[str] = Field(description = "targeted states to be processed of single column.")
     rate: float = Field(ge=0, description = "the rate at whihc people will die from.")
     stochastic: bool = Field(default=False, description = "whether the transition is stochastic or deterministic.")
@@ -47,7 +47,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
     #_columns_code: list[str] | None = PrivateAttr(default_factory=list) #not needed given it is single column
     _states_code: list[str] | None = PrivateAttr(default_factory=list)
 
-    @field_validator("all_states", "target_states", mode="before") #validate list type
+    @field_validator("column_states", "target_states", mode="before") #validate list type
     @classmethod
     def validate_list(cls, list_parameters, field: ValidationInfo):
         """Ensure the input is a list."""
@@ -56,8 +56,8 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         return list_parameters
     
     def model_post_init(self, _):
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #for InfState column mapping only
-        states_sorted = sorted(self.all_states)
+        #infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #for InfState column mapping only, not used for this rule
+        states_sorted = sorted(self.column_states)
         colstate_to_int = {s: i for i, s in enumerate(states_sorted)} #for the single column mapping
         self._states_code = [colstate_to_int[state] for state in states_sorted if state in self.target_states] #encoded column states
         
@@ -128,3 +128,8 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
     @property
     def infstate_all(self) -> list[str]: 
         return self.infstate_compartments
+    
+    #set up a property to return all the required states used in general column
+    @property
+    def column_all(self) -> list[str]: 
+        return self.column_states
