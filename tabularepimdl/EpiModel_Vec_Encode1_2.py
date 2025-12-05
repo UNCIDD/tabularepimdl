@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 from tabularepimdl.Rule import Rule
 from typing import Iterable
 
-
+#Vec_Encode_1_2 is derived from Vec_Encode_1, it moves the buffer pre-allocation inside do_timestep()
 class EpiModel_Vec_Encode_1_2(BaseModel):
     """! Class that that applies a list of rules to a changing current state through 
     some number of time steps to produce an epidemic. It has attributes representing the initial state,
@@ -97,6 +97,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         """
         Initialization of init_state column order, internal attributes, current_state_arrays and full_epi_array.
         """
+        #self._init_state_column_names_upper_case() #convert all column names of init_state to lowercase
         self._init_state_column_values_grouping() #grouping init_state column values
         self._init_state_column_order_shuffle() #shuffle init_state column order
         self._update_col_domain_values_from_rules() #update each rule's selected column's unique domain values
@@ -104,6 +105,11 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         self._convert_init_df_to_cur_arrays() #initalize current_state_array only
         self._save_initial_current_state_array()
         self._initalize_full_epi_array() #initalize full_epi_array only
+
+    #def _init_state_column_names_upper_case(self): #new addtion, 12/4, this requires all rules to convert their values to upper case, not efficient
+    #    """Convert all column names of init_state to lowercase."""
+    #    self.init_state.columns = self.init_state.columns.str.upper()
+        #print(self.init_state)
 
 
     def _init_state_column_values_grouping(self):
@@ -167,27 +173,41 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
             for rule in ruleset:
                 rule_field_name_set = list(rule.model_fields_set) #return the set of fields that have been explicitly set on the rule instance
                 
+                #new addtion 12/4, before going through all attributes, checking if input data has 'infstate' column and update its domain values
+                if 'infstate'.lower() in (k.lower() for k in self._domains.keys()): #if 'infstate' is a col name in init_state dataframe
+                    #print('infstate is in keys')
+                    try:
+                        infstate_all_compartments = getattr(rule, 'infstate_all')
+                        #print('infstate full:', infstate_all_compartments)
+                    except Exception:
+                        infstate_all_compartments = None
+
+                    if infstate_all_compartments: #a rule has infstate_all property
+                        if isinstance(infstate_all_compartments, (list, set, tuple, Iterable)):
+                            self._domains['InfState'].update(infstate_all_compartments) #to-do: case-sensitive InfState, may need to line up case-sensitivity across engine and rules
+
                 for attribute_name in rule_field_name_set: #iterate all attributes that have been explicitly set in the rule instance
+                    #print('attribute name:', attribute_name)
                     if 'col' not in attribute_name.lower(): #search keyword 'col' in rule's attribute names
                         continue
 
                     try:
                         attribute_value = getattr(rule, attribute_name) #if attribute_name has 'col', then obtain its value
-                        #print(attribute_name, 'value :', attribute_value)
+                        #print('attribute_name\'s value :', attribute_value)
                     except Exception:
                         continue
-
+                    
                     # Normalize: always work with a list of column names
                     if isinstance(attribute_value, str):
-                        col_names = [attribute_value]
+                        attribute_value_list = [attribute_value]
                     elif isinstance(attribute_value, list):
-                        col_names = attribute_value
+                        attribute_value_list = attribute_value
                     else:
                         raise ValueError(f"Expect attribute value to be a string or list, received {type(attribute_value)}.")
-                        
+                    #print('attribute value list:', attribute_value_list)    
                     
-                    for col in col_names:
-                        data_col_name = self._match_domain_key(col_name = col) #check if attribute value exists in domain keys
+                    for value in attribute_value_list:
+                        data_col_name = self._match_domain_key(col_name = value) #check if attribute value exists in domain keys
                         #print('found data col name in domain:', data_col_name)
 
                         if data_col_name is None: #attribute name has 'col' but its value is not in domain keys
@@ -200,11 +220,11 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
                             except Exception:
                                 infstate_all_compartments = None
 
-                            if infstate_all_compartments:
+                            if infstate_all_compartments: #a rule has infstate_all property
                                 if isinstance(infstate_all_compartments, (list, set, tuple, Iterable)):
                                     self._domains[data_col_name].update(infstate_all_compartments)
                                     #print('domain_values:', self._domains)
-
+                       
                         else: #Generic case: look for property named "<data_col_name>_all"
                             property_name = f"{attribute_name}_all"
                             if hasattr(rule, property_name):
@@ -344,11 +364,15 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         
         for ruleset in self.rules:
             ruleset_deltas_list = []
+            #every ruleset will have its own pre-allocated buffer
+            n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
+            n_cols = self.current_state_array.shape[1]
+            self._current_result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
             for rule in ruleset:
                 #print('current rule:', rule)
-                n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
-                n_cols = self.current_state_array.shape[1]
-                self._current_result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
+                #n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
+                #n_cols = self.current_state_array.shape[1]
+                #self._current_result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
                 
                 #print('in rule Before loop preallocation buffer\n', self._current_result_preallocation)
                 if self.stoch_policy == "rule_based":
@@ -363,7 +387,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
                 #print('after append, ruleset_deltas_list\n', ruleset_deltas_list)
 
             if len(ruleset_deltas_list) == 0: #if no data added to ruleset_deltas_list, go to next ruleset
-                #print('go to next ruleset')
+                #print('list is empty, go to next ruleset')
                 continue
 
             ruleset_deltas_list.append(self.current_state_array) #add current_state_array to the list
