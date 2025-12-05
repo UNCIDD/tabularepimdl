@@ -28,7 +28,7 @@ class StateBasedDeathProcessRunner(BaseModel):
     iterations: list[int]
     column: str
     columns: list[str]
-    all_states: list[str]
+    column_states: list[str]
     target_states: list[str]
     rate: float
     stochastic: bool = False
@@ -81,7 +81,7 @@ class StateBasedDeathProcessRunner(BaseModel):
                         structure=struct,
                         column=self.column,
                         columns=self.columns,
-                        all_states=self.all_states,
+                        column_states=self.column_states,
                         target_states=self.target_states,
                         rate=self.rate,
                         stochastic=self.stochastic,

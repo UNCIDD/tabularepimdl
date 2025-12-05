@@ -22,7 +22,7 @@ class StateBasedDeathProcessDispatcher(BaseModel):
     structure: Literal["Pandas", "Numpy_Encode"] = Field(description="data structure used for rules.")
     column: str = Field(description = "one column that we will check states against in StateBasedDeathProcess_Vec_Encode.")
     columns: list[str] = Field(description = "one or more columns that we will check states against in StateBasedDeathProcess.")
-    all_states: list[str] = Field(description = "all the states of single column.")
+    column_states: list[str] = Field(description = "all the states of single column.")
     target_states: list[str] = Field(description = "targeted states to be processed of each column.")
     #states: list[str] = Field(description = "the states of each column.")
     rate: float = Field(ge=0, description = "the rate at whihc people will die from.")
@@ -43,7 +43,7 @@ class StateBasedDeathProcessDispatcher(BaseModel):
         elif self.structure == 'Numpy_Encode':
             self._dispatcher = StateBasedDeathProcess_Vec_Encode(
                 column=self.column,
-                all_states=self.all_states,
+                column_states=self.column_states,
                 target_states=self.target_states,
                 rate=self.rate,
                 stochastic=self.stochastic,

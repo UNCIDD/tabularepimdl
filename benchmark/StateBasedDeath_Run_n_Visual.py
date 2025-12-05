@@ -17,7 +17,7 @@ def StateBasedDeath_Run_n_Visual():
         iterations= [700],#[100, 300, 500, 700],
         column='AgeCat',
         columns=['AgeCat', 'AgeCat'],
-        all_states=All_States_List(),
+        column_states=All_States_List(),
         target_states=['0.0 to 4.0', '70+'],
         rate=0.2,
         stochastic=False,
