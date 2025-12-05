@@ -31,6 +31,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
     inf_to: str
     freq_dep: bool = True
     stochastic: bool = False
+    column_categories: list[str]
     infstate_compartments: list[str]
 
     _s_code: int | None = PrivateAttr(default=None)
@@ -38,10 +39,16 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
     _inf_to_code: int | None = PrivateAttr(default=None)
 
     def model_post_init(self, _):
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
-        self._s_code = infstate_to_int.get(self.s_st)
-        self._i_code = infstate_to_int.get(self.i_st)
-        self._inf_to_code = infstate_to_int.get(self.i_st) #inf_to code might be defined in infstate_compartments as well if needed
+        if self.column.lower() == 'infstate': #column is infection state
+            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
+            self._s_code = infstate_to_int.get(self.s_st)
+            self._i_code = infstate_to_int.get(self.i_st)
+            self._inf_to_code = infstate_to_int.get(self.i_st) #inf_to code might be defined in infstate_compartments as well if needed
+        else: #column is other attribute
+            col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.column_categories))}  #encode infstate strings to integers {'0 to 4': 0, '5 to 9': 1}
+            self._s_code = col_cat_to_int.get(self.s_st)
+            self._i_code = col_cat_to_int.get(self.i_st)
+            self._inf_to_code = col_cat_to_int.get(self.i_st)
         
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
@@ -128,3 +135,8 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
     @property
     def infstate_all(self) -> list[str]: 
         return self.infstate_compartments
+    
+    #set up a property to return all the required categories used in general column
+    @property
+    def column_all(self) -> list[str]: 
+        return self.column_categories
