@@ -97,7 +97,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         """
         Initialization of init_state column order, internal attributes, current_state_arrays and full_epi_array.
         """
-        #self._init_state_column_names_upper_case() #convert all column names of init_state to lowercase
+        #self._init_state_column_names_upper_case() #convert all column names of init_state to lowercase, this will cause many string handling changes in rules, not implement it for now
         self._init_state_column_values_grouping() #grouping init_state column values
         self._init_state_column_order_shuffle() #shuffle init_state column order
         self._update_col_domain_values_from_rules() #update each rule's selected column's unique domain values
