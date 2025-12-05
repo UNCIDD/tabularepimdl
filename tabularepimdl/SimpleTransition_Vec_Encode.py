@@ -18,6 +18,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     @param to_st: the state that column transitions to.
     @param rate: transition rate per unit time.
     @param stochastic: whether the process is stochastic or deterministic.
+    @param column_compartments: the compartments used for parameter column. E.g column_compartments = ['0 to 4', '5 to 9', '10-14']
     @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R']. 
     @param _from_code: encoded from_st.
     @param _to_code: encoded to_st.
@@ -27,22 +28,27 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     to_st: str
     rate: Annotated[float, Field(ge=0)]
     stochastic: bool = False
+    column_categories: list[str]
     infstate_compartments: list[str]
 
     _from_code: int | None = PrivateAttr(default=None)
     _to_code: int | None = PrivateAttr(default=None)
 
     def model_post_init(self, _):
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
-        self._from_code = infstate_to_int.get(self.from_st)
-        self._to_code = infstate_to_int.get(self.to_st)
-        
+        if self.column.lower() == 'infstate': #column is infection state
+            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
+            self._from_code = infstate_to_int.get(self.from_st)
+            self._to_code = infstate_to_int.get(self.to_st)
+        else: #column is other attribute
+            col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.column_categories))}  #encode infstate strings to integers {'0 to 4': 0, '5 to 9': 1}
+            self._from_code = col_cat_to_int.get(self.from_st)
+            self._to_code = col_cat_to_int.get(self.to_st)
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         @param current_state: a numpy array (at the moment) representing the current epidemic state. Must include population values (e.g. 'N' values).
         @param dt: size of the timestep.
-        @param: Add additional parameters...
+        @param: Add additional parameters...stochastic, dt
         @param col_idx_map: mapping of input data columns and their column index. E.g. col_idx_map = {'InfState' : 0, 'N': 1}
         @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. E.g. result_buffer = np.empty((2 * count, ncols), dtype=current_state.dtype)
         return: an array containing changes in from_st and to_st.
@@ -53,16 +59,20 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         infstate_idx = col_idx_map[self.column]
         n_idx = col_idx_map['N']
         #print('input array\n', current_state)
+        #print('infstate idx:', infstate_idx, 'n idx:', n_idx)
         #print('_from_code:', self._from_code, '_to_code:', self._to_code)
 
         # Fast boolean mask for matching from-state
         mask = current_state[:, infstate_idx] == self._from_code
+        #print('mask:', mask)
         if not np.any(mask):
+            print('empty return')
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
             
+            
         # Get indices where mask is true (faster than slicing twice)
-        from_row_idxs = np.flatnonzero(mask)
-        selected_from = current_state[from_row_idxs, :]
+        #from_row_idxs = np.flatnonzero(mask) #redundant code
+        selected_from = current_state[mask, :]
         #print('selected_from\n', selected_from)
         N = selected_from[:, n_idx] #equivalent: current_state[from_row_idxs, n_idx]
         #print('from_code N:', N)
@@ -77,13 +87,15 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
             changed_N = -N * rate_const
         #print('change_N:', changed_N)
 
-        count = len(from_row_idxs)
+        count = selected_from.shape[0]#len(from_row_idxs)
+        #print('count:', count)
         #ncols = current_state.shape[1] #move num of columns out of class for now
 
         # Preallocate result: 2 rows per event (from & to)
         #result = np.empty((2 * count, ncols), dtype=current_state.dtype) #move pre-allocation out of class for now
 
         # Fill 'from' rows
+        #print('result_buffer:\n', result_buffer)
         result_buffer[:count, :] = selected_from #equivalent: self._from_code
         result_buffer[:count, n_idx] = changed_N  #update column N with changed_N (negative value)
 
@@ -108,3 +120,8 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     @property
     def infstate_all(self) -> list[str]: 
         return self.infstate_compartments
+    
+    #set up a property to return all the required categories used in general column
+    @property
+    def column_all(self) -> list[str]: 
+        return self.column_categories
