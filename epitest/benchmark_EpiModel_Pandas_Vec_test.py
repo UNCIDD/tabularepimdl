@@ -25,6 +25,7 @@ iters = 10
 infection_rate = 0.2
 transition_rate = 0.25
 infstate_compartments = ['S', 'I', 'R']
+column_compartments =  ['S', 'I', 'R']
 
 # Store expected output globally for reuse
 #pandas_result = None
@@ -45,8 +46,8 @@ def build_pandas_model(init_df):
 def build_vec1_model(init_df):
     """EpiModel Vec version 1"""
     init_state, _ = init_df
-    infect_rule_vec = SimpleInfection_Vec_Encode(beta=infection_rate, column='InfState', s_st='S', i_st='I', inf_to='I', infstate_compartments=infstate_compartments)
-    recover_rule_vec = SimpleTransition_Vec_Encode(column='InfState', from_st='I', to_st='R', rate=transition_rate, infstate_compartments=infstate_compartments)
+    infect_rule_vec = SimpleInfection_Vec_Encode(beta=infection_rate, column='InfState', s_st='S', i_st='I', inf_to='I', infstate_compartments=infstate_compartments, column_categories=column_compartments)
+    recover_rule_vec = SimpleTransition_Vec_Encode(column='InfState', from_st='I', to_st='R', rate=transition_rate, infstate_compartments=infstate_compartments, column_categories=column_compartments)
     determ_epi_mdl_vec1 = EpiModel_Vec_Encode_1(init_state = init_state ,rules=[[infect_rule_vec, recover_rule_vec]], compartment_col = 'InfState')
 
     return determ_epi_mdl_vec1
@@ -55,8 +56,8 @@ def build_vec1_model(init_df):
 def build_vec2_model(init_df):
     """EpiModel Vec version 2"""
     init_state, _ = init_df
-    infect_rule_vec = SimpleInfection_Vec_Encode(beta=infection_rate, column='InfState', s_st='S', i_st='I', inf_to='I', infstate_compartments=infstate_compartments)
-    recover_rule_vec = SimpleTransition_Vec_Encode(column='InfState', from_st='I', to_st='R', rate=transition_rate, infstate_compartments=infstate_compartments)
+    infect_rule_vec = SimpleInfection_Vec_Encode(beta=infection_rate, column='InfState', s_st='S', i_st='I', inf_to='I', infstate_compartments=infstate_compartments, column_categories=column_compartments)
+    recover_rule_vec = SimpleTransition_Vec_Encode(column='InfState', from_st='I', to_st='R', rate=transition_rate, infstate_compartments=infstate_compartments, column_categories=column_compartments)
     determ_epi_mdl_vec2 = EpiModel_Vec_Encode_2(init_state = init_state ,rules=[[infect_rule_vec, recover_rule_vec]], compartment_col = 'InfState')
 
     return determ_epi_mdl_vec2
@@ -65,8 +66,8 @@ def build_vec2_model(init_df):
 def build_vec1_2_model(init_df):
     """EpiModel Vec version 1_2"""
     init_state, _ = init_df
-    infect_rule_vec = SimpleInfection_Vec_Encode(beta=infection_rate, column='InfState', s_st='S', i_st='I', inf_to='I', infstate_compartments=infstate_compartments)
-    recover_rule_vec = SimpleTransition_Vec_Encode(column='InfState', from_st='I', to_st='R', rate=transition_rate, infstate_compartments=infstate_compartments)
+    infect_rule_vec = SimpleInfection_Vec_Encode(beta=infection_rate, column='InfState', s_st='S', i_st='I', inf_to='I', infstate_compartments=infstate_compartments, column_categories=column_compartments)
+    recover_rule_vec = SimpleTransition_Vec_Encode(column='InfState', from_st='I', to_st='R', rate=transition_rate, infstate_compartments=infstate_compartments, column_categories=column_compartments)
     determ_epi_mdl_vec1_2 = EpiModel_Vec_Encode_1_2(init_state = init_state ,rules=[[infect_rule_vec, recover_rule_vec]], compartment_col = 'InfState')
 
     return determ_epi_mdl_vec1_2
