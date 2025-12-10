@@ -134,13 +134,13 @@ class WAIFWTransmission(Rule, BaseModel):
         
         inf_array = self.compute_infection_array(infected_group_codes, infected_weights, num_of_categories) #numba approach
 
-        print('inf_array is\n', inf_array) #debug
+        #print('inf_array is\n', inf_array) #debug
 
         #prI = np.power(np.exp(-dt*self.waifw_matrix), inf_array)
         #prI = 1-prI.prod(axis=1)
         
         prI = self.compute_prI(self.waifw_matrix, inf_array, dt) #numba approach
-        print('prI:', prI)
+        #print('prI:', prI)
 
         ##get folks in susceptible states which link to all unique groups
         is_susceptible = current_state[self.inf_col] == self.s_st
@@ -151,7 +151,7 @@ class WAIFWTransmission(Rule, BaseModel):
         #infectious process, getting the number of individuals who get infected from susceptible status
         susceptible_group_codes = present_category_codes[is_susceptible.to_numpy()]
         prI_per_group = prI[susceptible_group_codes]
-        print('prI per group:', prI_per_group)
+        #print('prI per group:', prI_per_group)
 
         if not stochastic:
             deltas["N"] = -deltas["N"] * prI_per_group
