@@ -79,12 +79,17 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
 
     #initial current_state_array, used to save the converted initial current_state_array
     _initial_current_state_array: np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) 
+
+    #new data flag, used for identifying if the added new data to current state has value changed or remained
+    _new_data_flag: bool = PrivateAttr(default=True)
+    _previous_data_copy: pd.DataFrame = PrivateAttr(default_factory=pd.DataFrame) #a dataframe for saving previous new data
+    _new_data_array:  np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) #an array for saving the converted added dataframe and avoid NameError
     
     @field_validator("init_state", mode="before") #by default, column N and T should be numerical values, if not then should raise ValueError and let users check
     @classmethod
     def validate_init_state(cls, initial_state) -> pd.DataFrame: 
         if not isinstance(initial_state, pd.DataFrame): #check if init_state is a dataFrame
-            raise TypeError(f"Expected a DataFrame, but got {type(initial_state).__name__} instead.")
+            raise TypeError(f"Expected a DataFrame, received {type(initial_state).__name__} instead.")
         required_cols = {'N', 'T'}
         missing = required_cols - set(initial_state.columns)
         if missing: #check if column T and N are in the dataframe
@@ -97,55 +102,57 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         """
         Initialization of init_state column order, internal attributes, current_state_arrays and full_epi_array.
         """
-        #self._init_state_column_names_upper_case() #convert all column names of init_state to lowercase, this will cause many string handling changes in rules, not implement it for now
-        self._init_state_column_values_grouping() #grouping init_state column values
-        self._init_state_column_order_shuffle() #shuffle init_state column order
-        self._update_col_domain_values_from_rules() #update each rule's selected column's unique domain values
-        self._setup_internal_attributes() #set up all internal attributes
-        self._convert_init_df_to_cur_arrays() #initalize current_state_array only
+        #self.init_state.columns = self._init_state_column_names_upper_case(input_data=self.init_state) #convert all column names of init_state to lowercase, this will cause many string handling changes in rules, not implement it for now
+        self.init_state = self._input_data_column_order_shuffle(input_data=self.init_state) #shuffle init_state column order
+        #print('shuffle init state\n', self.init_state) #debug
+        self.init_state = self._input_data_column_values_grouping(input_data=self.init_state) #grouping init_state column values
+        #print('after grouping init state\n', self.init_state) #debug
+        
+        self._update_col_domain_values_from_rules(input_data=self.init_state) #update each rule's selected column's unique domain values
+        self._setup_internal_attributes(input_data=self.init_state) #set up all internal attributes
+        self.current_state_array = self._convert_input_data_to_arrays(input_data=self.init_state) #initalize current_state_array only
+        #print('init state\n', self.init_state)
+        #print('initial converted current state array\n', self.current_state_array)
         self._save_initial_current_state_array()
         self._initalize_full_epi_array() #initalize full_epi_array only
 
-    #def _init_state_column_names_upper_case(self): #new addtion, 12/4, this requires all rules to convert their values to upper case, not efficient
+    #def _init_state_column_names_upper_case(self, input_data: pd.DataFrame): #new addtion, 12/4, this requires all individual rules to convert their values to upper case, not efficient
     #    """Convert all column names of init_state to lowercase."""
-    #    self.init_state.columns = self.init_state.columns.str.upper()
-        #print(self.init_state)
+    #    return input_data.columns.str.upper()
+    #    print(input_data.columns.str.upper())
 
+    def _input_data_column_order_shuffle(self, input_data: pd.DataFrame):
+        """
+        Move column N and T to the last two columns in init_state before all internal attributes and data processing steps occure.
+        """
+        cols = input_data.columns.tolist()
 
-    def _init_state_column_values_grouping(self):
+        # Define the target columns to move
+        cols_to_move = ['N', 'T']
+
+        # Filter out the columns_to_move from the list and sort the remaining columns alphabetically
+        remaining_cols = sorted([col for col in cols if col not in cols_to_move])
+
+        # Build the new column order
+        new_col_order = remaining_cols + cols_to_move
+
+        # Reorder the DataFrame init_state
+        return input_data[new_col_order]
+    
+
+    def _input_data_column_values_grouping(self, input_data: pd.DataFrame):
         """
         Grouping each column of init_state and aggregate column N and T in case the input raw data has duplicate rows.
         This ensures rules that have categorical column(s) can accurately check the input raw data aginst their input categories.
         """
         #collect column names for aggregating columns and rest grouping columns
         self._agg_cols = {'N', 'T'}
-        self._grouping_cols = [c for c in self.init_state.columns if c not in self._agg_cols]
+        self._grouping_cols = [c for c in input_data.columns if c not in self._agg_cols]
         #print('grouping col:', self._grouping_cols)
         #print('before grouping init state\n', self.init_state) #debug
         #grouping column values, only the categories that are actually present in the data will be included in the groups.
-        self.init_state = self.init_state.groupby(self._grouping_cols, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
-        #print('after grouping init state\n', self.init_state) #debug
-
-
-    def _init_state_column_order_shuffle(self):
-        """
-        Move column N and T to the last two columns in init_state before all internal attributes and data processing steps occure.
-        """
-        cols = self.init_state.columns.tolist()
-
-        # Define the target columns to move
-        cols_to_move = ['N', 'T']
-
-        # Filter out the columns to move from the list (preserves order of others)
-        remaining_cols = [col for col in cols if col not in cols_to_move]
-
-        # Build the new column order
-        new_col_order = remaining_cols + cols_to_move
-
-        # Reorder the DataFrame init_state
-        self.init_state = self.init_state[new_col_order]
-        #print('shuffle init state\n', self.init_state) #debug
-
+        return input_data.groupby(self._grouping_cols, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
+        
 
     def _match_domain_key(self, col_name: str) -> str | None:
         """Case-insensitive lookup: return the matching key for column names of input data or None."""
@@ -158,7 +165,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         return None
 
 
-    def _update_col_domain_values_from_rules(self) -> None:
+    def _update_col_domain_values_from_rules(self, input_data: pd.DataFrame) -> None:
         """
         Walk through rules list and update each rule's selected column's unique domain values in place.
 
@@ -166,7 +173,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         that include keyword 'col' in the attribute name will be inspected.
         """
         #unique domain values per grouping column (excludes N and T) in init_state
-        self._domains = {col: set(self.init_state[col].astype(str).tolist()) for col in self._grouping_cols}
+        self._domains = {col: set(input_data[col].astype(str).tolist()) for col in self._grouping_cols}
         #print('initial domain value:', self._domains)
         #collect domain values that exist in each rule's properties but not in init_state data columns
         for ruleset in self.rules:
@@ -242,7 +249,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         #print('final domains per column:', self._domains) #debug
 
 
-    def _setup_internal_attributes(self):
+    def _setup_internal_attributes(self, input_data: pd.DataFrame):
         """
         Set up internal attributes with values from init_state and rule list.
         """
@@ -268,7 +275,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         #print('inverse grouping col map:', self._inverse_grouping_col_map)
 
         #fetch column order of init_state
-        self._init_state_col_order = [col for col in self.init_state.columns] #get all column names into a list, e.g. ['InfState', 'N', 'T']
+        self._init_state_col_order = [col for col in input_data.columns] #get all column names into a list, e.g. ['InfState', 'N', 'T']
         self._col_idx_map = {col: i for i, col in enumerate(self._init_state_col_order)} #e.g. {'Location': 0, 'Age': 1, 'InfState': 2, 'N': 3, 'T': 4}
         #print('col_idx_map:', self._col_idx_map) #debug
 
@@ -281,7 +288,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         #print('_infsate_idx:', self._infstate_idx, '_n_idx:', self._n_idx, '_t_idx:', self._t_idx, '_grouping_col_idx:', self._grouping_col_idx)
         
 
-    def _convert_init_df_to_cur_arrays(self) -> np.ndarray: #might be benificial to add array args to the method and return current_state and full_epi
+    def _convert_input_data_to_arrays(self, input_data: pd.DataFrame) -> np.ndarray: #might be benificial to add array args to the method and return current_state and full_epi
         """
         Convert init_state dataframe to numpy array. Save the array to current_state_array.
         """
@@ -300,22 +307,22 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         encoded_columns = [] #to save each grouping column's converted array based on the column values
         for col in self._init_state_col_order:
             if col in self._grouping_col_map: #process grouping cols
-                col_array = self.init_state[col].map(self._grouping_col_map[col]).to_numpy()
+                col_array = input_data[col].map(self._grouping_col_map[col]).to_numpy()
             else: #process column N, T
-                col_array = self.init_state[col].to_numpy()
+                col_array = input_data[col].to_numpy()
             encoded_columns.append(col_array)
         
         if encoded_columns: #check encoded columns empty or not and convert all values to float64
-            self.current_state_array = np.column_stack(encoded_columns).astype(np.float64)
+            return np.column_stack(encoded_columns).astype(np.float64)
         else:
-            self.current_state_array = np.empty((0, len(self._init_state_col_order)), dtype=np.float64)
+            return np.empty((0, len(self._init_state_col_order)), dtype=np.float64)
 
         #pre-allocation of result array -- to be checked/verified ##=== MOVE pre-allocation into do_timestep()===##
         #n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
         #n_cols = self.current_state_array.shape[1]
         #self._current_result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
         #print('initial preallocation buffer\n', self._current_result_preallocation)
-        return self.current_state_array #return current_state_array only
+        #return self.current_state_array #return current_state_array only
     
     def _save_initial_current_state_array(self) -> np.ndarray:
             """
@@ -355,7 +362,69 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         self.current_state_array = self._initial_current_state_array.copy()
         self._initalize_full_epi_array()
 
-    def do_timestep(self, dt: int | float =1.0):
+
+    def add_new_data_to_current_state(self, new_data: pd.DataFrame) -> np.ndarray:
+        """
+        Add new data to the current state of epidemics. The input is dataframe, the output is numpy array.
+        @param new_data: new data point to be used in simulations such as a new infected person.
+        return: a numpy array containing the current state plus the new data.
+        """
+        #verify if the input data is a dataframe
+        if not isinstance(new_data, pd.DataFrame):
+            raise TypeError(f"Expected a DataFrame, recieved {type(new_data).__name__} instead.")
+        
+        #verify if the input data has the same number of columns as the init_state
+        if len(new_data.columns) != len(self.init_state.columns): #init_state is used within this method directly as the method only takes parameter new_data input
+            raise ValueError(f"Expected {len(self.init_state.columns)} columns in new_data, received {len(new_data.columns)}.")
+
+        #verify if the new data has the exact column names as init_state
+        cols_new = set(new_data.columns.str.lower())
+        cols_init = set(self.init_state.columns.str.lower())
+
+        if cols_new != cols_init:
+            missing_in_new = cols_init - cols_new
+            extra_in_new = cols_new - cols_init
+
+            raise ValueError(
+                "Column name mismatch (case-insensitive) between new data and initial state.\n"
+                f"Missing in new data: {sorted(missing_in_new)}.\n"
+                f"Extra in new data: {sorted(extra_in_new)}."
+            )
+        
+        #check if the current new data is the same as the previous new data copy. 
+        #If no, then update the previous new data copy. If yes, flip the new_data_flag to False.
+        if not self._previous_data_copy.equals(new_data):
+            self._new_data_flag = True #yes, new data
+            #print('not same, it is new data.')
+            self._previous_data_copy = new_data.copy() #save new_data
+        else:
+            self._new_data_flag = False #not new data or an empty new_data equals to the initial empty previous_data_copy
+   
+        if self._new_data_flag: #yes, new data comes
+            new_data = self._input_data_column_values_grouping(input_data = new_data) #grouping new_data column values
+            #print('after grouping new data\n', new_data) #debug
+            new_data = self._input_data_column_order_shuffle(input_data = new_data) #shuffle new_data column order
+            #print('new data frame\n', new_data) #debug
+            #convert input new data to array and save it
+            self._new_data_array = self._convert_input_data_to_arrays(input_data = new_data)
+            #print('new data array\n', self._new_data_array)
+            #print('current state array\n', self.current_state_array)
+            #flip new_data_flag to False and add new data to current_state_array
+            self._new_data_flag = False
+            self.current_state_array = np.vstack([self.current_state_array, self._new_data_array])
+            #print('vec after adding new data, current array\n', self.current_state_array)
+        
+        else: #not new data, it is the same as previous data, can use the saved new_data_array if this array is not empty
+            if self._new_data_array.size != 0:
+                self.current_state_array = np.vstack([self.current_state_array, self._new_data_array])
+            else:
+                pass
+
+        return self.current_state_array
+        
+
+
+    def do_timestep(self, dt: int | float =1.0) -> np.ndarray:
         """
         Does a timestep process, updating the epidemic current state by applying each epidemic rule to the current state data.
         If in cycles of simulation, appends each iteration's current state to the full epidemic history.
@@ -363,6 +432,8 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         """
         
         for ruleset in self.rules:
+            #print('vec current ruleset:', ruleset)
+            #print('vec current state\n', self.current_state_array)
             ruleset_deltas_list = []
             #every ruleset will have its own pre-allocated buffer
             n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
@@ -370,9 +441,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
             self._current_result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
             for rule in ruleset:
                 #print('current rule:', rule)
-                #n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
-                #n_cols = self.current_state_array.shape[1]
-                #self._current_result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
+                
                 
                 #print('in rule Before loop preallocation buffer\n', self._current_result_preallocation)
                 if self.stoch_policy == "rule_based":
@@ -412,12 +481,18 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
             max_col_T_per_group[:] = np.max(max_col_T_per_group) #global max T
 
             self.current_state_array = np.column_stack((unique_col_value, sum_col_N_per_group, max_col_T_per_group)) #order of cols is grouping_cols, N, T
-            #print('after grouping, cur_array\n', self.current_state_array)
+            
+            #remove all rows where column N has a value of 0
+            self.current_state_array = self.current_state_array[self.current_state_array[:, self._n_idx] != 0]
+            #print('after grouping&dropping 0s, before adding dt, current array\n', self.current_state_array)
+
+            #if ruleset is not self.rules[-1]: #debug
+            #    print('-------next ruleset--------') #debug
+            #else: print('for loop ends') #debug
 
         self.current_state_array[:, self._t_idx] = self.current_state_array[:, self._t_idx] + dt #increase T value by dt
 
-        #remove all rows where column N has a value of 0
-        self.current_state_array = self.current_state_array[self.current_state_array[:, self._n_idx] != 0]
+        
         
         #this code line may not be needed
         #self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) #T is forward with dt after each timestep iteration
