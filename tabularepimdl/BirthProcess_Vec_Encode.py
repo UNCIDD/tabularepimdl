@@ -75,7 +75,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             self._start_state_saved = True #once start state data is assigned, flip the flag to True
         else:
             pass #start state has had values saved, use it directly in the following code.
-                 #the alternative approach is to use the flag to directly return the result_buffer after the 1st time's data saving
+    
 
         count = len(self._start_state_sig)
         #print('count:', count)
