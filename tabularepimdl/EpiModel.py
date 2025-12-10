@@ -232,11 +232,13 @@ class EpiModel(BaseModel):
         #print('Epi model starts!!!') #debug
 
         for ruleset in self.rules:
-            #print('current ruleset is\n', ruleset) #debug
+            #print('pandas current ruleset is\n', ruleset) #debug
+            #print('pandas current state\n', self.cur_state)
             all_deltas = pd.DataFrame()
             #Processes cur_state and obtain all_detlas within the current ruleset
             for rule in ruleset:
                 #print('current rule is\n', rule) #debug
+                
                 if self.stoch_policy == "rule_based":
                     #print('epi model rule based') #debug
                     nw_deltas = rule.get_deltas(self.cur_state, dt = dt)
@@ -292,9 +294,9 @@ class EpiModel(BaseModel):
             #print('remove 0 rows, nw_state is\n', nw_state)
 
             self.cur_state = nw_state
-            #print('before adding dt, current_state is\n', self.cur_state) #debug
+            #print('after grouping&dropping 0s, before adding dt, current_state is\n', self.cur_state) #debug
             #if ruleset is not self.rules[-1]: #debug
-            #    print('-------next ruleset--------') #debug
+                #print('-------next ruleset--------') #debug
             #else: print('for loop ends') #debug
     
       
