@@ -82,6 +82,9 @@ class SimpleObservationProcess(Rule, BaseModel):
         
         return(pd.concat([out_of_unobs, into_incobs, out_of_incobs, into_prev]).reset_index(drop=True)) 
 
+    def __str__(self) -> str:
+        return f"SimpleObservationProcess."
+    
     def to_yaml(self) -> dict:
         """
         return the rule's attributes to a dictionary.
