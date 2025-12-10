@@ -24,6 +24,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
     stochastic: bool = Field(False, description = "whether the transition is stochastic or deterministic.")
 
     _start_state_sig: np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) #initial state configuration for new births.
+    _start_state_saved: bool = PrivateAttr(default=False) #to identify if a valid value has been assigned to _start_state_sig
     
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -50,6 +51,10 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         
         if stochastic is None:
             stochastic = self.stochastic
+
+        if current_state.size == 0: #check if the input array is empty
+            print('input array data size is zero, return empty array.')
+            return np.empty((0, current_state.shape[1]))
         
         n_idx = col_idx_map["N"]
         N = np.sum(current_state[:, n_idx])
@@ -65,7 +70,13 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             changed_N = birth_value
         #print('result buffer init\n', result_buffer)
         
-        self._start_state_sig = current_state[0:1] #obtain a 2D array with one row [0:1]
+        if not self._start_state_saved:
+            self._start_state_sig = current_state[0:1] #obtain a 2D array with one row [0:1]
+            self._start_state_saved = True #once start state data is assigned, flip the flag to True
+        else:
+            pass #start state has had values saved, use it directly in the following code.
+                 #the alternative approach is to use the flag to directly return the result_buffer after the 1st time's data saving
+
         count = len(self._start_state_sig)
         #print('count:', count)
         #print('start state\n', self._start_state_sig)
