@@ -66,7 +66,9 @@ class SimpleInfection(Rule, BaseModel):
         
         return pd.concat([deltas, deltas_add]).reset_index(drop=True)
         
-        
+    def __str__(self) -> str:
+        return f"SimpleInfection: {self.s_st} --> {self.inf_to} at rate {self.beta}"
+       
     def to_yaml(self) -> dict:
         """
         return the rule's attributes to a dictionary.

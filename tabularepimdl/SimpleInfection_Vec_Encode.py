@@ -122,6 +122,9 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
 
         return result_buffer[:2*count, :]
     
+    def __str__(self) -> str:
+        return f"SimpleInfection_Vec_Encode: {self.s_st} --> {self.inf_to} at rate {self.beta}"
+    
     def to_yaml(self) -> dict:
         """
         return the rule's attributes to a dictionary.

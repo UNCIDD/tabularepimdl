@@ -94,6 +94,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         mask_source_state_unobs = (current_state[:, infstate_idx] == self._source_state_code) & (current_state[:, obs_col_idx] == self._unobs_code)
         #print('mask source state:', mask_source_state_unobs)
         if not np.any(mask_source_state_unobs):
+            #print('empty mask')
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
         
         out_of_unobs = current_state[mask_source_state_unobs]
@@ -148,6 +149,8 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         #print('5. result buffer:\n', result_buffer[:2*count_out_Unobs+2*count_out_Incobs, :])
         return result_buffer[:2*count_out_Unobs+2*count_out_Incobs, :]
     
+    def __str__(self) -> str:
+        return f"SimpleObservationProcess_Vec_Encode."
     
     def to_yaml(self) -> dict:
         """

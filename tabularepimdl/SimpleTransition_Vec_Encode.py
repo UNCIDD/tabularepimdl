@@ -66,7 +66,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         mask = current_state[:, infstate_idx] == self._from_code
         #print('mask:', mask)
         if not np.any(mask):
-            print('empty return')
+            #print('empty return')
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
             
             
