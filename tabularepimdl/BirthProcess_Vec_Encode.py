@@ -14,6 +14,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
 
     Attributes:
         rate: Birth rate per timestep (N * rate births).
+        column: Specify which input field is used to sort the dataset in ascending order.
         stochastic: Whether the transition is stochastic.
     """
 
@@ -21,6 +22,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
       
     rate: float = Field(ge=0, description = "birth rate at per time step (where N*rate births occur).")
+    column_to_sort: str = Field(description="Specify which input field is used to sort the dataset in ascending order.")
     stochastic: bool = Field(False, description = "whether the transition is stochastic or deterministic.")
 
     _start_state_sig: np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) #initial state configuration for new births.
@@ -58,7 +60,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         
         n_idx = col_idx_map["N"]
         N = np.sum(current_state[:, n_idx])
-
+        #print('input current state\n', current_state)
         # Compute transition rate
         rate_const = 1 - np.exp(-dt * self.rate)
 
@@ -71,16 +73,24 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         #print('result buffer init\n', result_buffer)
         
         if not self._start_state_saved:
+            sort_column_index = col_idx_map[self.column_to_sort] #obtain the designated column index (e.g. AgeCat)
+
+            sort_indices = np.argsort(current_state[:, sort_column_index], axis=0) # sorts along first axis (row by row)
+            #print('sort_indices:', sort_indices)
+
+            current_state = current_state[sort_indices] #sort the input array by designated column (e.g. AgeCat)
+            #print('sorted current state\n', current_state)
+
             self._start_state_sig = current_state[0:1] #obtain a 2D array with one row [0:1]
             self._start_state_saved = True #once start state data is assigned, flip the flag to True
         else:
             pass #start state has had values saved, use it directly in the following code.
     
 
-        count = len(self._start_state_sig)
+        count = len(self._start_state_sig) #this step could be moved into if-else start_state_saved
         #print('count:', count)
-        #print('start state\n', self._start_state_sig)
-        result_buffer[count-1] = self._start_state_sig
+        #print('start_state_sig\n', self._start_state_sig)
+        result_buffer[count-1] = self._start_state_sig #this step could be moved into if-else start_state_saved
         #print('result buffer\n', result_buffer)
         result_buffer[:count, n_idx] = changed_N
 
