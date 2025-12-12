@@ -14,7 +14,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
 
     Attributes:
         rate: Birth rate per timestep (N * rate births).
-        column: Specify which input field is used to sort the dataset in ascending order.
+        column_to_sort: Specify which input field is used to sort the dataset in ascending order.
         stochastic: Whether the transition is stochastic.
     """
 
@@ -46,7 +46,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             ValueError: If the column `'N'` is missing in `current_state`.
         """
         N: float #sum of population
-
+        
         required_columns = "N" #check if column N presents in current_state
         if required_columns not in col_idx_map:
             raise ValueError(f"Missing required columns in current_state: {required_columns}")
@@ -101,9 +101,9 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         return the rule's attributes to a dictionary.
         """
         rc = {
-            'tabularepimdl.BirthProcess' : {
+            'tabularepimdl.BirthProcess_Vec_Encode' : {
                 'rate': self.rate,
-                #'start_state_sig': start_state_sig_dict,
+                'column_to_sort': self.column_to_sort,
                 'stochastic': self.stochastic
             }
         }
