@@ -15,8 +15,16 @@ from .StateBasedDeathProcess import StateBasedDeathProcess
 from .WAIFWTransmission import WAIFWTransmission
 from .WithFilters import WithFilters
 from .FunctionalTransition import FunctionalTransition
-from. SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
-from. SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
+
+####The following rules are in vectorized/numpy structure#########
+from .BirthProcess_Vec_Encode import BirthProcess_Vec_Encode
+from .SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
+from .SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
+from .SimpleObservationProcess_Vec_Encode import SimpleObservationProcess_Vec_Encode
+from .StateBasedDeathProcess_Vec_Encode import StateBasedDeathProcess_Vec_Encode
+from .WAIFWTransmission_Vec_Encode_Bincount import WAIFWTransmission_Vec_Encode_Bincount
+
 from .EpiModel_Vec_Encode2 import EpiModel_Vec_Encode_2
 from .EpiModel_Vec_Encode1 import EpiModel_Vec_Encode_1
-__version__ = "0.1.0"
+from .EpiModel_Vec_Encode1_2 import EpiModel_Vec_Encode_1_2
+__version__ = "0.2.0"
