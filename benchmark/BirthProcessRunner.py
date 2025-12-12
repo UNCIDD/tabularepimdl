@@ -24,18 +24,28 @@ class BirthProcessRunner(BaseModel):
     structures: list[str]
     iterations: list[int]
     rate: float
-    #start_state_sig: dict | pd.DataFrame #not needed in runner
+    column_to_sort: str
+    #start_state_sig: dict | pd.DataFrame #not needed in runner since a dict is given below
     stochastic: bool = False
     col_idx_map: dict[str, int] = Field(default_factory=dict)
     infstate_compartments: list[str] = Field(default_factory=list)
     
     
     time_mem_results: list[dict] = []
+    _age_all_categories: list[str] = ["0 to 4", "5 to 9", "10 to 14", "15 to 19", "20 to 24", "25 to 29", "30 to 34", \
+                                       "35 to 39", "40 to 44", "45 to 49", "50 to 54", "55 to 59", "60 to 64", "65 to 69", "70+"]
+    #_infstate_comp_map: dict[str, int] = PrivateAttr(default_factory=dict)
 
-    _infstate_comp_map: dict[str, int] = PrivateAttr(default_factory=dict)
+    #def model_post_init(self, _):
+    #    self._infstate_comp_map = {comp: i for i, comp in enumerate(sorted(self.infstate_compartments))}
 
-    def model_post_init(self, _):
-        self._infstate_comp_map = {comp: i for i, comp in enumerate(sorted(self.infstate_compartments))}
+    def encode_column_sorted(self, compartment_list, df_col):
+        #print('comp list:', compartment_list)
+        unique_vals = list(sorted(set(compartment_list)))  # Sorted to ensure consistent index, set needs to be inside sorted because the order in a set is not guranteed
+        #print('unique values:', unique_vals)
+        mapping = {val: idx for idx, val in enumerate(unique_vals)}
+        #print('mapping\n', mapping) #debug
+        return df_col.map(mapping)
 
     def run(self) -> list[dict]:
         """
@@ -49,15 +59,18 @@ class BirthProcessRunner(BaseModel):
 
             age_struct_pop = pd.DataFrame({
                 'InfState' : pd.Categorical(["S"]*size, categories=["I","R","S"]),
-                'AgeCat': ["{} to {}".format(i, i+ (age_step-1)) for i in np.arange(start_age, end_age, age_step)]+["{}+".format(end_age)],
-                'N' : 100, #each group has 100 individuals
+                'AgeCat': ["{} to {}".format(int(i), int(i+ (age_step-1))) for i in np.arange(start_age, end_age, age_step)]+["{}+".format(end_age)],
+                'N' : [10, 20, 30, 40, 50, 60,  70, 80, 90, 100, 101, 102, 103, 104, 105],
                 'T': 0
             })
 
+            age_struct_pop = age_struct_pop.sample(frac=1, random_state=3).reset_index(drop=True) #row-level random shuffle
+            #print('shuffled age_struct_pop\n', age_struct_pop)
+            
             start_state_sig_dict = {
                 'InfState': 'S',
                 'AgeCat': '0 to 4',
-                'N': 100,
+                'N': 10,
                 'T': 0
             }
             #print('age structure\n', age_struct_pop)
@@ -67,22 +80,22 @@ class BirthProcessRunner(BaseModel):
                     if struct == 'Pandas': #provide dataframe to Pandas
                         data = age_struct_pop
                     elif struct == 'Numpy_Encode': #provide true Numpy array to Numpy_Encode
-                        agecat_map = {label: idx for idx, label in enumerate((age_struct_pop['AgeCat'].unique()))}
-
-                        age_struct_pop['InfState'] = age_struct_pop['InfState'].map(self._infstate_comp_map)
-                        age_struct_pop['AgeCat'] = age_struct_pop['AgeCat'].map(agecat_map)
-                        age_array = age_struct_pop.to_numpy(dtype=np.float64)
-                        #print('age array\n', age_array)
+                        InfState_encode = self.encode_column_sorted(self.infstate_compartments, age_struct_pop['InfState'])
+                        Age_encode = self.encode_column_sorted(self._age_all_categories, age_struct_pop['AgeCat'])
+                        age_array = np.column_stack((InfState_encode, Age_encode, age_struct_pop['N'], age_struct_pop['T']))
+                        age_array = age_array.astype(np.float64) #this makes all columns a float number, it will later cause float indexing error for Numba, but WAIFW rule will convert group_col category back to integers.
+                        #print('current_state array\n', age_array)
                         n_rows = age_array.shape[0] #detect the number of rows and columns in input array
                         n_cols = age_array.shape[1]
                         result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
                     dispatcher = BirthProcessDispatcher(
                         structure=struct,
                         rate=self.rate,
+                        column_to_sort=self.column_to_sort,
                         start_state_sig = start_state_sig_dict,
                         stochastic=self.stochastic,
                     )
-                    print('dispatcher created ok\n')
+                    #print('dispatcher created ok\n')
                     if struct  == 'Pandas':
                         gc.collect()
                         tracemalloc.start() #track memory
@@ -101,7 +114,7 @@ class BirthProcessRunner(BaseModel):
                         t1 = time.perf_counter()
                         peak = tracemalloc.get_traced_memory()[1]
                         tracemalloc.stop()
-                    
+                        
                     print(f"Sample deltas for {struct}:\n{deltas}\n, data length: {len(deltas)}\n, non-zero counts: {np.count_nonzero(deltas[:, self.col_idx_map['N']] if isinstance(deltas, np.ndarray) else deltas.loc[:, 'N'])}") #debug
 
                     #concatenate each iteration's result

@@ -7,6 +7,7 @@ def BirthProcess_Run_n_Visual():
         structures= ['Pandas', 'Numpy_Encode'],
         iterations= [700],#[100, 300, 500, 700],
         rate=0.01,
+        column_to_sort = 'AgeCat',
         stochastic=False,
         col_idx_map = {'InfState': 0, 'AgeCat': 1, 'N': 2, 'T': 3},
         infstate_compartments = ['S', 'I', 'R']

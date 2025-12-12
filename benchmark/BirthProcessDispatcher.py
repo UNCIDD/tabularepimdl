@@ -19,6 +19,7 @@ class BirthProcessDispatcher(BaseModel):
     structure: Literal["Pandas", "Numpy_Encode"] = Field(description="data structure used for rules.")
     rate: float = Field(ge=0, description = "birth rate at per time step (where N*rate births occur).")
     start_state_sig: dict = Field(description = "initial state configuration for new births.")
+    column_to_sort: str = Field(description="Specify which input field is used to sort the dataset in ascending order.")
     stochastic: bool = Field(False, description = "whether the transition is stochastic or deterministic.")
 
     #Dispatcher
@@ -34,6 +35,7 @@ class BirthProcessDispatcher(BaseModel):
         elif self.structure == 'Numpy_Encode':
             self._dispatcher = BirthProcess_Vec_Encode(
                 rate=self.rate,
+                column_to_sort=self.column_to_sort,
                 stochastic=self.stochastic
             )
         else:
