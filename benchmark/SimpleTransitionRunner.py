@@ -33,6 +33,7 @@ class SimpleTransitionRunner(BaseModel):
     stochastic: bool = False
     col_idx_map: dict[str, int] = Field(default_factory=dict)
     infstate_compartments: list[str] = Field(default_factory=list)
+    column_categories: list[str] = Field(default_factory=list)
 
     time_mem_results: list[dict] = []
 
@@ -94,7 +95,8 @@ class SimpleTransitionRunner(BaseModel):
                         to_st=self.to_st,
                         rate=self.rate,
                         stochastic=self.stochastic,
-                        infstate_compartments = self.infstate_compartments
+                        infstate_compartments = self.infstate_compartments,
+                        column_categories = self.column_categories
                     )
                     
                     if struct  == 'Pandas' or struct == 'Numpy':

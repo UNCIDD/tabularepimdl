@@ -25,6 +25,7 @@ class SimpleTransitionDispatcher(BaseModel):
     to_st: str
     rate: float = Field(ge=0)
     infstate_compartments: list[str] = Field(default_factory=list)
+    column_categories: list[str] = Field(default_factory=list)
     stochastic: bool = False
 
     #Dispatcher
@@ -54,6 +55,7 @@ class SimpleTransitionDispatcher(BaseModel):
                 to_st=self.to_st,
                 rate=self.rate,
                 infstate_compartments=self.infstate_compartments,
+                column_categories=self.column_categories,
                 stochastic=self.stochastic
             )
         elif self.structure == 'Josh_Encode_Vec':

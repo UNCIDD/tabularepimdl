@@ -13,6 +13,7 @@ def STrans_Run_n_Visual():
         stochastic=False,
         col_idx_map = {'InfState' : 0, 'N': 1},
         #state_map = {'I': 0, 'R': 1, 'S': 2},
+        column_categories =  ['S', 'I', 'R'],
         infstate_compartments = ['S', 'I', 'R']
     )
     results = runner.run()
@@ -22,4 +23,4 @@ def STrans_Run_n_Visual():
 
 if __name__ == "__main__":
     STrans_Run_n_Visual()
-#python -m benchmark.STrans_Run_n_Visual
+#python -m benchmark.SimpleTransition_Run_n_Visual
