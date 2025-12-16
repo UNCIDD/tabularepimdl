@@ -15,7 +15,8 @@ def SInfect_Run_n_Visual():
         stochastic=False,
         col_idx_map = {'InfState' : 0, 'N': 1},
         #state_map = {'I': 0, 'R': 1, 'S': 2},
-        infstate_compartments = ['S', 'I', 'R']
+        infstate_compartments = ['S', 'I', 'R'],
+        column_categories =  ['S', 'I', 'R']
     )
     results = runner.run()
 
@@ -24,4 +25,4 @@ def SInfect_Run_n_Visual():
 
 if __name__ == "__main__":
     SInfect_Run_n_Visual()
-#python -m benchmark.SInfect_Run_n_Visual
+#python -m benchmark.SimpleInfection_Run_n_Visual

@@ -27,6 +27,7 @@ class SimpleInfectionDispatcher(BaseModel):
     inf_to: str
     freq_dep: bool = True
     infstate_compartments: list[str] = Field(default_factory=list)
+    column_categories: list[str] = Field(default_factory=list)
     stochastic: bool = False
 
     #Dispatcher
@@ -52,6 +53,7 @@ class SimpleInfectionDispatcher(BaseModel):
                 i_st=self.i_st,
                 inf_to=self.inf_to,
                 infstate_compartments=self.infstate_compartments,
+                column_categories=self.column_categories,
                 stochastic=self.stochastic
             )
         elif self.structure == 'Josh_Encode_Vec':
