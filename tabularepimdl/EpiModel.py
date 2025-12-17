@@ -308,7 +308,7 @@ class EpiModel(BaseModel):
     
       
         self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) #T is forward with dt after each timestep iteration
-        #print('final current_state is\n', self.cur_state) #debug
+        #print('add dt, final current_state is\n', self.cur_state) #debug
         
         # append the updated current state to the epidemic history.
         self.full_epi = pd.concat([self.full_epi, self.cur_state]).reset_index(drop=True)

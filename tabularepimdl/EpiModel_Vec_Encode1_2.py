@@ -508,6 +508,9 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
                 if rule_deltas is not None and len(rule_deltas) > 0: #add non-None rule_deltas to the list
                     ruleset_deltas_list.append(rule_deltas.copy())
                 #print('after append, ruleset_deltas_list\n', ruleset_deltas_list)
+                #if rule is not ruleset[-1]: #debug
+                #    print('---next rule---') #debug
+                #else: print('finished current ruleset, moving on') #debug
 
             if len(ruleset_deltas_list) == 0: #if no data added to ruleset_deltas_list, go to next ruleset
                 #print('list is empty, go to next ruleset')
@@ -545,7 +548,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
             #else: print('for loop ends') #debug
 
         self.current_state_array[:, self._t_idx] = self.current_state_array[:, self._t_idx] + dt #increase T value by dt
-
+        #print('add dt, final current_state_array:\n', self.current_state_array) #debug
         
         
         #this code line may not be needed
