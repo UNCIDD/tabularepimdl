@@ -31,7 +31,7 @@ class EpiModel(BaseModel):
     @classmethod
     def validate_init_state(cls, initial_state) -> pd.DataFrame: 
         if not isinstance(initial_state, pd.DataFrame): #check if init_state is a dataFrame
-            raise TypeError(f"Expected a DataFrame, but got {type(initial_state).__name__} instead.")
+            raise TypeError(f"Expected a DataFrame, received {type(initial_state).__name__} instead.")
         required_cols = {"T", "N"}
         missing = required_cols - set(initial_state.columns)
         if missing: #check if column T and N are in the dataframe
@@ -40,20 +40,27 @@ class EpiModel(BaseModel):
     
     @field_validator("rules", mode="before")
     @classmethod
-    def validate_rules_list(cls, input_rules) -> List[List[Rule]]: #check if the rules is a list or list of lists
-        # Step 1: Wrap single Rule instance
+    def validate_rules_list(cls, input_rules) -> list[list[Rule]]: #check if the rules is a list or list of lists
+        # Case 1: Wrap single Rule instance
         if isinstance(input_rules, Rule):
             return [[input_rules]]
 
-        # Step 2: Ensure input is list-like
+        # Case 2: Ensure input is list-like
         if not isinstance(input_rules, list):
             raise TypeError(f"rules must be an epidemic Rule or a list (or list of lists) of epidemic Rules. Received {type(input_rules).__name__}.")
         
+        # Case 3: list of individual Rules stay in one group
+        if all(isinstance(item, Rule) for item in input_rules):
+            return [input_rules]
+
+        # Case 4: mixed list
         normalized_list = []
         for i, item in enumerate(input_rules):
             if isinstance(item, Rule):
                 normalized_list.append([item]) #Single rule instance: wrap it in list
             elif isinstance(item, list): # Sublist: validate contents
+                if not item:
+                    raise ValueError("Rule sublists cannot be empty.")
                 for j, subitem in enumerate(item):
                     if isinstance(subitem, Rule):
                         continue

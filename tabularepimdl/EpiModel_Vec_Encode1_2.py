@@ -85,18 +85,69 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
     _previous_data_copy: pd.DataFrame = PrivateAttr(default_factory=pd.DataFrame) #a dataframe for saving previous new data
     _new_data_array:  np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) #an array for saving the converted added dataframe and avoid NameError
     
-    @field_validator("init_state", mode="before") #by default, column N and T should be numerical values, if not then should raise ValueError and let users check
+    @field_validator("init_state", mode="before")
     @classmethod
     def validate_init_state(cls, initial_state) -> pd.DataFrame: 
+        #Type check
         if not isinstance(initial_state, pd.DataFrame): #check if init_state is a dataFrame
             raise TypeError(f"Expected a DataFrame, received {type(initial_state).__name__} instead.")
+        
+        #Required columns check
         required_cols = {'N', 'T'}
         missing = required_cols - set(initial_state.columns)
         if missing: #check if column T and N are in the dataframe
             raise ValueError(f"init_state is missing required columns: {missing}.")
+        
+        #Numeric-type validation for column N and T #12/16, #by default, data type validation of column N and T
+        for col in ["N", "T"]:
+            if not pd.api.types.is_numeric_dtype(initial_state[col]):
+                raise ValueError(
+                    f"Column '{col}' must contain numeric values only. Found dtype: {initial_state[col].dtype}. Please check the input data."
+                )
+
         return initial_state
     
-    #Omitting rules list check for now
+    #rules list validation
+    @field_validator("rules", mode="before")
+    @classmethod
+    def validate_rules_list(cls, input_rules) -> list[list[Rule]]: #check if the rules is a list or list of lists
+        # Case 1: Wrap single Rule instance
+        if isinstance(input_rules, Rule):
+            return [[input_rules]]
+
+        # Case 2: Ensure input is list-like
+        if not isinstance(input_rules, list):
+            raise TypeError(f"rules must be an epidemic Rule or a list (or list of lists) of epidemic Rules. Received {type(input_rules).__name__}.")
+        
+        # Case 3: list of individual Rules stay in one group
+        if all(isinstance(item, Rule) for item in input_rules):
+            return [input_rules]
+
+        # Case 4: mixed list
+        normalized_list = []
+        for i, item in enumerate(input_rules):
+            if isinstance(item, Rule):
+                normalized_list.append([item]) #Single rule instance: wrap it in list
+            elif isinstance(item, list): # Sublist: validate contents
+                if not item:
+                    raise ValueError("Rule sublists cannot be empty.")
+                for j, subitem in enumerate(item):
+                    if isinstance(subitem, Rule):
+                        continue
+                    elif isinstance(subitem, list):
+                        raise TypeError(
+                            f"Too much nesting at input rules[{i}][{j}], element is {subitem} with type {type(subitem).__name__}. " 
+                            f"Expected an epidemic Rule, received nested list with depth > 2."
+                        )
+                    else:
+                        raise TypeError(
+                            f"Invalid type at input rules[{i}][{j}]: expected an epidemic Rule, received {subitem} with type {type(subitem).__name__}."
+                        )
+                normalized_list.append(item)
+            else:
+                raise TypeError(f"Element {subitem} at input rules[{i}] must be an epidemic Rule or a list of epidemic Rules. Received {type(item).__name__}.")
+
+        return normalized_list
 
     def model_post_init(self, _):
         """
@@ -106,7 +157,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         self.init_state = self._input_data_column_order_shuffle(input_data=self.init_state) #shuffle init_state column order
         #print('shuffle init state\n', self.init_state) #debug
         self.init_state = self._input_data_column_values_grouping(input_data=self.init_state) #grouping init_state column values
-        #print('after grouping init state\n', self.init_state) #debug
+        #print('after grouping init state\n', self.init_state, '\n', self.init_state.dtypes) #debug
         
         self._update_col_domain_values_from_rules(input_data=self.init_state) #update each rule's selected column's unique domain values
         self._setup_internal_attributes(input_data=self.init_state) #set up all internal attributes
@@ -158,6 +209,8 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         """Case-insensitive lookup: return the matching key for column names of input data or None."""
         if col_name is None:
             return None
+        if not isinstance(col_name, str): #12/15 new: if attribute value passed through col_name is not string, no need to process
+            return None
         col_name_lower = col_name.lower()
         for key in self._domains.keys():
             if key.lower() == col_name_lower:
@@ -173,7 +226,8 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         that include keyword 'col' in the attribute name will be inspected.
         """
         #unique domain values per grouping column (excludes N and T) in init_state
-        self._domains = {col: set(input_data[col].astype(str).tolist()) for col in self._grouping_cols}
+        #self._domains = {col: set(input_data[col].astype(str).tolist()) for col in self._grouping_cols} #convert col values to strings but not mess up the numerics
+        self._domains = {col: set(input_data[col].tolist()) for col in self._grouping_cols} #12/15 new: remove astype(str)
         #print('initial domain value:', self._domains)
         #collect domain values that exist in each rule's properties but not in init_state data columns
         for ruleset in self.rules:
@@ -230,7 +284,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
                             if infstate_all_compartments: #a rule has infstate_all property
                                 if isinstance(infstate_all_compartments, (list, set, tuple, Iterable)):
                                     self._domains[data_col_name].update(infstate_all_compartments)
-                                    #print('domain_values:', self._domains)
+                                    #print('infstate domain_values:', self._domains)
                        
                         else: #Generic case: look for property named "<data_col_name>_all"
                             property_name = f"{attribute_name}_all"
@@ -244,7 +298,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
                                 if property_value:
                                     if isinstance(property_value, (list, set, tuple, Iterable)):
                                         self._domains[data_col_name].update(property_value)
-                                        #print('domain_values:', self._domains)
+                                        #print('other domain_values:', self._domains)
        
         #print('final domains per column:', self._domains) #debug
 
