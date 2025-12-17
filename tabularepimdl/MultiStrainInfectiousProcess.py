@@ -102,8 +102,9 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         #print('Multistrain, current_state is\n', current_state)#debug
         infectious = ((current_state[self.columns] == self.i_st).multiply(current_state["N"], axis=0)).sum(axis=0) #when no value 'I' exists in columns, infectious values are all zeros
         infectious = np.array(infectious)
-        #print('infectious value: ', infectious) #debug
+        #print('infectious (mask) value: ', infectious) #debug
         if sum(infectious)==0: #there are cases that infecious==0
+            #print('no infection, return none.')
             return None
         
         ##calculate the strain specific FOI (force of infection) for each row for each strain.
