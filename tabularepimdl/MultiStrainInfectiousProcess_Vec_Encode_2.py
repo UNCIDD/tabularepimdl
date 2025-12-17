@@ -106,14 +106,16 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
         return category_vals
     
     def model_post_init(self, _):
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
-        self._s_code = infstate_to_int.get(self.s_st)
-        self._i_code = infstate_to_int.get(self.i_st)
-        self._r_code = infstate_to_int.get(self.r_st)
-        self._inf_to_code = infstate_to_int.get(self.inf_to)
+        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}, not used in this rule
+        
+        self.columns_all_categories = sorted(self.columns_all_categories) #sort the columns' all categories
+        self._columns_all_categories_code = {v: i for i, v in enumerate(self.columns_all_categories)} #encode each category
 
-        self.columns_all_categories = sorted(self.columns_all_categories) #sort the trait_col's all categories
-        self._columns_all_categories_code = [i for i, v in enumerate(self.columns_all_categories)] #encode each category, keeping numbers only
+        #input data columns should be values like strain type, but not 'infstate'
+        self._s_code = self._columns_all_categories_code.get(self.s_st)
+        self._i_code = self._columns_all_categories_code.get(self.i_st)
+        self._r_code = self._columns_all_categories_code.get(self.r_st)
+        self._inf_to_code = self._columns_all_categories_code.get(self.inf_to)
 
     
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
