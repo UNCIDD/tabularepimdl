@@ -298,7 +298,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
                                 if property_value:
                                     if isinstance(property_value, (list, set, tuple, Iterable)):
                                         self._domains[data_col_name].update(property_value)
-                                        #print('other domain_values:', self._domains)
+                                        #print('update with property then domain_values:', self._domains)
        
         #print('final domains per column:', self._domains) #debug
 
@@ -407,6 +407,20 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         for col in self._inverse_grouping_col_map: #convert grouping col's numeric values to domain values (not including N and T)
             df_reconstructed[col] = df_reconstructed[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
         return df_reconstructed
+    
+    def current_state(self) -> pd.DataFrame:
+        """
+        Convert current_state_array from array to pandas dataframe with original column names.
+        return: a dataframe containing current state values.
+        """
+        if len(self.current_state_array) == 0:
+            return pd.DataFrame(columns=self._init_state_col_order)
+        df_constructed_current_state = pd.DataFrame(self.current_state_array, columns=self._init_state_col_order)
+
+        for col in self._inverse_grouping_col_map: #convert grouping col's numeric values to domain values (not including N and T)
+            df_constructed_current_state[col] = df_constructed_current_state[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
+        return df_constructed_current_state
+
 
     def Reset(self):
         """
@@ -510,7 +524,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
                 #print('after append, ruleset_deltas_list\n', ruleset_deltas_list)
                 #if rule is not ruleset[-1]: #debug
                 #    print('---next rule---') #debug
-                #else: print('finished current ruleset, moving on') #debug
+                #else: print('finished current ruleset, moving to next ruleset') #debug
 
             if len(ruleset_deltas_list) == 0: #if no data added to ruleset_deltas_list, go to next ruleset
                 #print('list is empty, go to next ruleset')
@@ -545,7 +559,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
 
             #if ruleset is not self.rules[-1]: #debug
             #    print('-------next ruleset--------') #debug
-            #else: print('for loop ends') #debug
+            #else: print('all rulesets done, for loop ends') #debug
 
         self.current_state_array[:, self._t_idx] = self.current_state_array[:, self._t_idx] + dt #increase T value by dt
         #print('add dt, final current_state_array:\n', self.current_state_array) #debug
