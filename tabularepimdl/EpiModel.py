@@ -245,11 +245,12 @@ class EpiModel(BaseModel):
             #Processes cur_state and obtain all_detlas within the current ruleset
             for rule in ruleset:
                 #print('current rule is\n', rule) #debug
-                
+                #print('current state\n', self.cur_state)
                 if self.stoch_policy == "rule_based":
                     #print('epi model rule based') #debug
                     nw_deltas = rule.get_deltas(self.cur_state, dt = dt)
                     #print('nw_delta is\n', nw_deltas) #debug
+                    #print('after processed by this rule, current state:\n', self.cur_state)
                 else:
                     #print('check stochastic: ', rule.stochastic) #debug
                     nw_deltas = rule.get_deltas(self.cur_state, dt = dt, stochastic = (self.stoch_policy=="stochastic"))
@@ -262,7 +263,7 @@ class EpiModel(BaseModel):
                 #print('all_deltas is\n', all_deltas) #debug
                 #if rule is not ruleset[-1]: #debug
                 #    print('---next rule---') #debug
-                #else: print('finished current ruleset, moving on') #debug
+                #else: print('finished current ruleset, moving to next ruleset') #debug
                 
             if all_deltas.shape[0]==0: #no changes out of the processed rule
                 continue
@@ -298,13 +299,13 @@ class EpiModel(BaseModel):
             #print('after grouping new state is\n', nw_state)
             
             nw_state = nw_state[nw_state["N"]!=0].reset_index(drop=True) #3rd change, reset index to have clean nw_state and cur_state
-            #print('remove 0 rows, nw_state is\n', nw_state)
+            #print('after grouping and remove 0 rows, nw_state is\n', nw_state)
 
             self.cur_state = nw_state
             #print('after grouping&dropping 0s, before adding dt, current_state is\n', self.cur_state) #debug
             #if ruleset is not self.rules[-1]: #debug
-                #print('-------next ruleset--------') #debug
-            #else: print('for loop ends') #debug
+            #    print('-------next ruleset--------') #debug
+            #else: print('all rulesets done, for loop ends') #debug
     
       
         self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) #T is forward with dt after each timestep iteration
