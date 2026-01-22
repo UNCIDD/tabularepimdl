@@ -40,7 +40,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
             self._from_code = infstate_to_int.get(self.from_st)
             self._to_code = infstate_to_int.get(self.to_st)
         else: #column is other attribute
-            col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.column_categories))}  #encode infstate strings to integers {'0 to 4': 0, '5 to 9': 1}
+            col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.column_categories))}  #encode column strings to integers {'0 to 4': 0, '5 to 9': 1}
             self._from_code = col_cat_to_int.get(self.from_st)
             self._to_code = col_cat_to_int.get(self.to_st)
 
@@ -111,7 +111,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     
     def to_yaml(self) -> dict:
         rc = {
-            'tabularepimdl.SimpleTransition': self.model_dump()
+            'tabularepimdl.SimpleTransition_Vec_Encode': self.model_dump()
         }
 
         return rc
