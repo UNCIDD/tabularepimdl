@@ -25,15 +25,22 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
     s_st: str = Field(default="S", description = "the state for susceptibles, assumed to be S.")
     inf_to: str = Field(default="I", description = "the state infectious population move to, assumed to be I.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
-    infstate_compartments: list[str] = Field("the infection compartments used in epidemics.")
+    inf_col_categories: list[str] = Field(description = "the categories used for attribute inf_col.")
+    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
 
     _s_code: int | None = PrivateAttr(default=None)
-    _inf_code: int | None = PrivateAttr(default=None)
+    _inf_to_code: int | None = PrivateAttr(default=None)
 
     def model_post_init(self, _):
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}
-        self._s_code = infstate_to_int.get(self.s_st)
-        self._inf_to_code = infstate_to_int.get(self.inf_to)
+        if self.inf_col.lower() == 'infstate': #column is infection state
+            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
+            self._s_code = infstate_to_int.get(self.s_st)
+            self._inf_to_code = infstate_to_int.get(self.inf_to)
+        else: #column is other attribute
+            col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.inf_col_categories))}  #encode column strings to integers {'0 to 4': 0, '5 to 9': 1}
+            self._s_code = col_cat_to_int.get(self.s_st)
+            self._inf_to_code = col_cat_to_int.get(self.inf_to)
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -54,7 +61,7 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
         """
         required_columns = "N" #check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}")
+            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
         
         if stochastic is None:
             stochastic = self.stochastic
@@ -67,8 +74,7 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
         if not np.any(mask):
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
 
-        from_row_idxs = np.flatnonzero(mask)
-        selected_from = current_state[from_row_idxs, :]
+        selected_from = current_state[mask, :]
         #print('selected_from\n', selected_from)
         N = selected_from[:, n_idx]
         
@@ -80,7 +86,7 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
         else:
             changed_N = -N * rate_const
 
-        count = len(from_row_idxs)
+        count = selected_from.shape[0]
 
         result_buffer[:count, :] = selected_from #equivalent: self._from_code
         result_buffer[:count, n_idx] = changed_N  #update column N with changed_N (negative value)
@@ -98,7 +104,7 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
         return the rule's attributes to a dictionary.
         """
         rc = {
-            'tabularepimdl.EnvironmentalTransmission': self.model_dump()
+            'tabularepimdl.EnvironmentalTransmission_Vec_Encode': self.model_dump()
         }
         return rc
     
@@ -106,3 +112,8 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
     @property
     def infstate_all(self) -> list[str]: 
         return self.infstate_compartments
+    
+    #set up a property to return all the required categories used in general column
+    @property
+    def inf_col_all(self) -> list[str]: 
+        return self.inf_col_categories
