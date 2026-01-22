@@ -49,7 +49,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         
         required_columns = "N" #check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}")
+            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
         
         if stochastic is None:
             stochastic = self.stochastic
@@ -87,10 +87,10 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             pass #start state has had values saved, use it directly in the following code.
     
 
-        count = len(self._start_state_sig) #this step could be moved into if-else start_state_saved
+        count = len(self._start_state_sig)
         #print('count:', count)
         #print('start_state_sig\n', self._start_state_sig)
-        result_buffer[count-1] = self._start_state_sig #this step could be moved into if-else start_state_saved
+        result_buffer[count-1] = self._start_state_sig
         #print('result buffer\n', result_buffer)
         result_buffer[:count, n_idx] = changed_N
 
