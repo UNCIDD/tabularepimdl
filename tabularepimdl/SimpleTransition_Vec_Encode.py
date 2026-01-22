@@ -18,7 +18,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     @param to_st: the state that column transitions to.
     @param rate: transition rate per unit time.
     @param stochastic: whether the process is stochastic or deterministic.
-    @param column_compartments: the compartments used for parameter column. E.g column_compartments = ['0 to 4', '5 to 9', '10-14']
+    @param column_categories: the categories used for attribute column. E.g column_categories = ['0 to 4', '5 to 9', '10-14'].
     @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R']. 
     @param _from_code: encoded from_st.
     @param _to_code: encoded to_st.
