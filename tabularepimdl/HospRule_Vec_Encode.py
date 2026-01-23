@@ -39,10 +39,10 @@ class HospRule_Vec_Encode(Rule, BaseModel):
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
     infstate_compartments: list[str] = Field("the infection compartments used in epidemics.")
 
-    _strain_columns_idx: list[int] = PrivateAttr(default_factory=list)
-    _strain_columns_all_categories_code: list[int] | None = PrivateAttr(default_factory=None)
-    _hosp_columns_idx: list[int] = PrivateAttr(default_factory=list)
-    _hosp_columns_all_categories_code: list[int] | None = PrivateAttr(default_factory=None)
+    _strain_columns_idx: list[int] = PrivateAttr(default_factory=list) #the column index for each strain column
+    _strain_columns_all_categories_code: list[int] | None = PrivateAttr(default_factory=None) #the numerical codes for all categories used by all strain columns
+    _hosp_columns_idx: list[int] = PrivateAttr(default_factory=list) #the column index for each hosp column
+    _hosp_columns_all_categories_code: list[int] | None = PrivateAttr(default_factory=None) #the numerical codes for all categories used by all hosp columns
 
     _infect_status_code: int | None = PrivateAttr(default=None)
     _recover_status_code: int | None = PrivateAttr(default=None)
@@ -90,7 +90,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         """
         required_columns = "N" #check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}")
+            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
         
         if stochastic is None:
             stochastic = self.stochastic
