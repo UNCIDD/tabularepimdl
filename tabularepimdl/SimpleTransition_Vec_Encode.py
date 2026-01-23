@@ -25,7 +25,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     from_st: str = Field(description = "the state that column transitions from.")
     to_st: str = Field(description = "the state that column transitions to.")
     rate: float = Field(ge=0, description = "the state that column transitions to.")
-    stochastic: bool = Field(default=False, description="whether the process is stochastic or deterministic.")
+    stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
     column_categories: list[str] = Field(description = "all the categories the column should have.")
     infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
 
