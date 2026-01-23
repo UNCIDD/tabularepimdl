@@ -6,33 +6,32 @@ from pydantic import BaseModel, Field, PrivateAttr
 from tabularepimdl.Rule import Rule
 
 
-#Vectorization of Simple Infection
 class SimpleInfection_Vec_Encode(Rule, BaseModel):
-    """!Class represents a simple infection process where people in one column are infected by people
-    in a given state in that same column with a probability."""
+    """!
+    Rule represents a simple infection process where people in one column are infected by people
+    in a given state in that same column with a probability.
 
-    """! Initialization.
-    @param beta: the transmission parameter. 
-    @param column: Name of the column this rule applies to.
-    @param s_st: the state for susceptibles, assumed to be S.
-    @param i_st: the state for infectious, assumed to be I.
-    @param inf_to: the state infectious folks go to, assumed to be I.
-    @param freq_dep: whether this model is a frequency dependent model.
-    @param stochastic: whether the process is stochastic or deterministic.
-    @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R']. 
-    @param _s_code: encoded s_st.
-    @param _i_code: encoded i_st.
-    @para _inf_to_code: encoded infected to state.
+    Attributes:
+        beta: the transmission parameter. 
+        column: name of the column this rule applies to.
+        s_st: the state for susceptibles, assumed to be S.
+        i_st: the state for infectious, assumed to be I.
+        inf_to: the state infectious folks go to, assumed to be I.
+        freq_dep: whether this model is a frequency dependent model.
+        stochastic: whether the process is stochastic or deterministic.
+        column_categories: all the categories the column should have.
+        infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R']. 
     """
-    beta: Annotated[float, Field(ge=0)]
-    column: str
-    s_st: str
-    i_st: str
-    inf_to: str
-    freq_dep: bool = True
-    stochastic: bool = False
-    column_categories: list[str]
-    infstate_compartments: list[str]
+
+    beta: float = Field(ge=0, description = "the transmission parameter.")
+    column: str = Field(description = "name of the column this rule applies to.")
+    s_st: str = Field(description = "the state for susceptibles, assumed to be S.")
+    i_st: str = Field(description = "the state for infectious, assumed to be I.")
+    inf_to: str = Field(description = "the state infectious folks go to, assumed to be I.")
+    freq_dep: bool = Field(default=True, description = "whether this model is a frequency dependent model.")
+    stochastic: bool = Field(default=False, description="whether the process is stochastic or deterministic.")
+    column_categories: list[str] = Field(description = "all the categories the column should have.")
+    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
 
     _s_code: int | None = PrivateAttr(default=None)
     _i_code: int | None = PrivateAttr(default=None)
@@ -53,14 +52,27 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
-        @param current_state: a numpy array (at the moment) representing the current epidemic state. Must include population values (e.g. 'N' values).
-        @param dt: size of the timestep.
-        @param: Add additional parameters...
-        @param col_idx_map: mapping of input data columns and their column index. E.g. col_idx_map = {'InfState' : 0, 'N': 1}
-        @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. E.g. result_buffer = np.empty((2 * count, ncols), dtype=current_state.dtype)
-        return: an array containing changes in s_st and inf_to.
+        Compute the population deltas for the current state at a given time step.
+
+        Args:
+            current_state (np.ndarray): A structured array representing the current epidemic state. Must include a column `'N'`, which indicates the population count.
+            col_idx_map (dict): mapping of column names to their index positions. e.g. {'N':0, 'InfState':1, 'Hosp':2}
+            result_buffer (np.ndarray): A pre-allocated array that will be populated with the computed deltas. This array is modified in-place and returned.
+            dt (float): The size of the time step. Defaults to 1.0.
+            stochastic (bool, optional): Whether to apply stochastic modeling. If `None`, the class-level `self.stochastic` attribute is used.
+        
+        Returns:
+            np.ndarray: A NumPy structured array containing the population deltas.
+
+        Raises:
+            ValueError: If the column `'N'` is missing in `current_state`.
         """
+
         beta: float
+
+        required_columns = "N" #check if column N presents in current_state
+        if required_columns not in col_idx_map:
+            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
 
         if stochastic is None:
             stochastic = self.stochastic
@@ -130,7 +142,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         return the rule's attributes to a dictionary.
         """
         rc = {
-            'tabularepimdl.SimpleInfection': self.model_dump()
+            'tabularepimdl.SimpleInfection_Vec_Encode': self.model_dump()
         }
         return rc
     

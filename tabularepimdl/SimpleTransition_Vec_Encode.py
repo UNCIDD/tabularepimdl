@@ -6,30 +6,28 @@ from pydantic import BaseModel, Field, PrivateAttr
 from tabularepimdl.Rule import Rule
 
 
-#Vectorization of Simple Transition
 class SimpleTransition_Vec_Encode(Rule, BaseModel):
-    """! Class is going to represent a simple transition from one state to another, 
-    such that if a column has the from specified value, it creates transitions with the to
-    specified value at the given rate."""
+    """! 
+    Rule represents a simple transition from one state to another, such that if a column has
+    the from specified value, it creates transitions with the to specified value at the given rate.
 
-    """! Initialization.
-    @param column: Name of the column this rule applies to.
-    @param from_st: the state that column transitions from.
-    @param to_st: the state that column transitions to.
-    @param rate: transition rate per unit time.
-    @param stochastic: whether the process is stochastic or deterministic.
-    @param column_categories: the categories used for attribute column. E.g column_categories = ['0 to 4', '5 to 9', '10-14'].
-    @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R']. 
-    @param _from_code: encoded from_st.
-    @param _to_code: encoded to_st.
+    Attributes:
+        column: name of the column this rule applies to.
+        from_st: the state that column transitions from.
+        to_st: the state that column transitions to.
+        rate: transition rate per unit time.
+        stochastic: whether the process is stochastic or deterministic.
+        column_categories: all the categories the column should have if the column is not for infstate. E.g column_categories = ['0 to 4', '5 to 9', '10-14'].
+        infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R']. 
     """
-    column: str
-    from_st: str
-    to_st: str
-    rate: Annotated[float, Field(ge=0)]
-    stochastic: bool = False
-    column_categories: list[str]
-    infstate_compartments: list[str]
+    
+    column: str = Field(description = "name of the column this rule applies to.")
+    from_st: str = Field(description = "the state that column transitions from.")
+    to_st: str = Field(description = "the state that column transitions to.")
+    rate: float = Field(ge=0, description = "the state that column transitions to.")
+    stochastic: bool = Field(default=False, description="whether the process is stochastic or deterministic.")
+    column_categories: list[str] = Field(description = "all the categories the column should have.")
+    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
 
     _from_code: int | None = PrivateAttr(default=None)
     _to_code: int | None = PrivateAttr(default=None)
@@ -46,13 +44,25 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
-        @param current_state: a numpy array (at the moment) representing the current epidemic state. Must include population values (e.g. 'N' values).
-        @param dt: size of the timestep.
-        @param: Add additional parameters...stochastic, dt
-        @param col_idx_map: mapping of input data columns and their column index. E.g. col_idx_map = {'InfState' : 0, 'N': 1}
-        @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. E.g. result_buffer = np.empty((2 * count, ncols), dtype=current_state.dtype)
-        return: an array containing changes in from_st and to_st.
+        Compute the population deltas for the current state at a given time step.
+
+        Args:
+            current_state (np.ndarray): A structured array representing the current epidemic state. Must include a column `'N'`, which indicates the population count.
+            col_idx_map (dict): mapping of column names to their index positions. e.g. {'N':0, 'InfState':1, 'Hosp':2}
+            result_buffer (np.ndarray): A pre-allocated array that will be populated with the computed deltas. This array is modified in-place and returned.
+            dt (float): The size of the time step. Defaults to 1.0.
+            stochastic (bool, optional): Whether to apply stochastic modeling. If `None`, the class-level `self.stochastic` attribute is used.
+        
+        Returns:
+            np.ndarray: A NumPy structured array containing the population deltas.
+
+        Raises:
+            ValueError: If the column `'N'` is missing in `current_state`.
         """
+        required_columns = "N" #check if column N presents in current_state
+        if required_columns not in col_idx_map:
+            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
+        
         if stochastic is None:
             stochastic = self.stochastic
         

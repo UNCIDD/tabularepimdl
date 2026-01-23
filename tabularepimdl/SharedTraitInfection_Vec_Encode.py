@@ -33,7 +33,7 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     i_st: str = Field(default="I", description = "the state for infectious.")
     inf_to: str = Field(default="I", description = "the state susceptible population go to.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
-    infstate_compartments: list[str] = Field("the infection compartments used in epidemics.")
+    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
 
     _s_code: int | None = PrivateAttr(default=None)
     _i_code: int | None = PrivateAttr(default=None)
