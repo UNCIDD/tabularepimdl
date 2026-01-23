@@ -10,6 +10,7 @@ from tabularepimdl.Rule import Rule
 class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
     """!
     Rule that does transmission based on a simple WAIFW transmission matrix.
+    Use Numba approach to generate inf_array.
 
     Attributes:
         waifw_martrix: the waifw transmission rate matrix, a square matrix is required.
@@ -36,7 +37,7 @@ class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
     i_st: str = Field(default="I", description = "the state for infectious.")
     inf_to: str = Field(default="I", description = "the state susceptible population go to.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
-    infstate_compartments: list[str] = Field("the infection compartments used in epidemics.")
+    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
 
     _s_code: int | None = PrivateAttr(default=None) #encoded s_st
     _i_code: int | None = PrivateAttr(default=None) #encoded i_st
@@ -162,7 +163,7 @@ class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
         """
         required_columns = "N" #check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}")
+            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
         
         if stochastic is None:
             stochastic = self.stochastic
@@ -257,14 +258,16 @@ class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
         """
                 
         rc = {
-            'tabularepimdl.WAIFWTransmission' : {
+            'tabularepimdl.WAIFWTransmission_Vec_Encode_Numba' : {
                 'waifw_matrix' : self.waifw_matrix.T, #transpose waifw matrix back to its initial order before writting the attributes to dict
                 'inf_col' : self.inf_col,
                 'group_col' : self.group_col,
+                'group_col_all_categories': self.group_col_all_categories,
                 's_st': self.s_st,
                 'i_st': self.i_st,
                 'inf_to': self.inf_to,
-                'stochastic': self.stochastic
+                'stochastic': self.stochastic,
+                'infstate_compartments': self.infstate_compartments
             }
         }
         

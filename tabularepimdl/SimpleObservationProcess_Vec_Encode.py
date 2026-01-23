@@ -33,8 +33,8 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
     incobs_state: str = Field(default='I', description = "incident-observed state.")
     prevobs_state: str = Field(default='P', description = "previously-observed state.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
-    infstate_compartments: list[str] = Field("the infection compartments used in epidemics.")
-    obs_col_all_categories: list[str] = Field("all the observation categories used in epidemics.") #new attribute is needed for encoding
+    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
+    obs_col_all_categories: list[str] = Field(description = "all the observation categories used in epidemics.") #new attribute is needed for encoding
 
     _source_state_code: int | None = PrivateAttr(default=None)
     
@@ -74,7 +74,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
 
         required_columns = "N" #check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}")
+            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
         
         if stochastic is None:
             stochastic = self.stochastic
