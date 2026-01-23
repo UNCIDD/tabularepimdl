@@ -137,7 +137,7 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
         """
         required_columns = "N" #check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}")
+            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
         
         if stochastic is None:
             stochastic = self.stochastic
