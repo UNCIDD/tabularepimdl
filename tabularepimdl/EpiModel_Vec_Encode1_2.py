@@ -104,6 +104,13 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
                 raise ValueError(
                     f"Column '{col}' must contain numeric values only. Found dtype: {initial_state[col].dtype}. Please check the input data."
                 )
+        
+        #Ensure all column names of init_state are string types
+        non_string_col_names = [col for col in initial_state.columns if not isinstance(col, str)]
+
+        if non_string_col_names:
+            raise ValueError(f"Non-string column names found: {non_string_col_names}. Please check the input data and use meaningful string column names.")
+
 
         return initial_state
     
