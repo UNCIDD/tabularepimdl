@@ -403,7 +403,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         """
         Convert list of arrays returned from do_timestep() to a dataframe as full epidemic history.
         @param list_of_arr: a list of arrays, each array is a epidemic historical data.
-        return: a dataframe containing full epidemic history.
+        return: a dataframe containing full epidemic history. This method may be removed given it duplicates the function of full_epi() method.
         """
         # _full_epi_list could be used to replace list_of_arr and remove the this argument from method definition
         if len(list_of_arr) == 0: #return empty dataframe if input list of arrays is empty
@@ -417,7 +417,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
     
     def current_state(self) -> pd.DataFrame:
         """
-        Convert current_state_array from array to pandas dataframe with original column names.
+        Convert current_state_array from array to pandas dataframe with original input data column names.
         return: a dataframe containing current state values.
         """
         if len(self.current_state_array) == 0:
@@ -428,6 +428,19 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
             df_constructed_current_state[col] = df_constructed_current_state[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
         return df_constructed_current_state
 
+    def full_epi(self) -> pd.DataFrame:
+        """
+        Convert _full_epi_list from a list of array to pandas dataframe with original input data column names.
+        return: a dataframe containing full epidemic history.
+        """
+        if len(self._full_epi_list) == 0:
+            return pd.DataFrame(columns=self._init_state_col_order)
+        self.full_epi_array = np.vstack(self._full_epi_list)
+        df_reconstructed_full_epi = pd.DataFrame(self.full_epi_array, columns=self._init_state_col_order)
+        
+        for col in self._inverse_grouping_col_map: #convert grouping col's numeric values to domain values (not including N and T)
+            df_reconstructed_full_epi[col] = df_reconstructed_full_epi[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
+        return df_reconstructed_full_epi
 
     def Reset(self):
         """
