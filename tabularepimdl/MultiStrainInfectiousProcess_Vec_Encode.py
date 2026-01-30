@@ -58,7 +58,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         
         #2. check for numeric data type.
         if not np.issubdtype(array_parameters.dtype, np.number):
-            raise ValueError(f"Array must contain numeric data, received data type {array_parameters.dtype}.")
+            raise ValueError(f"All elements in {field.field_name} must contain numeric data, received data type {array_parameters.dtype}.")
         
         #3. check if all elements are non-negative values.
         if np.any(array_parameters < 0):
@@ -70,24 +70,6 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         
         return array_parameters
 
-    
-    @model_validator(mode="after") #after all fields are validated, check cross fields relationship
-    def check_dimensions(cls, parameter_values):
-        """Ensure betas and cross_protect have matching dimensions."""
-        betas = parameter_values.betas
-        columns = parameter_values.columns
-        cross_protect = parameter_values.cross_protect
-
-        if len(columns) != len(betas):
-            raise ValueError(f"The number of 'columns' ({len(columns)}) must match the number of 'betas' ({len(betas)}).")
-
-        if cross_protect.shape[0] != cross_protect.shape[1] or cross_protect.shape[0] != len(betas):
-            raise ValueError(
-                f"'cross_protect' must be a square matrix of size {len(betas)}x{len(betas)}, got {cross_protect.shape}."
-            )
-        
-        return parameter_values
-    
     @field_validator("columns_all_categories", mode='before')
     @classmethod
     def validate_group_col_all_categories(cls, category_vals):
@@ -102,8 +84,22 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
                     f"All elements in columns_all_categories must be of the same datatype. "
                     f"Found both {first_element_type.__name__} and {type(item).__name__}."
                 )
+        
         return category_vals
     
+    @model_validator(mode="after") #after all fields are validated, check cross fields relationship
+    def check_dimensions(self):
+        """Ensure betas and cross_protect have matching dimensions."""
+        if len(self.columns) != len(self.betas):
+            raise ValueError(f"The number of 'columns' ({len(self.columns)}) must match the number of 'betas' ({len(self.betas)}).")
+
+        if self.cross_protect.shape[0] != self.cross_protect.shape[1] or self.cross_protect.shape[0] != len(self.betas):
+            raise ValueError(
+                f"'cross_protect' must be a square matrix of size {len(self.betas)}x{len(self.betas)}, received {self.cross_protect.shape}."
+            )
+        
+        return self
+        
     def model_post_init(self, _):
         infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}, not used in this rule
         
