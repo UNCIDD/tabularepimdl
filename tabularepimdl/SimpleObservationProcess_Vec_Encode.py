@@ -27,6 +27,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
 
     source_col: str = Field(description = "the column containing source_state for the observation process.")
     source_state: str = Field(description = "the state individuals start.")
+    source_col_all_categories: list[str] = Field(description = "all the categories used in source column.")
     obs_col: str = Field(description = "the column that contains each group of individuals' observed state.")
     rate: float = Field(ge=0, description = "the number of people move from a particular state into another state per unit time.")
     unobs_state: str = Field(default='U', description="un-observed state.")
@@ -44,9 +45,12 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
     _prevobs_code: int | None = PrivateAttr(default=None)
 
     def model_post_init(self, _):
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
-        self._source_state_code = infstate_to_int.get(self.source_state)
-        
+        if self.source_col.lower() == 'infstate': #column is infection state
+            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate domain values to integers {'I': 0, 'R': 1, 'S': 2}
+            self._source_state_code = infstate_to_int.get(self.source_state)
+        else: #column takes other attribute value
+            source_col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.source_col_all_categories))}  #encode column domain values to integers
+            self._source_state_code = source_col_cat_to_int.get(self.source_state)
         
         observation_to_int = {obs: i for i, obs in enumerate(sorted(self.obs_col_all_categories))} #encode observation strings to integer
         self._unobs_code = observation_to_int.get(self.unobs_state)
@@ -171,3 +175,8 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
     @property
     def obs_col_all(self) -> list[str]: 
         return self.obs_col_all_categories
+    
+    #set up a property to return all the required categories used in source_col
+    @property
+    def source_col_all(self) -> list[str]: 
+        return self.source_col_all_categories
