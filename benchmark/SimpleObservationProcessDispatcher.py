@@ -13,6 +13,7 @@ class SimpleObservationProcessDispatcher(BaseModel):
     @param structure: data structure used for rules.
     @param source_col: the column containing source_state for the observation process.
     @param source_state: the state individuals start, listed in source_col.
+    @param source_col_all_categories: all the categories used in source column.
     @param obs_col: the column that contains each group of individuals' observed state.
     @param rate: the number of people move from a particular state into another state per unit time.
     @param unobs_state: un-observed state, listed in obs_col.
@@ -26,6 +27,7 @@ class SimpleObservationProcessDispatcher(BaseModel):
     structure: Literal["Pandas", "Numpy_Vec_Encode", "Numpy_Vec_Encode_nobuffer"]
     source_col: str
     source_state: str
+    source_col_all_categories: list[str]
     obs_col: str
     rate: float
     unobs_state: str
@@ -54,6 +56,7 @@ class SimpleObservationProcessDispatcher(BaseModel):
             self._dispatcher = SimpleObservationProcess_Vec_Encode(
                 source_col=self.source_col,
                 source_state=self.source_state,
+                source_col_all_categories = self.source_col_all_categories,
                 obs_col=self.obs_col,
                 rate=self.rate,
                 unobs_state=self.unobs_state,
@@ -67,6 +70,7 @@ class SimpleObservationProcessDispatcher(BaseModel):
             self._dispatcher = SimpleObservationProcess_Vec_Encode_nobuffer(
                 source_col=self.source_col,
                 source_state=self.source_state,
+                source_col_all_categories = self.source_col_all_categories,
                 obs_col=self.obs_col,
                 rate=self.rate,
                 unobs_state=self.unobs_state,

@@ -52,6 +52,7 @@ def SimpleObservation_Run_n_Visual():
         
         source_col = "InfState",
         source_state = "I",
+        source_col_all_categories = compartments,
         obs_col = 'Hosp',
         rate = 0.05,
         unobs_state = 'U',
