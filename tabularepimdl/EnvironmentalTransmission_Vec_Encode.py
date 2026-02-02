@@ -1,5 +1,3 @@
-from typing import Annotated
-
 import numpy as np
 from pydantic import BaseModel, Field, PrivateAttr
 
@@ -7,7 +5,7 @@ from tabularepimdl.Rule import Rule
 
 
 class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
-    """!
+    """
     Class represents disease transmission that happens in nature environment without any human-to-human or cross-species infection.
     The EnvironmentalTransmission implements the same logic and functionality as the SimpleTransition rule.
     
@@ -32,6 +30,12 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
     _inf_to_code: int | None = PrivateAttr(default=None)
 
     def model_post_init(self, _):
+        """
+        Encode the input states based on the infection column's attribute values.
+
+        Returns:
+            Numerical values of encoded infection states.
+        """
         if self.inf_col.lower() == 'infstate': #column is infection state
             infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
             self._s_code = infstate_to_int.get(self.s_st)
@@ -99,9 +103,12 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
         return result_buffer[:2*count, :]
     
     
-    def to_yaml(self) -> dict:
+    def to_dict(self) -> dict:
         """
-        return the rule's attributes to a dictionary.
+        Save the rule's attributes and their associated values to a dictionary.
+                
+        Returns:
+            Rule attributes in a dictionary.
         """
         rc = {
             'tabularepimdl.EnvironmentalTransmission_Vec_Encode': self.model_dump()
@@ -110,10 +117,22 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
     
     #set up a property to return all the required compartments used in infstate column
     @property
-    def infstate_all(self) -> list[str]: 
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if the `inf_col` takes 'infstate' value.
+        """
         return self.infstate_compartments
     
     #set up a property to return all the required categories used in general column
     @property
-    def inf_col_all(self) -> list[str]: 
+    def inf_col_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories if the `inf_col` takes other string values.
+        """
         return self.inf_col_categories

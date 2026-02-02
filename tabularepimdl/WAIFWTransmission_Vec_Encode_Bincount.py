@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationInfo, PrivateAttr
 from numpy.typing import NDArray
 
@@ -7,15 +6,16 @@ from tabularepimdl.Rule import Rule
 
 
 class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
-    """!
+    """
     Rule that does transmission based on a simple WAIFW transmission matrix.
     Use np.bincount to generate inf_array.
 
     Attributes:
         waifw_martrix: the waifw transmission rate matrix, a square matrix is required.
         inf_col: the infection state column for this infectious process.
-        group_col: the group where infection is applied, different group values are specified in this column. The number of possible unique values in the column should match the waifw matrix size,
-                   and the unique values should have an order (i.e., the group_col should be a categorical datatype).
+        group_col: the group where infection is applied, different group values are specified in this column. 
+        The number of possible unique values in the column should match the waifw matrix size, and the unique 
+        values should have an order (i.e., the group_col should be a categorical datatype).
         group_col_all_categories: all the categories the group column should have.
         s_st: the state for susceptibles, assumed to be S.
         i_st: the state for infectious, assumed to be I.
@@ -93,6 +93,12 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         return category_vals
     
     def model_post_init(self, _):
+        """
+        Encode the input states based on each column's attribute values.
+        
+        Returns:
+            Numerical values of encoded infection states.
+        """
         infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
         self._s_code = infstate_to_int.get(self.s_st)
         self._i_code = infstate_to_int.get(self.i_st)
@@ -100,7 +106,6 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
 
         self.group_col_all_categories = sorted(self.group_col_all_categories) #sort the group_col's all categories
         self._group_col_all_categories_code = [i for i, v in enumerate(self.group_col_all_categories)] #encode each category, keeping numbers only
-
         
     
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
@@ -202,9 +207,14 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         return result
 
 
-    def to_yaml(self) -> dict:
+    def to_dict(self) -> dict:
         """
-        return the rule's attributes to a dictionary.
+        Save the rule's attributes and their associated values to a dictionary.
+        
+        Returns:
+            Rule attributes in a dictionary.
+
+        Notes: transpose waifw matrix back to its initial order before saving the attributes. This step may need to be discussed further.
         """
                 
         rc = {
@@ -226,10 +236,22 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
 
     #set up a property to return all the required compartments used in infstate column
     @property
-    def infstate_all(self) -> list[str]: 
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if the `inf_col` takes 'infstate' value.
+        """
         return self.infstate_compartments
     
     #set up a property to return all the required categories used in group_col
     @property
-    def group_col_all(self) -> list[str]: 
+    def group_col_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `group_col` uses.
+        """
         return self.group_col_all_categories

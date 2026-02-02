@@ -9,26 +9,25 @@ from typing import Iterable
 
 #Vec_Encode_1_2 is derived from Vec_Encode_1, it moves the buffer pre-allocation inside do_timestep()
 class EpiModel_Vec_Encode_1_2(BaseModel):
-    """! Class that that applies a list of rules to a changing current state through 
-    some number of time steps to produce an epidemic. It has attributes representing the initial state,
-    current state and the full epidemic thus far.
+    """
+    Class that that applies a list of rules to a changing current state through 
+    some number of time steps to produce an epidemic.
 
-    #Public Attributes
-    @param init_state: a data frame with the initial epidemic state. Must have at minimum columns T and N.
-        Location	Age	    InfState	N	T
-    0	A	        adult	S	        100	0.0
-    1	A	        adult	I	        5	0.0
-    2	A	        child	R	        50	0.0
-    3	B	        adult	S	        80	0.0
+    Args:
+        init_state: A pandas DataFrame with the initial epidemic fields such as infection state, grouping state, population size and time.
+                    It must have at minimum columns `'T'` and `'N'`.
+    Example:
+        Location	Age     InfState    N   T
+    0	       A  adult	           S  100  20
+    1	       A  adult	           I    5	0
+    2	       A  child            R   50	0
+    3	       B  adult            S   80	0
     
-    @para current_state_array: a numpy array (at the moment) with the current epidemic state.
-    @para full_epi_array: a numpy array contains full epidemic history.
-    @param rules: a list of epidemic rules that will represent the epidemic process. Must be a list of lists. [[B], [SI, ST], [W]]
-    @param stoch_policy: whether the entire epidemic process is rule based or centralized with either deterministic or stochastic.
-    @param compartment_col: a string indicating the column name that is used for saving infection compartments.
-
-    #Private Attributes
-    ...to be added
+        current_state_array: A numpy array represents the current epidemic state.
+        full_epi_array: A numpy array contains full epidemic history.
+        rules: A list of epidemic rules that represents the epidemic process. Must be a flat list or a list of lists. E.g. [[B], [SI, ST], [W]]
+        stoch_policy: Whether the entire epidemic process is rule based or centralized with either deterministic or stochastic.
+        compartment_col: A placeholder (not being used in model engine). A string indicating the column name that is used for saving infection compartments.
     """
 
     # Pydantic Configuration
@@ -87,7 +86,8 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
     
     @field_validator("init_state", mode="before")
     @classmethod
-    def validate_init_state(cls, initial_state) -> pd.DataFrame: 
+    def validate_init_state(cls, initial_state) -> pd.DataFrame:
+        """Ensure input data is pandas DataFrame type with required minimum columns"""
         #Type check
         if not isinstance(initial_state, pd.DataFrame): #check if init_state is a dataFrame
             raise TypeError(f"Expected a DataFrame, received {type(initial_state).__name__} instead.")
@@ -117,7 +117,8 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
     #rules list validation
     @field_validator("rules", mode="before")
     @classmethod
-    def validate_rules_list(cls, input_rules) -> list[list[Rule]]: #check if the rules is a list or list of lists
+    def validate_rules_list(cls, input_rules) -> list[list[Rule]]:
+        """Check if the rules is a flat list or list of lists."""
         # Case 1: Wrap single Rule instance
         if isinstance(input_rules, Rule):
             return [[input_rules]]
@@ -158,7 +159,13 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
 
     def model_post_init(self, _):
         """
-        Initialization of init_state column order, internal attributes, current_state_arrays and full_epi_array.
+        Prepare the model engine with the following steps:
+        1. shuffle init_state column order
+        2. group collumn values
+        3. update column domain values
+        4. set up model's internal attributes
+        5. initialize current_state_arrays
+        6. initialize full_epi_array.
         """
         #self.init_state.columns = self._init_state_column_names_upper_case(input_data=self.init_state) #convert all column names of init_state to lowercase, this will cause many string handling changes in rules, not implement it for now
         self.init_state = self._input_data_column_order_shuffle(input_data=self.init_state) #shuffle init_state column order
@@ -182,6 +189,12 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
     def _input_data_column_order_shuffle(self, input_data: pd.DataFrame):
         """
         Move column N and T to the last two columns in init_state before all internal attributes and data processing steps occure.
+
+        Args:
+            input_data: A pandas DataFrame of the initial state.
+
+        Returns:
+            A pandas DataFrame with column order re-organized.
         """
         cols = input_data.columns.tolist()
 
@@ -200,8 +213,13 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
 
     def _input_data_column_values_grouping(self, input_data: pd.DataFrame):
         """
-        Grouping each column of init_state and aggregate column N and T in case the input raw data has duplicate rows.
-        This ensures rules that have categorical column(s) can accurately check the input raw data aginst their input categories.
+        Group each column of init_state and aggregate column N and T in case the input raw data has duplicate rows.
+        
+        Args:
+            input_data: A pandas DataFrame of the initial state.
+
+        Returns:
+            A pandas DataFrame with column values grouped.
         """
         #collect column names for aggregating columns and rest grouping columns
         self._agg_cols = {'N', 'T'}
@@ -213,7 +231,15 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
         
 
     def _match_domain_key(self, col_name: str) -> str | None:
-        """Case-insensitive lookup: return the matching key for column names of input data or None."""
+        """
+        Case-insensitive lookup: return the matching key for column names of input data or None.
+        
+        Args:
+            col_name: A string of column name used in the initial state.
+
+        Returns:
+            The column name or None.
+        """
         if col_name is None:
             return None
         if not isinstance(col_name, str): #12/15 new: if attribute value passed through col_name is not string, no need to process
@@ -228,9 +254,16 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
     def _update_col_domain_values_from_rules(self, input_data: pd.DataFrame) -> None:
         """
         Walk through rules list and update each rule's selected column's unique domain values in place.
+        Rules must be instances of BaseModel (Pydantic), and rule attributes that include keyword 'col' in the attribute name will be inspected.
 
-        Rules must be instances of BaseModel (Pydantic), and rule attributes
-        that include keyword 'col' in the attribute name will be inspected.
+        Args:
+            input_data: A pandas DataFrame of the initial state.
+        
+        Returns:
+            Objects of updated domain values of each column.
+
+        Raises:
+            ValueError: If a rule's attribute's value is not a string or a list.
         """
         #unique domain values per grouping column (excludes N and T) in init_state
         #self._domains = {col: set(input_data[col].astype(str).tolist()) for col in self._grouping_cols} #convert col values to strings but not mess up the numerics
@@ -312,7 +345,15 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
 
     def _setup_internal_attributes(self, input_data: pd.DataFrame):
         """
-        Set up internal attributes with values from init_state and rule list.
+        Set up internal private attributes with values from init_state and rule list.
+
+        Args:
+            input_data: A pandas DataFrame of the initial state.
+
+        Returns:
+            1. A dictionary of mapping of each column's domain values to their index positions.
+            2. The column order in the input pandas DataFrame.
+            3. A dictionary of mapping of column names to their orders.
         """
         #self._infstate_all_comps = sorted(self._domains[self.compartment_col]) #keep a variable to save column InfState's compartment values
         #self._num_comps = len(self._infstate_all_comps) #keep a variable to save the number of compartments in column InfState
@@ -351,7 +392,13 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
 
     def _convert_input_data_to_arrays(self, input_data: pd.DataFrame) -> np.ndarray: #might be benificial to add array args to the method and return current_state and full_epi
         """
-        Convert init_state dataframe to numpy array. Save the array to current_state_array.
+        Convert init_state DataFrame to Numpy array. Save the array to current_state_array.
+
+        Args:
+            input_data: A pandas DataFrame of the initial state.
+        
+        Returns:
+            A Numpy array of encoded input_data or an empty array.
         """
         
         #this code block is for debugging only
@@ -387,13 +434,19 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
     
     def _save_initial_current_state_array(self) -> np.ndarray:
             """
-            After init_state dataframe is converted to current_state_array, save the array's initial values.
+            After init_state DataFrame is converted to current_state_array, save the array's initial values.
+
+            Returns:
+                A Numpy array of initial state of the input data.
             """
             self._initial_current_state_array = self.current_state_array.copy()
             
     def _initalize_full_epi_array(self) -> np.ndarray:
         """
-        Initialize full_epi_array with current_state_array.
+        Initialize full_epi_array with initial current_state_array.
+
+        Returns:
+            A Numpy array of initial state of the input data saved in the full epi array.
         """
         self._full_epi_list = [self._initial_current_state_array] #make current_state_array the 1st elment in full_epi_array
         self.full_epi_array = np.vstack(self._full_epi_list)
@@ -401,9 +454,13 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
     
     def _covnert_list_of_arrays_to_df(self, list_of_arr: list[np.ndarray]) -> pd.DataFrame:
         """
-        Convert list of arrays returned from do_timestep() to a dataframe as full epidemic history.
-        @param list_of_arr: a list of arrays, each array is a epidemic historical data.
-        return: a dataframe containing full epidemic history. This method may be removed given it duplicates the function of full_epi() method.
+        Convert list of arrays returned from do_timestep() to a pandas DataFrame as full epidemic history.
+
+        Args:
+            list_of_arr: A list of arrays, each array is a epidemic historical data.
+
+        Returns:
+            A pandas DataFrame containing full epidemic history. This method may be removed given it duplicates the function of full_epi() method.
         """
         # _full_epi_list could be used to replace list_of_arr and remove the this argument from method definition
         if len(list_of_arr) == 0: #return empty dataframe if input list of arrays is empty
@@ -418,7 +475,9 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
     def current_state(self) -> pd.DataFrame:
         """
         Convert current_state_array from array to pandas dataframe with original input data column names.
-        return: a dataframe containing current state values.
+        
+        Returns:
+            A pandas DataFrame containing current state values.
         """
         if len(self.current_state_array) == 0:
             return pd.DataFrame(columns=self._init_state_col_order)
@@ -431,7 +490,9 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
     def full_epi(self) -> pd.DataFrame:
         """
         Convert _full_epi_list from a list of array to pandas dataframe with original input data column names.
-        return: a dataframe containing full epidemic history.
+        
+        Returns:
+            A pandas DataFrame containing full epidemic history.
         """
         if len(self._full_epi_list) == 0:
             return pd.DataFrame(columns=self._init_state_col_order)
@@ -444,7 +505,7 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
 
     def Reset(self):
         """
-        Reset the values of current_state_array and full_epi_array to be init_state values.
+        Reset the values of current_state_array and full_epi_array to be the init_state values.
         only call back initial_current_state_array value and invoke _initalize_full_epi_array().
         """
         self.current_state_array = self._initial_current_state_array.copy()
@@ -453,9 +514,18 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
 
     def add_new_data_to_current_state(self, new_data: pd.DataFrame) -> np.ndarray:
         """
-        Add new data to the current state of epidemics. The input is dataframe, the output is numpy array.
-        @param new_data: new data point to be used in simulations such as a new infected person.
-        return: a numpy array containing the current state plus the new data.
+        Add new data to the current state of epidemics. The input is a pandas Dataframe, the output is a Numpy array.
+        
+        Args:
+            new_data: a pandas DataFrame of new data point to be used in simulations such as a new infected person.
+
+        Returns:
+            A Numpy array containing the current state plus the new data.
+
+        Raises:
+            TypeError: If the added new data is not in pandas DataFrame type.
+            ValueError: If the added new data has different number of columns than that of the original input data.
+            ValueError: If the added new data has different column names than that of the original input data.
         """
         #verify if the input data is a dataframe
         if not isinstance(new_data, pd.DataFrame):
@@ -514,9 +584,14 @@ class EpiModel_Vec_Encode_1_2(BaseModel):
 
     def do_timestep(self, dt: int | float =1.0) -> np.ndarray:
         """
-        Does a timestep process, updating the epidemic current state by applying each epidemic rule to the current state data.
-        If in cycles of simulation, appends each iteration's current state to the full epidemic history.
-        @param dt: the time step.
+        Do a timestep process, updating the epidemic current state by applying each epidemic rule to the current state data.
+        Append each iteration's current state to the full epidemic history.
+        
+        Args:
+            dt: A floating number of the time step.
+
+        Returns:
+            A list of Numpy arrays with each array representing an epidemic historical data in time T.
         """
         
         for ruleset in self.rules:

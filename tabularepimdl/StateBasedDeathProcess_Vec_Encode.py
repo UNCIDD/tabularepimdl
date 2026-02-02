@@ -1,12 +1,11 @@
 import numpy as np
-import pandas as pd
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 
 
 class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
-    """! 
+    """
     Rule that represents a death process that takes people out of a state defined by one or more columns at some rate.
 
     Attributes:
@@ -16,23 +15,6 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         rate: the rate at whihc people will die from.
         stochastic: whether the process is stochastic or deterministic.
         infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
-
-    Examples:
-    data = pd.DataFrame({
-        'N': [10, 20, 30],
-        'InfState': ['I', 'R', 'S'], #column1
-        'Hosp':     ['P1', 'U1', 'U2'] #column2
-    })
-
-    column = 'InfState' #one column only
-    column_states = ['I', 'R', 'S']
-    target_states = ['I', 'S'] #values from single column
-
-    selected_data = pd.DataFrame({
-        'N': [10, 30],
-        'InfState': ['I', 'S'], #column1
-        'Hosp':     ['P1', 'U2'] #column2
-    })
     """
 
     column: str = Field(description = "one column that we will check states against.")
@@ -54,7 +36,12 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         return list_parameters
     
     def model_post_init(self, _):
-        #infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #for InfState column mapping only, not used for this rule
+        """
+        Encode the input states based on each column's attribute values.
+        
+        Returns:
+            Numerical values of encoded column states.
+        """
         states_sorted = sorted(self.column_states)
         colstate_to_int = {s: i for i, s in enumerate(states_sorted)} #for the single column mapping
         self._states_code = [colstate_to_int[state] for state in states_sorted if state in self.target_states] #encoded column states
@@ -76,6 +63,25 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
 
         Raises:
             ValueError: If the column `'N'` is missing in `current_state`.
+        
+        Examples: # in pandas DataFrame formt instead of Numpy array
+            import pandas as pd
+            data = pd.DataFrame({
+            'N': [10, 20, 30],
+            'InfState': ['I', 'R', 'S'], #column1
+            'Hosp':     ['P1', 'U1', 'U2'] #column2
+            })
+
+            column = 'InfState' #one column only
+            column_states = ['I', 'R', 'S']
+            target_states = ['I', 'S'] #values from single column
+
+            process_object = StateBasedDeathProcess_Vec_Encode(column, column_states, target_states, ...)
+        
+        selected_from = project_object.get_deltas(current_state, ...)
+            N   InfState    Hosp
+        0  10          I      P1
+        1  30          S      U2
         """
         required_columns = "N" #check if column N presents in current_state
         if required_columns not in col_idx_map:
@@ -112,9 +118,12 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         return result_buffer[:count, :]
 
 
-    def to_yaml(self) -> dict:
+    def to_dict(self) -> dict:
         """
-        return the rule's attributes to a dictionary.
+        Save the rule's attributes and their associated values to a dictionary.
+        
+        Returns:
+            Rule attributes in a dictionary.
         """
         rc = {
             'tabularepimdl.StateBasedDeathProcess_Vec_Encode' : self.model_dump()
@@ -124,10 +133,22 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
 
     #set up a property to return all the required compartments used in infstate column
     @property
-    def infstate_all(self) -> list[str]: 
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if the `column` takes 'infstate' value.
+        """
         return self.infstate_compartments
     
     #set up a property to return all the required states used in general column
     @property
-    def column_all(self) -> list[str]: 
+    def column_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories if the `column` takes other string values.
+        """
         return self.column_states

@@ -1,5 +1,3 @@
-from typing import Annotated
-
 import numpy as np
 from pydantic import BaseModel, Field, field_validator, PrivateAttr
 
@@ -7,7 +5,7 @@ from tabularepimdl.Rule import Rule
 
 
 class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
-    """!
+    """
     Rule that does transmission based on if a trait is shared across different populations.
     
     Attributes:
@@ -22,7 +20,6 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         stochastic: whether the process is stochastic or deterministic.
         infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
     """
-
     
     inf_col: str = Field(description = "the infection state column for this infectious process.")
     in_beta: float = Field(ge=0, description = "transmission rate if trait shared.")
@@ -57,6 +54,12 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         return category_vals
     
     def model_post_init(self, _):
+        """
+        Encode the input states based on each column's attribute values.
+        
+        Returns:
+            Numerical values of encoded infection states, recover states and hosp states.
+        """
         infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
         self._s_code = infstate_to_int.get(self.s_st)
         self._i_code = infstate_to_int.get(self.i_st)
@@ -64,7 +67,6 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
 
         self.trait_col_all_categories = sorted(self.trait_col_all_categories) #sort the trait_col's all categories
         self._trait_col_all_categories_code = [i for i, v in enumerate(self.trait_col_all_categories)] #encode each category, keeping numbers only
-
 
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
@@ -146,9 +148,12 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         return result
 
 
-    def to_yaml(self) -> dict:
+    def to_dict(self) -> dict:
         """
-        return the rule's attributes to a dictionary.
+        Save the rule's attributes and their associated values to a dictionary.
+        
+        Returns:
+            Rule attributes in a dictionary.
         """
         rc = {
             'tabularepimdl.SharedTraitInfection_Vec_Encode': self.model_dump()
@@ -158,10 +163,22 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
 
     #set up a property to return all the required compartments used in infstate column
     @property
-    def infstate_all(self) -> list[str]: 
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if the `inf_col` takes 'infstate' value.
+        """
         return self.infstate_compartments
     
     #set up a property to return all the required categories used in trait_col
     @property
-    def trait_col_all(self) -> list[str]: 
+    def trait_col_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `trait_col` uses.
+        """
         return self.trait_col_all_categories

@@ -1,7 +1,4 @@
-from typing import Annotated
-
 import numpy as np
-import pandas as pd
 from pydantic import BaseModel, Field, PrivateAttr
 
 from tabularepimdl.Rule import Rule
@@ -9,13 +6,14 @@ from tabularepimdl.Rule import Rule
 #This class removes the pre-allocated buffer parameter from get_deltas() method
 #This class is used to compare performance to the class that has pre-allocated buffer
 class SimpleObservationProcess_Vec_Encode_nobuffer(Rule, BaseModel):
-    """!
+    """
     Rule that captures a simple generic observation process where people from a particular state are
     observed to move into another state at some constant rate.
     
     Attributes:
         source_col: the column containing source_state for the observation process.
         source_state: the state individuals start, listed in source_col.
+        source_col_all_categories: all the categories used in source column.
         obs_col: the column that contains each group of individuals' observed state.
         rate: the number of people move from a particular state into another state per unit time.
         unobs_state: un-observed state, listed in obs_col.
@@ -28,6 +26,7 @@ class SimpleObservationProcess_Vec_Encode_nobuffer(Rule, BaseModel):
 
     source_col: str = Field(description = "the column containing source_state for the observation process.")
     source_state: str = Field(description = "the state individuals start.")
+    source_col_all_categories: list[str] = Field(description = "all the categories used in source column.")
     obs_col: str = Field(description = "the column that contains each group of individuals' observed state.")
     rate: float = Field(ge=0, description = "the number of people move from a particular state into another state per unit time.")
     unobs_state: str = Field(default='U', description="un-observed state.")
@@ -45,9 +44,18 @@ class SimpleObservationProcess_Vec_Encode_nobuffer(Rule, BaseModel):
     _prevobs_code: int | None = PrivateAttr(default=None)
 
     def model_post_init(self, _):
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
-        self._source_state_code = infstate_to_int.get(self.source_state)
+        """
+        Encode the input states based on each column's attribute values.
         
+        Returns:
+            Numerical values of encoded infection states and observation states.
+        """
+        if self.source_col.lower() == 'infstate': #column is infection state
+            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate domain values to integers {'I': 0, 'R': 1, 'S': 2}
+            self._source_state_code = infstate_to_int.get(self.source_state)
+        else: #column takes other attribute value
+            source_col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.source_col_all_categories))}  #encode column domain values to integers
+            self._source_state_code = source_col_cat_to_int.get(self.source_state)
         
         observation_to_int = {obs: i for i, obs in enumerate(sorted(self.obs_col_all_categories))} #encode observation strings to integer
         self._unobs_code = observation_to_int.get(self.unobs_state)
@@ -154,9 +162,12 @@ class SimpleObservationProcess_Vec_Encode_nobuffer(Rule, BaseModel):
         return np.vstack((out_of_unobs_buffer, into_incobs_buffer, out_of_incobs_buffer, into_prev_buffer))
     
     
-    def to_yaml(self) -> dict:
+    def to_dict(self) -> dict:
         """
-        return the rule's attributes to a dictionary.
+        Save the rule's attributes and their associated values to a dictionary.
+        
+        Returns:
+            Rule attributes in a dictionary.
         """
         rc = {
             'tabularepimdl.SimpleObservationProcess_Vec_Encode_nobuffer': self.model_dump()
@@ -166,10 +177,33 @@ class SimpleObservationProcess_Vec_Encode_nobuffer(Rule, BaseModel):
 
     #set up a property to return all the required compartments used in infstate column
     @property
-    def infstate_all(self) -> list[str]: 
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if the `source_col` takes 'infstate' value.
+        """
         return self.infstate_compartments
     
     #set up a property to return all the required categories used in obs_col
     @property
-    def obs_col_all(self) -> list[str]: 
+    def obs_col_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `obs_col` uses.
+        """
         return self.obs_col_all_categories
+    
+    #set up a property to return all the required categories used in source_col
+    @property
+    def source_col_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories if the `source_col` takes other string values.
+        """
+        return self.source_col_all_categories

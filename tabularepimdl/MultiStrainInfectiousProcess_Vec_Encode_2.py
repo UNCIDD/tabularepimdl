@@ -1,12 +1,11 @@
 import numpy as np
-import pandas as pd
 from pydantic import BaseModel, Field, ConfigDict, ValidationInfo, field_validator, model_validator, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 
 
 class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
-    """! 
+    """
     Rule that takes a cross protection matrix, a list of infection state columns and an array of betas 
     to simulate infections contain multiple strains of the same pathogen.
     Does not allow co-infections.
@@ -102,6 +101,15 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
         return self
     
     def model_post_init(self, _):
+        """
+        Encode the input states based on each column's attribute values.
+        
+        Returns:
+            Numerical values of encoded infection states, recover states and hosp states.
+        
+        Notes:
+            infstate_to_int (dict): A placeholder (not being used in this rule). Mapping of infection states of infstate_compartments to their index positions.
+        """
         infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}, not used in this rule
         
         self.columns_all_categories = sorted(self.columns_all_categories) #sort the columns' all categories
@@ -271,20 +279,27 @@ class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
         return result_buffer[:count_end, :] #include all rows with 0 for now
     
 
-    def to_yaml(self) -> dict:
+    def to_dict(self) -> dict:
         """
-        return the rule's attributes to a dictionary.
+        Save the rule's attributes and their associated values to a dictionary.
+        
+        Returns:
+            Rule attributes in a dictionary.
         """
         rc = {
-            'tabularepimdl.MultiStrainInfectiousProcess_Vec_Encode': self.model_dump()
+            'tabularepimdl.MultiStrainInfectiousProcess_Vec_Encode_2': self.model_dump()
         }
 
         return rc
 
 
-    #set up a property to return all the required categories used in trait_col
+    #set up a property to return all the required categories used in columns
     @property
-    def columns_all(self) -> list[str]: 
+    def columns_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `columns` uses.
+        """
         return self.columns_all_categories
-
-

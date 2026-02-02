@@ -1,5 +1,3 @@
-from typing import Annotated
-
 import numpy as np
 from pydantic import BaseModel, Field, PrivateAttr
 
@@ -7,7 +5,7 @@ from tabularepimdl.Rule import Rule
 
 
 class SimpleTransition_Vec_Encode(Rule, BaseModel):
-    """! 
+    """
     Rule represents a simple transition from one state to another, such that if a column has
     the from specified value, it creates transitions with the to specified value at the given rate.
 
@@ -33,6 +31,12 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     _to_code: int | None = PrivateAttr(default=None)
 
     def model_post_init(self, _):
+        """
+        Encode the input states based on each column's attribute values.
+        
+        Returns:
+            Numerical values of encoded infection states.
+        """
         if self.column.lower() == 'infstate': #column is infection state
             infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
             self._from_code = infstate_to_int.get(self.from_st)
@@ -117,9 +121,21 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         return result_buffer[:2*count, :]
 
     def __str__(self) -> str:
+        """
+        String representatoin of the rule's transition state and rate.
+
+        Returns:
+            A string output displays the rule's transition state and rate.
+        """
         return f"SimpleTransition_Vec_Encode: {self.from_st} --> {self.to_st} at rate {self.rate}"
     
-    def to_yaml(self) -> dict:
+    def to_dict(self) -> dict:
+        """
+        Save the rule's attributes and their associated values to a dictionary.
+        
+        Returns:
+            Rule attributes in a dictionary.
+        """
         rc = {
             'tabularepimdl.SimpleTransition_Vec_Encode': self.model_dump()
         }
@@ -128,10 +144,22 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     
     #set up a property to return all the required compartments used in infstate column
     @property
-    def infstate_all(self) -> list[str]: 
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if the `column` takes 'infstate' value.
+        """
         return self.infstate_compartments
     
     #set up a property to return all the required categories used in general column
     @property
-    def column_all(self) -> list[str]: 
+    def column_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories if the `column` takes other string values.
+        """
         return self.column_categories

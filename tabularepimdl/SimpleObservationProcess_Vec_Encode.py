@@ -1,7 +1,4 @@
-from typing import Annotated
-
 import numpy as np
-import pandas as pd
 from pydantic import BaseModel, Field, PrivateAttr
 
 from tabularepimdl.Rule import Rule
@@ -15,6 +12,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
     Attributes:
         source_col: the column containing source_state for the observation process.
         source_state: the state individuals start, listed in source_col.
+        source_col_all_categories: all the categories used in source column.
         obs_col: the column that contains each group of individuals' observed state.
         rate: the number of people move from a particular state into another state per unit time.
         unobs_state: un-observed state, listed in obs_col.
@@ -45,6 +43,12 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
     _prevobs_code: int | None = PrivateAttr(default=None)
 
     def model_post_init(self, _):
+        """
+        Encode the input states based on each column's attribute values.
+        
+        Returns:
+            Numerical values of encoded infection states and observation states.
+        """
         if self.source_col.lower() == 'infstate': #column is infection state
             infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate domain values to integers {'I': 0, 'R': 1, 'S': 2}
             self._source_state_code = infstate_to_int.get(self.source_state)
@@ -154,11 +158,20 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         return result_buffer[:2*count_out_Unobs+2*count_out_Incobs, :]
     
     def __str__(self) -> str:
+        """
+        String representatoin of the rule's name.
+
+        Returns:
+            A string output displays the rule name.
+        """
         return f"SimpleObservationProcess_Vec_Encode."
     
-    def to_yaml(self) -> dict:
+    def to_dict(self) -> dict:
         """
-        return the rule's attributes to a dictionary.
+        Save the rule's attributes and their associated values to a dictionary.
+        
+        Returns:
+            Rule attributes in a dictionary.
         """
         rc = {
             'tabularepimdl.SimpleObservationProcess_Vec_Encode': self.model_dump()
@@ -168,15 +181,33 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
 
     #set up a property to return all the required compartments used in infstate column
     @property
-    def infstate_all(self) -> list[str]: 
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if the `source_col` takes 'infstate' value.
+        """
         return self.infstate_compartments
     
     #set up a property to return all the required categories used in obs_col
     @property
-    def obs_col_all(self) -> list[str]: 
+    def obs_col_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `obs_col` uses.
+        """
         return self.obs_col_all_categories
     
     #set up a property to return all the required categories used in source_col
     @property
-    def source_col_all(self) -> list[str]: 
+    def source_col_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories if the `source_col` takes other string values.
+        """
         return self.source_col_all_categories

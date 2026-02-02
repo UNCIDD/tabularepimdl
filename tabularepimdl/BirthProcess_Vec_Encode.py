@@ -1,14 +1,11 @@
-from collections.abc import Iterable
-
 import numpy as np
-import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 
 
 class BirthProcess_Vec_Encode(Rule, BaseModel):
-    """!
+    """
     Represents a birth process where people are borne based
     on a birth rate based on the full poplation size.
 
@@ -34,7 +31,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         
         Args:
             current_state (np.ndarray): A structured array representing the current epidemic state. Must include a column `'N'`, which indicates the population count.
-            col_idx_map (dict): mapping of column names to their index positions.
+            col_idx_map (dict): Mapping of column names to their index positions.
             result_buffer (np.ndarray): A pre-allocated array that will be populated with the computed deltas. This array is modified in-place and returned.
             dt (float): The size of the time step. Defaults to 1.0.
             stochastic (bool, optional): Whether to apply stochastic modeling. If `None`, the class-level `self.stochastic` attribute is used.
@@ -96,21 +93,29 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
 
         return result_buffer[:count, :]
         
-    def to_yaml(self) -> dict:
+    def to_dict(self) -> dict:
         """
-        return the rule's attributes to a dictionary.
+        Save the rule's attributes and their associated values to a dictionary.
+        
+        Returns:
+            Rule attributes in a dictionary.
         """
         rc = {
-            'tabularepimdl.BirthProcess_Vec_Encode' : {
-                'rate': self.rate,
-                'column_to_sort': self.column_to_sort,
-                'stochastic': self.stochastic
-            }
+            'tabularepimdl.BirthProcess_Vec_Encode': self.model_dump()
         }
         return rc
     
     @property
     def start_state_sig(self) -> np.ndarray:
+        """
+        Return the start_state_sig value if it is not empty.
+
+        Returns:
+            A Numpy array of initial state configuration for new births.
+
+        Raises:
+            ValueError: If the `_start_state_sig` is empty.
+        """
         if self._start_state_sig.size == 0:
             raise ValueError(f"No start state data is available due to no input current state data is provided to get_deltas() of the rule.")
         else:

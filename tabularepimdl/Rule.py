@@ -1,6 +1,3 @@
-## Define a class that represents a transition rule. Its simplest form is a rule just takes in the current state,
-## and returns as set of deltas that will be applied to the appropriate parts of the current state. These deltas
-## should specify the full row signature.
 import importlib
 import inspect
 from abc import ABC, abstractmethod
@@ -10,29 +7,46 @@ import pandas as pd
 
 
 class Rule(ABC):
+    """
+    Set up an abstract base class `Rule` which defines a generic interface for 
+    epidemic rules that are used in epidemic model engine.
+    """
 
     stochastic: bool
-    """
-    @param stochastic: whether the process is stochastic or deterministic.
-    """
+    """@param stochastic: whether the process is stochastic or deterministic."""
         
     @abstractmethod
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int] | None = None, result_buffer: np.ndarray | None = None, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray: #updated method definition
-        #get_deltas(self, current_state: pd.DataFrame, dt: int|float, stochastic: bool | None = None) -> pd.DataFrame: #the original get_deltas()
+        """
+        Method takes in current state and return a series of deltas to that state.
+        It computes the population deltas for the current state at a given time step.
+
+        Args:
+            current_state (np.ndarray): A structured array representing the current epidemic state. Must include a column `'N'`, which indicates the population count.
+            col_idx_map (dict): mapping of column names to their index positions. e.g. {'N':0, 'InfState':1, 'Hosp':2}
+            result_buffer (np.ndarray): A pre-allocated array that will be populated with the computed deltas. This array is modified in-place and returned.
+            dt (float): The size of the time step. Defaults to 1.0.
+            stochastic (bool, optional): Whether to apply stochastic modeling. If `None`, the class-level `self.stochastic` attribute is used.
         
-        """! Method should take in current state and return a series of deltas to that state.
-        @param current_state: a data frame (at the moment) w/ the current epidemic state
-        @param dt: the size of the timestep
-        @return: deltas to the epidemic state.
+        Returns:
+            np.ndarray: A NumPy structured array containing the population deltas.
+
+        Raises:
+            ValueError: If the column `'N'` is missing in `current_state`.
         """
 
         pass
 
     @classmethod
     def from_yaml(cls, rule_yaml):
-        '''! This method loads a rule from its full yaml definition. Should not be overridden.
-        @param rule_yaml: a dictionary (key-value pair) defining the class(es) read from yaml file.
-        @return: an instantiated class object with parameter values initialized.
+        '''
+        Load a rule from its full yaml definition. Should not be overridden.
+        
+        Args:
+            rule_yaml: a dictionary (key-value pair) defining the class(es) read from yaml file.
+        
+        Returns:
+            An instantiated class object with parameter values initialized.
         '''
         
         key = list(rule_yaml.keys())[0]
@@ -62,10 +76,17 @@ class Rule(ABC):
     @classmethod
     def _validate_definition(cls, tepi_rule, definition: dict) -> None:
 
-        """Processes a epidemic rule's class definition from a YAML file
-           and validate its definition keys against the same Pydantic-integrated model's fields.
-        @para tepi_rule: a tabularepimdl class.
-        @para definition: parameters defined from a YAML file for the above tabularepimdl class.   
+        """
+        Process an epidemic rule's class definition from a YAML file
+        and validate its definition keys against the same Pydantic-integrated model's fields.
+        
+        Args:
+            tepi_rule: a tabularepimdl rule class.
+            definition: parameters defined from a YAML file for the above tabularepimdl class.
+        
+        Raises:
+            ValueError: If the YAML file misses fields the corresponding rule requires.
+            ValueError: If the YAML file includes fields the corresponding rule does not require.
         """
         #Expect the parameter defition to be a dictioary type data.
         if not isinstance(definition, dict):
@@ -95,20 +116,26 @@ class Rule(ABC):
         
     @classmethod
     def from_yaml_def(cls, definition):
-        '''! This is the method to override to do any special processing of a rule class definition
-        from a yaml file. 
-        @param definition: a dictionary giving the parameters required by a epidemic rule.
-        return: an instantiated class object with parameter values intialized.
+        '''
+        Do any special processing of a rule class definition from a yaml file.
+        
+        Args:
+            definition: A dictionary giving the parameters required by an epidemic rule.
+
+        Returns: 
+            An instantiated class object with parameter values intialized.
         '''
         
         return(cls(**definition))
 
     @abstractmethod
-    def to_yaml(self) -> dict:
-        '''! This method should return dictionary object appropriate for inclusion in a yaml 
-        definition of an epidemic. Should be a dictionary with the class name (in form module.classname)
-        being the outer key containing information needed for the class to run "from_yaml"
+    def to_dict(self) -> dict:
+        '''
+        Return a dictionary object appropriate for inclusion in a yaml definition of an epidemic.
+        Should be a dictionary with the class name (in form module.classname) 
+        being the outer key containing information needed for the class to run `from_yaml`
         
-        @return: a dictionary representation of this object appropriate to read in by from_yaml
+        Returns:
+            A dictionary representation of this object appropriate to read in by method `from_yaml`.
         '''
         pass

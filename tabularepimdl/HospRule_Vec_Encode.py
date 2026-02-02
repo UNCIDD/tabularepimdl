@@ -1,11 +1,11 @@
 import numpy as np
-import pandas as pd
-from pydantic import BaseModel, Field, ConfigDict, ValidationInfo, field_validator, model_validator, PrivateAttr
+from pydantic import BaseModel, Field, ConfigDict, model_validator, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 
 class HospRule_Vec_Encode(Rule, BaseModel):
-    '''This rule takes multiple columns. You have some risk of hospitalization if infected from any column,
+    '''
+    This rule takes multiple columns. You have some risk of hospitalization if infected from any column,
     but that probability is reduced if you are recovered in any column. We will additionally track which strain you were
     hospitalized with. Only tracking total hospitalizations.
     
@@ -60,6 +60,15 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         return self
 
     def model_post_init(self, _):
+        """
+        Encode the input states based on each column's attribute values.
+
+        Returns:
+            Numerical values of encoded infection states, recover states and hosp states.
+
+        Notes:
+            infstate_to_int (dict): A placeholder (not being used in this rule). Mapping of infection states of infstate_compartments to their index positions.
+        """
         infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}, not used in this rule
         
         self._strain_columns_all_categories_code = {v: i for i, v in enumerate(sorted(self.strain_cols_all_categories))} #encode each category
@@ -158,7 +167,13 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         return result_buffer[:2*count, :]
 
                 
-    def to_yaml(self) -> dict:
+    def to_dict(self) -> dict:
+        """
+        Save the rule's attributes and their associated values to a dictionary.
+        
+        Returns:
+            Rule attributes in a dictionary.
+        """
         rc = {
             'tabularepimdl.HospRule_Vec_Encode': self.model_dump()
         }
@@ -168,15 +183,33 @@ class HospRule_Vec_Encode(Rule, BaseModel):
 
     #set up a property to return all the required compartments used in infstate column
     @property
-    def infstate_all(self) -> list[str]: 
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if any column in this rule takes 'infstate' value.
+        """
         return self.infstate_compartments
     
     #set up a property to return all the required categories used in strain_cols
     @property
-    def strain_cols_all(self) -> list[str]: 
+    def strain_cols_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `strain_cols` uses.
+        """
         return self.strain_cols_all_categories
     
     #set up a property to return all the required categories used in hosp_cols
     @property
-    def hosp_cols_all(self) -> list[str]: 
+    def hosp_cols_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `hosp_cols` uses.
+        """
         return self.hosp_cols_all_categories
