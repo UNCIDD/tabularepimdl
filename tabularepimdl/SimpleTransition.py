@@ -63,3 +63,7 @@ class SimpleTransition(Rule, BaseModel):
         }
 
         return rc
+    
+    def to_dict(self) -> dict:
+        """to accomodate the to_dict() addition in base Rule"""
+        pass

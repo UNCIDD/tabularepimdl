@@ -66,3 +66,7 @@ class StateBasedDeathProcess(Rule, BaseModel):
             'tabularepimdl.StateBasedDeathProcess' : self.model_dump()
         }
         return rc #add return operation
+    
+    def to_dict(self) -> dict:
+        """to accomodate the to_dict() addition in base Rule"""
+        pass

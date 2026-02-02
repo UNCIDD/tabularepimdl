@@ -103,9 +103,9 @@ class SimpleTransition_Vec(Rule, BaseModel):
     def __str__(self) -> str:
         return f"SimpleTransition_Vec: {self.from_st} --> {self.to_st} at rate {self.rate}"
     
-    def to_yaml(self) -> dict:
+    def to_dict(self) -> dict:
         rc = {
-            'tabularepimdl.SimpleTransition': self.model_dump()
+            'tabularepimdl.SimpleTransition_Vec': self.model_dump()
         }
 
         return rc

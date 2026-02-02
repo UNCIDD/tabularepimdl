@@ -252,7 +252,7 @@ class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
         return result
 
 
-    def to_yaml(self) -> dict:
+    def to_dict(self) -> dict:
         """
         return the rule's attributes to a dictionary.
         """

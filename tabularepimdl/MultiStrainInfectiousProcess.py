@@ -181,4 +181,8 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
             'tabularepimdl.MultiStrainInfectiousProcess': self.model_dump()
         }
 
-        return rc    
+        return rc
+    
+    def to_dict(self) -> dict:
+        """to accomodate the to_dict() addition in base Rule"""
+        pass

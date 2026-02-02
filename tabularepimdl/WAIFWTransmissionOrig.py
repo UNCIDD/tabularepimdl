@@ -100,3 +100,7 @@ class WAIFWTransmissionOrig(Rule):
         }
         
         return rc #added return operation
+    
+    def to_dict(self) -> dict:
+        """to accomodate the to_dict() addition in base Rule"""
+        pass

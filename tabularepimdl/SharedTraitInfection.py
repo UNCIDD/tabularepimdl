@@ -101,3 +101,7 @@ class SharedTraitInfection(Rule, BaseModel):
             'tabularepimdl.SharedTraitInfection': self.model_dump()
         }
         return rc
+    
+    def to_dict(self) -> dict:
+        """to accomodate the to_dict() addition in base Rule"""
+        pass
