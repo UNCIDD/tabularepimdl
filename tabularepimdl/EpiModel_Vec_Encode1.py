@@ -343,30 +343,35 @@ class EpiModel_Vec_Encode_1(BaseModel):
         """
         
         for ruleset in self.rules:
+            print('vec1 current ruleset is\n', ruleset) #debug
             ruleset_deltas_list = []
             for rule in ruleset:
-                #print('current rule:', rule)
+                print('current rule:', rule)
                 #print('in rule Before loop preallocation buffer\n', self._current_result_preallocation)
                 if self.stoch_policy == "rule_based":
                     rule_deltas = rule.get_deltas(current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=self._current_result_preallocation, dt=dt)
                 else:
                     rule_deltas = rule.get_deltas(current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=self._current_result_preallocation, dt=dt, stochastic = (self.stoch_policy=="stochastic"))
-                #print('rule detlas\n', rule_deltas)
+                print('rule detlas\n', rule_deltas)
                 #print('in rule After loop preallocation buffer\n', self._current_result_preallocation)
                 #print('before append, ruleset_deltas_list\n', ruleset_deltas_list)
                 if rule_deltas is not None and len(rule_deltas) > 0: #add non-None rule_deltas to the list
                     ruleset_deltas_list.append(rule_deltas.copy())
-                #print('after append, ruleset_deltas_list\n', ruleset_deltas_list)
+                print('after append, ruleset_deltas_list\n', ruleset_deltas_list)
+
+                if rule is not ruleset[-1]: #debug
+                    print('---next rule---') #debug
+                else: print('finished current ruleset, moving to next ruleset') #debug
 
             if len(ruleset_deltas_list) == 0: #if no data added to ruleset_deltas_list, go to next ruleset
-                #print('go to next ruleset')
+                print('list is empty, go to next ruleset')
                 continue
 
             ruleset_deltas_list.append(self.current_state_array) #add current_state_array to the list
-            #print('after append cur_state_array, ruleset_deltas_list\n', ruleset_deltas_list)
+            print('after append cur_state_array, ruleset_deltas_list\n', ruleset_deltas_list)
 
             self.current_state_array = np.vstack(ruleset_deltas_list) #convert list of arrays to array and save it to current_state_array
-            #print('before grouping, cur_array\n', self.current_state_array)
+            print('before grouping, cur_array\n', self.current_state_array)
 
             #grouping columns, sum N for each group, pick max T out of all groups
             #process grouping columns
@@ -384,13 +389,18 @@ class EpiModel_Vec_Encode_1(BaseModel):
             max_col_T_per_group[:] = np.max(max_col_T_per_group) #global max T
 
             self.current_state_array = np.column_stack((unique_col_value, sum_col_N_per_group, max_col_T_per_group)) #order of cols is grouping_cols, N, T
-            #print('after grouping, cur_array\n', self.current_state_array)
+            
+
+            #remove all rows where column N has a value of 0
+            self.current_state_array = self.current_state_array[self.current_state_array[:, self._n_idx] != 0]
+            print('after grouping&dropping 0s, before adding dt, current array\n', self.current_state_array)
+            if ruleset is not self.rules[-1]: #debug
+                print('-------next ruleset--------') #debug
+            else: print('all rulesets done, for loop ends') #debug
 
         self.current_state_array[:, self._t_idx] = self.current_state_array[:, self._t_idx] + dt #increase T value by dt
+        print('add dt, engine_vec1 final current_state_array:\n', self.current_state_array) #debug
 
-        #remove all rows where column N has a value of 0
-        self.current_state_array = self.current_state_array[self.current_state_array[:, self._n_idx] != 0]
-        
         #this code line may not be needed
         #self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) #T is forward with dt after each timestep iteration
             
