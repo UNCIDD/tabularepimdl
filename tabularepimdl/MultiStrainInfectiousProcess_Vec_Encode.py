@@ -120,6 +120,12 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         self._i_code = self._columns_all_categories_code.get(self.i_st)
         self._r_code = self._columns_all_categories_code.get(self.r_st)
         self._inf_to_code = self._columns_all_categories_code.get(self.inf_to)
+
+    def combination_of_input_states(self) -> int: 
+        """
+        Return the number of combinations of different input states of the rule.
+        """
+        return len(self.columns_all_categories)*len(self.infstate_compartments)
     
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """
