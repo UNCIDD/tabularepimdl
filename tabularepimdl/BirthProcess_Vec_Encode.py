@@ -13,6 +13,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         rate: Birth rate per timestep (N * rate births).
         column_to_sort: Specify which input field is used to sort the dataset in ascending order.
         stochastic: Whether the transition is stochastic.
+        infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
     """
 
     # Pydantic Configuration
@@ -21,9 +22,17 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
     rate: float = Field(ge=0, description = "birth rate at per time step (where N*rate births occur).")
     column_to_sort: str = Field(description="Specify which input field is used to sort the dataset in ascending order.")
     stochastic: bool = Field(False, description = "whether the transition is stochastic or deterministic.")
+    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
 
     _start_state_sig: np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) #initial state configuration for new births.
     _start_state_saved: bool = PrivateAttr(default=False) #to identify if a valid value has been assigned to _start_state_sig
+
+    def combination_of_input_states(self) -> int: 
+        """
+        Return the number of combinations of different input states of the rule.
+        BirthProcess_Vec_Encode does not have input states.
+        """
+        return len(self.infstate_compartments)
     
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -104,6 +113,17 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             'tabularepimdl.BirthProcess_Vec_Encode': self.model_dump()
         }
         return rc
+    
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments.
+        """
+        return self.infstate_compartments
     
     @property
     def start_state_sig(self) -> np.ndarray:
