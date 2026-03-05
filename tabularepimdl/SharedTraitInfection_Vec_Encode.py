@@ -68,6 +68,11 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         self.trait_col_all_categories = sorted(self.trait_col_all_categories) #sort the trait_col's all categories
         self._trait_col_all_categories_code = [i for i, v in enumerate(self.trait_col_all_categories)] #encode each category, keeping numbers only
 
+    def combination_of_input_states(self) -> int: 
+        """
+        Return the number of combinations of different input states of the rule.
+        """
+        return len(self.trait_col_all_categories)*len(self.infstate_compartments)
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -100,18 +105,16 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         if len(set(self.trait_col_all_categories)) < len(set(current_state[:, trait_col_idx])):
             raise ValueError(f"Number of elements in trait_col_all_categories is less than the number of categories of input data, please check trait_col_all_categories and input data.")
 
-        s_mask = current_state[:, infstate_idx] == self._s_code
-        if not np.any(s_mask):
+        mask_s_idxs = current_state[:, infstate_idx] == self._s_code
+        if mask_s_idxs.size == 0:
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
         
-        s_row_idxs = np.flatnonzero(s_mask)
-        selected_s = current_state[s_row_idxs, :]
+        selected_s = current_state[mask_s_idxs, :]
         N_susceptible = selected_s[:, n_idx]
         #print('N susceptible:', N_susceptible) #debug
 
-        i_mask = current_state[:, infstate_idx] == self._i_code
-        i_row_idxs = np.flatnonzero(i_mask)
-        infect_only = current_state[i_row_idxs, :]
+        mask_i = current_state[:, infstate_idx] == self._i_code
+        infect_only = current_state[mask_i, :]
 
         total_infect = np.sum(infect_only[:, n_idx])
 
