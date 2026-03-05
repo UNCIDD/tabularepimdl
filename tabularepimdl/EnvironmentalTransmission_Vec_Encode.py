@@ -74,11 +74,11 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
         n_idx = col_idx_map['N']
         
         # Fast boolean mask for matching from-state
-        mask = current_state[:, infstate_idx] == self._s_code
-        if not np.any(mask):
+        mask_s_idxs = np.flatnonzero(current_state[:, infstate_idx] == self._s_code)
+        if mask_s_idxs.size == 0:
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
 
-        selected_from = current_state[mask, :]
+        selected_from = current_state[mask_s_idxs, :]
         #print('selected_from\n', selected_from)
         N = selected_from[:, n_idx]
         
