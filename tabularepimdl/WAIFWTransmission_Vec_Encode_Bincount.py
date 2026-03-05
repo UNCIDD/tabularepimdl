@@ -106,7 +106,12 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
 
         self.group_col_all_categories = sorted(self.group_col_all_categories) #sort the group_col's all categories
         self._group_col_all_categories_code = [i for i, v in enumerate(self.group_col_all_categories)] #encode each category, keeping numbers only
-        
+
+    def combination_of_input_states(self) -> int: 
+        """
+        Return the number of combinations of different input states of the rule.
+        """
+        return len(self.group_col_all_categories)*len(self.infstate_compartments)
     
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """

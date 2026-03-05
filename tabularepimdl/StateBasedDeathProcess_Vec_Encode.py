@@ -45,7 +45,12 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         states_sorted = sorted(self.column_states)
         colstate_to_int = {s: i for i, s in enumerate(states_sorted)} #for the single column mapping
         self._states_code = [colstate_to_int[state] for state in states_sorted if state in self.target_states] #encoded column states
-        
+
+    def combination_of_input_states(self) -> int: 
+        """
+        Return the number of combinations of different input states of the rule.
+        """
+        return len(self.column_states)*len(self.target_states)*len(self.infstate_compartments)
         
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -95,6 +100,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
 
         states_mask = np.isin(current_state[:, col_idx], self._states_code) #all rows match single column's states code
         #print('state mask', states_mask)
+        #need to add an empty array return condition if state_mask is empty
 
         #all satisfied records are wanted based on column and state values
         selected_from = current_state[states_mask]
