@@ -78,7 +78,12 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         self._infect_status_code = self._strain_columns_all_categories_code.get(self.infect_status)
         self._recover_status_code = self._strain_columns_all_categories_code.get(self.recover_status)
         self._hosp_status_code = self._hosp_columns_all_categories_code.get(self.hosp_status)
-        
+
+    def combination_of_input_states(self) -> int: 
+        """
+        Return the number of combinations of different input states of the rule.
+        """
+        return len(self.strain_cols_all_categories)*len(self.infstate_compartments)
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """
