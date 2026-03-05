@@ -99,14 +99,14 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
 
         #out_of_unobs supports deterministic and stochastic
         #print('current_state\n', current_state)
-        mask_source_state_unobs = (current_state[:, infstate_idx] == self._source_state_code) & (current_state[:, obs_col_idx] == self._unobs_code)
-        #print('mask source state:', mask_source_state_unobs)
-        if not np.any(mask_source_state_unobs):
+        mask_source_state_unobs_idxs = np.flatnonzero((current_state[:, infstate_idx] == self._source_state_code) & (current_state[:, obs_col_idx] == self._unobs_code))
+        #print('mask_source_state_unobs_idxs:', mask_source_state_unobs_idxs)
+        if mask_source_state_unobs_idxs.size == 0:
             #print('empty mask')
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
         
-        out_of_unobs = current_state[mask_source_state_unobs]
-        #print('out of unobs\n', out_of_unobs) #debug
+        out_of_unobs = current_state[mask_source_state_unobs_idxs]
+        #print('selected out of unobs\n', out_of_unobs) #debug
         N_out_of_unobs = out_of_unobs[:, n_idx]
         #print('N out of unobs\n', N_out_of_unobs) #debug
 
@@ -121,40 +121,37 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
             changed_N = -N_out_of_unobs * rate_const
         #print('changed_N:', changed_N) #debug
 
+        #print('0. result buffer\n', result_buffer)
         #out_of_unobs
         result_buffer[:count_out_Unobs, :] = out_of_unobs
         result_buffer[:count_out_Unobs, n_idx] = changed_N
-        #print('1. out_of_unobs:\n', result_buffer) #debug
+        #print('1. out_of_unobs:\n', result_buffer[:count_out_Unobs]) #debug
 
         #additions, changes in in_ and out_ incobs and prevobs only require deterministic process
-        #into_incobs = N_out_of_unobs.copy()
-        #into_incobs[:, obs_col_idx] = self._incobs_code
-        #into_incobs[:, n_idx] *= -1
         
         #into_incobs
         result_buffer[count_out_Unobs:2*count_out_Unobs, :] = out_of_unobs
         result_buffer[count_out_Unobs:2*count_out_Unobs, n_idx] = -changed_N
         result_buffer[count_out_Unobs:2*count_out_Unobs, obs_col_idx] = self._incobs_code
-        #print('2. into_incobs:\n', result_buffer) #debug
+        #print('2. into_incobs:\n', result_buffer[count_out_Unobs:2*count_out_Unobs]) #debug
 
         #move folks out of current_state incobs state, out_of_incobs
         mask_incobs = current_state[:, obs_col_idx] == self._incobs_code
+        #print('mask_incobs:', mask_incobs)
         out_of_incobs = current_state[mask_incobs]
-        #print('out_of_incobs\n', out_of_incobs) #out_of_incobs[:, n_idx] *= -1
+        #print('out_of_incobs\n', out_of_incobs)
         count_out_Incobs = len(out_of_incobs)
         #print('count_out_Incobs:', count_out_Incobs)
         result_buffer[2*count_out_Unobs:2*count_out_Unobs+count_out_Incobs, :] = out_of_incobs
         result_buffer[2*count_out_Unobs:2*count_out_Unobs+count_out_Incobs, n_idx] *= -1
-        #print('3. out_of_incobs:\n', result_buffer) #debug
+        #print('3. out_of_incobs:\n', result_buffer[2*count_out_Unobs:2*count_out_Unobs+count_out_Incobs]) #debug
 
         #move folks out of the incident state and into the previous state, into_prev 
-        #into_prev = current_state[mask_incobs]
-        #into_prev[:, obs_col_idx] = self._prevobs_code
         result_buffer[2*count_out_Unobs+count_out_Incobs:2*count_out_Unobs+2*count_out_Incobs, :] = out_of_incobs
         result_buffer[2*count_out_Unobs+count_out_Incobs:2*count_out_Unobs+2*count_out_Incobs, obs_col_idx] = self._prevobs_code
-        #print('4. into_prev:\n', result_buffer) #debug
+        #print('4. into_prev:\n', result_buffer[2*count_out_Unobs+count_out_Incobs:2*count_out_Unobs+2*count_out_Incobs]) #debug
 
-        #print('5. result buffer:\n', result_buffer[:2*count_out_Unobs+2*count_out_Incobs, :])
+        #print('5. vec result buffer:\n', result_buffer[:2*count_out_Unobs+2*count_out_Incobs, :])
         return result_buffer[:2*count_out_Unobs+2*count_out_Incobs, :]
     
     def __str__(self) -> str:
@@ -211,3 +208,11 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
             A list of strings of all the required categories if the `source_col` takes other string values.
         """
         return self.source_col_all_categories
+    
+    @property
+    def expansion_factor(self) -> int:
+        """Maximum number of rows this rule can return per input row."""
+        if self.source_col.lower() == 'infstate':
+            return len(self.infstate_compartments)*len(self.obs_col_all_categories)
+        else:
+            return len(self.source_col_all_categories)*len(self.obs_col_all_categories)

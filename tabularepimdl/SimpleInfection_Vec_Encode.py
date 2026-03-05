@@ -53,7 +53,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
             self._i_code = col_cat_to_int.get(self.i_st)
             self._inf_to_code = col_cat_to_int.get(self.i_st)
         
-
+    
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         Compute the population deltas for the current state at a given time step.
@@ -83,7 +83,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         
         infstate_idx = col_idx_map[self.column]
         n_idx = col_idx_map['N']
-        #print('input array\n', current_state)
+        #print('current_state\n', current_state) #debug
 
         total_population: float = np.sum(current_state[:, n_idx])
         #print('total population:', total_population)
@@ -98,21 +98,22 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         #print('beta:', beta)
 
         # i_state
-        mask_i = current_state[:, infstate_idx] == self._i_code
-        if not np.any(mask_i):
+        mask_i_idxs = np.flatnonzero(current_state[:, infstate_idx] == self._i_code)
+        if (mask_i_idxs).size == 0:
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
-            
-        i_row_idxs = np.flatnonzero(mask_i)
-        N_infectious_sum: float = np.sum(current_state[i_row_idxs, n_idx]) #number of infected individuals
+        #print('mask_i_idxs:', mask_i_idxs) 
+        
+        N_infectious_sum: float = np.sum(current_state[mask_i_idxs, n_idx]) #number of infected individuals
         #print('N_infectious_sum:', N_infectious_sum)
 
         # s_state
-        mask_s = current_state[:, infstate_idx] == self._s_code
-        if not np.any(mask_s):
+        mask_s_idxs = np.flatnonzero(current_state[:, infstate_idx] == self._s_code)
+        if (mask_s_idxs).size == 0:
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
+        #print('mask_s_idxs:', mask_s_idxs)
         
-        s_row_idxs = np.flatnonzero(mask_s)
-        selected_s = current_state[s_row_idxs, :]
+        selected_s = current_state[mask_s_idxs, :]
+        #print('selected_s\n', selected_s)
         N_susceptible = selected_s[:, n_idx] #equivalent: current_state[s_row_idxs, n_idx]
         #print('N_susceptible:', N_susceptible)
 
@@ -125,17 +126,18 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
             changed_N = -N_susceptible * rate_const
         #print('change_N:', changed_N)
 
-        count = len(s_row_idxs)
-        
+        count = len(mask_s_idxs)
+        #print('mask_s count:', count)
+        #print('before filling from, result buffer:\n', result_buffer) #debug
         # Fill 'from' rows
         result_buffer[:count, :] = selected_s #equivalent: self._s_code
         result_buffer[:count, n_idx] = changed_N #update column N with changed_N (negative value)
-
+        #print('after fill from, result buffer:\n', result_buffer[:count]) #debug
         # Fill 'to' rows
         result_buffer[count:2*count, :] = selected_s 
         result_buffer[count:2*count, infstate_idx] = self._inf_to_code #update col infstate
         result_buffer[count:2*count, n_idx] = -changed_N  #update column N with inversed changed_N
-
+        #print('after fill to, vec return\n', result_buffer[:2*count, :]) #debug
         return result_buffer[:2*count, :]
     
     def __str__(self) -> str:
@@ -180,3 +182,11 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
             A list of strings of all the required categories if the `column` takes other string values.
         """
         return self.column_categories
+    
+    @property
+    def expansion_factor(self) -> int:
+        """Maximum number of rows this rule can return per input row."""
+        if self.column.lower() == 'infstate':
+            return len(self.infstate_compartments)
+        else:
+            return len(self.column_categories)
