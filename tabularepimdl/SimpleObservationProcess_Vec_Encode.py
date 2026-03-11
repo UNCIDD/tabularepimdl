@@ -61,6 +61,43 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         self._incobs_code = observation_to_int.get(self.incobs_state)
         self._prevobs_code = observation_to_int.get(self.prevobs_state)
 
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if the `source_col` takes 'infstate' value.
+        """
+        return self.infstate_compartments
+    
+    #set up a property to return all the required categories used in obs_col
+    @property
+    def obs_col_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `obs_col` uses.
+        """
+        return self.obs_col_all_categories
+    
+    #set up a property to return all the required categories used in source_col
+    @property
+    def source_col_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories if the `source_col` takes other string values.
+        """
+        return self.source_col_all_categories
+    
+    @property
+    def expansion_factor(self) -> int:
+        """Maximum number of rows this rule can return per input row."""
+        return max(len(self.infstate_compartments)*len(self.obs_col_all_categories), len(self.source_col_all_categories)*len(self.obs_col_all_categories))
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -174,45 +211,3 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
             'tabularepimdl.SimpleObservationProcess_Vec_Encode': self.model_dump()
         }
         return rc
-    
-
-    #set up a property to return all the required compartments used in infstate column
-    @property
-    def infstate_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required infection compartments if the `source_col` takes 'infstate' value.
-        """
-        return self.infstate_compartments
-    
-    #set up a property to return all the required categories used in obs_col
-    @property
-    def obs_col_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required categories the `obs_col` uses.
-        """
-        return self.obs_col_all_categories
-    
-    #set up a property to return all the required categories used in source_col
-    @property
-    def source_col_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required categories if the `source_col` takes other string values.
-        """
-        return self.source_col_all_categories
-    
-    @property
-    def expansion_factor(self) -> int:
-        """Maximum number of rows this rule can return per input row."""
-        if self.source_col.lower() == 'infstate':
-            return len(self.infstate_compartments)*len(self.obs_col_all_categories)
-        else:
-            return len(self.source_col_all_categories)*len(self.obs_col_all_categories)

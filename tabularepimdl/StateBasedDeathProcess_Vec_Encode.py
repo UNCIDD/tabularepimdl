@@ -40,11 +40,32 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         colstate_to_int = {s: i for i, s in enumerate(states_sorted)} #for the single column mapping
         self._states_code = [colstate_to_int[state] for state in states_sorted if state in self.target_states] #encoded column states
 
-    def combination_of_input_states(self) -> int: 
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]:
         """
-        Return the number of combinations of different input states of the rule.
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if the `column` takes 'infstate' value.
         """
-        return len(self.column_states)*len(self.target_states)*len(self.infstate_compartments)
+        return self.infstate_compartments
+    
+    #set up a property to return all the required states used in general column
+    @property
+    def column_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories if the `column` takes other string values.
+        """
+        return self.column_states
+    
+    @property
+    def expansion_factor(self) -> int:
+        """Maximum number of rows this rule can return per input rows."""
+        return max(len(self.column_states)*len(self.infstate_compartments), len(self.target_states)*len(self.infstate_compartments))
         
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -129,26 +150,3 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
             'tabularepimdl.StateBasedDeathProcess_Vec_Encode' : self.model_dump()
         }
         return rc
-    
-
-    #set up a property to return all the required compartments used in infstate column
-    @property
-    def infstate_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required infection compartments if the `column` takes 'infstate' value.
-        """
-        return self.infstate_compartments
-    
-    #set up a property to return all the required states used in general column
-    @property
-    def column_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required categories if the `column` takes other string values.
-        """
-        return self.column_states

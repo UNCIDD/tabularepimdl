@@ -80,11 +80,44 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         self._recover_status_code = self._strain_columns_all_categories_code.get(self.recover_status)
         self._hosp_status_code = self._hosp_columns_all_categories_code.get(self.hosp_status)
 
-    def combination_of_input_states(self) -> int: 
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]:
         """
-        Return the number of combinations of different input states of the rule.
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if any column in this rule takes 'infstate' value.
         """
-        return len(self.strain_cols_all_categories)*len(self.infstate_compartments)
+        return self.infstate_compartments
+    
+    #set up a property to return all the required categories used in strain_cols
+    @property
+    def strain_cols_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `strain_cols` uses.
+        """
+        return self.strain_cols_all_categories
+    
+    #set up a property to return all the required categories used in hosp_cols
+    @property
+    def hosp_cols_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `hosp_cols` uses.
+        """
+        return self.hosp_cols_all_categories
+    
+    @property
+    def expansion_factor(self) -> int:
+        """Maximum number of rows this rule can return per input rows."""
+        return max(len(self.strain_cols_all_categories)*len(self.infstate_compartments), self.infstate_compartments)
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -185,37 +218,3 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         }
 
         return rc
-    
-
-    #set up a property to return all the required compartments used in infstate column
-    @property
-    def infstate_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required infection compartments if any column in this rule takes 'infstate' value.
-        """
-        return self.infstate_compartments
-    
-    #set up a property to return all the required categories used in strain_cols
-    @property
-    def strain_cols_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required categories the `strain_cols` uses.
-        """
-        return self.strain_cols_all_categories
-    
-    #set up a property to return all the required categories used in hosp_cols
-    @property
-    def hosp_cols_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required categories the `hosp_cols` uses.
-        """
-        return self.hosp_cols_all_categories

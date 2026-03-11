@@ -81,7 +81,7 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
     @field_validator("group_col_all_categories", mode='after')
     @classmethod
     def validate_group_col_all_categories(cls, category_vals, field: ValidationInfo):
-        """Validate all elements in the list have the same data type."""
+        """Validate all elements in the list share the same data type."""
         first_element_type = type(category_vals[0])
         for item in category_vals[1:]:
             if type(item) != first_element_type:
@@ -106,10 +106,31 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         self.group_col_all_categories = sorted(self.group_col_all_categories) #sort the group_col's all categories
         self._group_col_all_categories_code = [i for i, v in enumerate(self.group_col_all_categories)] #encode each category, keeping numbers only
 
-    def combination_of_input_states(self) -> int: 
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]:
         """
-        Return the number of combinations of different input states of the rule.
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if the `inf_col` takes 'infstate' value.
         """
+        return self.infstate_compartments
+    
+    #set up a property to return all the required categories used in group_col
+    @property
+    def group_col_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `group_col` uses.
+        """
+        return self.group_col_all_categories
+    
+    @property
+    def expansion_factor(self) -> int:
+        """Maximum number of rows this rule can return per input rows."""
         return len(self.group_col_all_categories)*len(self.infstate_compartments)
     
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
@@ -236,26 +257,3 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         }
         
         return rc
-    
-
-    #set up a property to return all the required compartments used in infstate column
-    @property
-    def infstate_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required infection compartments if the `inf_col` takes 'infstate' value.
-        """
-        return self.infstate_compartments
-    
-    #set up a property to return all the required categories used in group_col
-    @property
-    def group_col_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required categories the `group_col` uses.
-        """
-        return self.group_col_all_categories

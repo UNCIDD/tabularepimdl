@@ -1,5 +1,5 @@
 import numpy as np
-from pydantic import BaseModel, Field, field_validator, PrivateAttr
+from pydantic import BaseModel, Field, field_validator, PrivateAttr, ValidationInfo
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList, UniqueNonEmptyStrIntList
@@ -40,13 +40,13 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
 
     @field_validator("trait_col_all_categories", mode='after')
     @classmethod
-    def validate_group_col_all_categories(cls, category_vals):
-        """Validate all elements in the list have the same data type."""
+    def validate_group_col_all_categories(cls, category_vals, field: ValidationInfo):
+        """Validate all elements in the list share the same data type."""
         first_element_type = type(category_vals[0])
         for item in category_vals[1:]:
             if type(item) != first_element_type:
                 raise ValueError(
-                    f"All elements in trait_col_all_categories must be of the same datatype. "
+                    f"All elements in {field.field_name} must be of the same datatype. "
                     f"Found both {first_element_type.__name__} and {type(item).__name__}."
                 )
         return category_vals
@@ -66,11 +66,32 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         self.trait_col_all_categories = sorted(self.trait_col_all_categories) #sort the trait_col's all categories
         self._trait_col_all_categories_code = [i for i, v in enumerate(self.trait_col_all_categories)] #encode each category, keeping numbers only
 
-    def combination_of_input_states(self) -> int: 
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]:
         """
-        Return the number of combinations of different input states of the rule.
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if the `inf_col` takes 'infstate' value.
         """
-        return len(self.trait_col_all_categories)*len(self.infstate_compartments)
+        return self.infstate_compartments
+    
+    #set up a property to return all the required categories used in trait_col
+    @property
+    def trait_col_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `trait_col` uses.
+        """
+        return self.trait_col_all_categories
+    
+    @property
+    def expansion_factor(self) -> int:
+        """Maximum number of rows this rule can return per input rows."""
+        return max(len(self.trait_col_all_categories), len(self.infstate_compartments))
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -160,26 +181,3 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
             'tabularepimdl.SharedTraitInfection_Vec_Encode': self.model_dump()
         }
         return rc
-    
-
-    #set up a property to return all the required compartments used in infstate column
-    @property
-    def infstate_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required infection compartments if the `inf_col` takes 'infstate' value.
-        """
-        return self.infstate_compartments
-    
-    #set up a property to return all the required categories used in trait_col
-    @property
-    def trait_col_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required categories the `trait_col` uses.
-        """
-        return self.trait_col_all_categories

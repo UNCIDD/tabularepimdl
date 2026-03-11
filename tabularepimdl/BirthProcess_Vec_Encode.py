@@ -28,13 +28,40 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
     _start_state_saved: bool = PrivateAttr(default=False) #to identify if a valid value has been assigned to _start_state_sig
 
     
-    def combination_of_input_states(self) -> int: 
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]:
         """
-        Return the number of combinations of different input states of the rule.
-        BirthProcess_Vec_Encode does not have input states.
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments.
+        """
+        return self.infstate_compartments
+    
+    @property
+    def start_state_sig(self) -> np.ndarray:
+        """
+        Return the start_state_sig value if it is not empty.
+
+        Returns:
+            A Numpy array of initial state configuration for new births.
+
+        Raises:
+            ValueError: If the `_start_state_sig` is empty.
+        """
+        if self._start_state_sig.size == 0:
+            raise ValueError(f"No start state data is available due to no input current state data is provided to get_deltas() of the rule.")
+        else:
+            return self._start_state_sig
+
+    @property
+    def expansion_factor(self) -> int:
+        """
+        Maximum number of rows this rule can return per input rows.
         """
         return len(self.infstate_compartments)
-    
+        
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         Compute the population birth deltas for the current state at a given time step.
@@ -113,31 +140,4 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         rc = {
             'tabularepimdl.BirthProcess_Vec_Encode': self.model_dump()
         }
-        return rc
-    
-    #set up a property to return all the required compartments used in infstate column
-    @property
-    def infstate_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required infection compartments.
-        """
-        return self.infstate_compartments
-    
-    @property
-    def start_state_sig(self) -> np.ndarray:
-        """
-        Return the start_state_sig value if it is not empty.
-
-        Returns:
-            A Numpy array of initial state configuration for new births.
-
-        Raises:
-            ValueError: If the `_start_state_sig` is empty.
-        """
-        if self._start_state_sig.size == 0:
-            raise ValueError(f"No start state data is available due to no input current state data is provided to get_deltas() of the rule.")
-        else:
-            return self._start_state_sig 
+        return rc 

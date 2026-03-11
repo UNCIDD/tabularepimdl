@@ -27,7 +27,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
 
     betas: np.ndarray = Field(description = "a beta for each strain.")
     columns: UniqueNonEmptyStrList = Field(description = "the strain columns for infection state.")
-    columns_all_categories: list[str] = Field(description = "all the infection state categories the strain columns should have.")
+    columns_all_categories: UniqueNonEmptyStrList = Field(description = "all the infection state categories the strain columns should have.")
     cross_protect: np.ndarray = Field(description = "a N(strain)*N(strain) matrix of cross protections.")
     s_st: str = Field(default="S", description = "the state for susceptibles.")
     i_st: str = Field(default="I", description = "the state for infectious.")
@@ -70,18 +70,15 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         
         return array_parameters
 
-    @field_validator("columns_all_categories", mode='before')
+    @field_validator("columns_all_categories", mode='after')
     @classmethod
-    def validate_group_col_all_categories(cls, category_vals):
-        """Validate all elements in the list have the same data type."""
-        if not category_vals:
-            raise ValueError("The columns_all_categories values must not be empty.")
-        
+    def validate_group_col_all_categories(cls, category_vals, field: ValidationInfo):
+        """Validate all elements in the list share the same data type."""
         first_element_type = type(category_vals[0])
         for item in category_vals[1:]:
             if type(item) != first_element_type:
                 raise ValueError(
-                    f"All elements in columns_all_categories must be of the same datatype. "
+                    f"All elements in {field.field_name} must be of the same datatype. "
                     f"Found both {first_element_type.__name__} and {type(item).__name__}."
                 )
         
@@ -121,11 +118,21 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         self._r_code = self._columns_all_categories_code.get(self.r_st)
         self._inf_to_code = self._columns_all_categories_code.get(self.inf_to)
 
-    def combination_of_input_states(self) -> int: 
+    #set up a property to return all the required categories used in columns
+    @property
+    def columns_all(self) -> list[str]:
         """
-        Return the number of combinations of different input states of the rule.
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories the `columns` uses.
         """
-        return len(self.columns_all_categories)*len(self.infstate_compartments)
+        return self.columns_all_categories
+    
+    @property
+    def expansion_factor(self) -> int:
+        """Maximum number of rows this rule can return per input rows."""
+        return max(len(self.columns_all_categories), len(self.infstate_compartments))
     
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -275,17 +282,5 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         }
 
         return rc
-
-
-    #set up a property to return all the required categories used in columns
-    @property
-    def columns_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required categories the `columns` uses.
-        """
-        return self.columns_all_categories
 
 

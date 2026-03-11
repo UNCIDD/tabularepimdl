@@ -47,6 +47,32 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
             self._from_code = col_cat_to_int.get(self.from_st)
             self._to_code = col_cat_to_int.get(self.to_st)
 
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required infection compartments if the `column` takes 'infstate' value.
+        """
+        return self.infstate_compartments
+    
+    #set up a property to return all the required categories used in general column
+    @property
+    def column_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values.
+
+        Returns:
+            A list of strings of all the required categories if the `column` takes other string values.
+        """
+        return self.column_categories
+    
+    @property
+    def expansion_factor(self) -> int:
+        """Maximum number of rows this rule can return per input row."""
+        return max(len(self.infstate_compartments), len(self.column_categories))
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -145,33 +171,3 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         }
 
         return rc
-    
-    #set up a property to return all the required compartments used in infstate column
-    @property
-    def infstate_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required infection compartments if the `column` takes 'infstate' value.
-        """
-        return self.infstate_compartments
-    
-    #set up a property to return all the required categories used in general column
-    @property
-    def column_all(self) -> list[str]:
-        """
-        Used and checked by the model engine to update input data's domain values.
-
-        Returns:
-            A list of strings of all the required categories if the `column` takes other string values.
-        """
-        return self.column_categories
-    
-    @property
-    def expansion_factor(self) -> int:
-        """Maximum number of rows this rule can return per input row."""
-        if self.column.lower() == 'infstate':
-            return len(self.infstate_compartments)
-        else:
-            return len(self.column_categories)
