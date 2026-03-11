@@ -2,7 +2,7 @@ import numpy as np
 from pydantic import BaseModel, Field, PrivateAttr
 
 from tabularepimdl.Rule import Rule
-
+from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 
 class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
     """!
@@ -25,15 +25,15 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
 
     source_col: str = Field(description = "the column containing source_state for the observation process.")
     source_state: str = Field(description = "the state individuals start.")
-    source_col_all_categories: list[str] = Field(description = "all the categories used in source column.")
+    source_col_all_categories: UniqueNonEmptyStrList = Field(description = "all the categories used in source column.")
     obs_col: str = Field(description = "the column that contains each group of individuals' observed state.")
     rate: float = Field(ge=0, description = "the number of people move from a particular state into another state per unit time.")
     unobs_state: str = Field(default='U', description="un-observed state.")
     incobs_state: str = Field(default='I', description = "incident-observed state.")
     prevobs_state: str = Field(default='P', description = "previously-observed state.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
-    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
-    obs_col_all_categories: list[str] = Field(description = "all the observation categories used in epidemics.") #new attribute is needed for encoding
+    infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
+    obs_col_all_categories: UniqueNonEmptyStrList = Field(description = "all the observation categories used in epidemics.") #new attribute is needed for encoding
 
     _source_state_code: int | None = PrivateAttr(default=None)
     

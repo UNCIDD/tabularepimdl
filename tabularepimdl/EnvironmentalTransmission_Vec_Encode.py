@@ -1,7 +1,8 @@
 import numpy as np
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, Field, field_validator, PrivateAttr, ValidationInfo
 
 from tabularepimdl.Rule import Rule
+from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 
 
 class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
@@ -23,8 +24,8 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
     s_st: str = Field(default="S", description = "the state for susceptibles, assumed to be S.")
     inf_to: str = Field(default="I", description = "the state infectious population move to, assumed to be I.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
-    inf_col_categories: list[str] = Field(description = "the categories used for attribute inf_col.")
-    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
+    inf_col_categories: UniqueNonEmptyStrList = Field(description = "the categories used for attribute inf_col.")
+    infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
 
     _s_code: int | None = PrivateAttr(default=None)
     _inf_to_code: int | None = PrivateAttr(default=None)

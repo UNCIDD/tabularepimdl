@@ -2,7 +2,7 @@ import numpy as np
 from pydantic import BaseModel, Field, PrivateAttr
 
 from tabularepimdl.Rule import Rule
-
+from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 
 class SimpleInfection_Vec_Encode(Rule, BaseModel):
     """
@@ -28,8 +28,8 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
     inf_to: str = Field(description = "the state infectious folks go to, assumed to be I.")
     freq_dep: bool = Field(default=True, description = "whether this model is a frequency dependent model.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
-    column_categories: list[str] = Field(description = "all the categories the column should have.")
-    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
+    column_categories: UniqueNonEmptyStrList = Field(description = "all the categories the column should have.")
+    infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
 
     _s_code: int | None = PrivateAttr(default=None)
     _i_code: int | None = PrivateAttr(default=None)

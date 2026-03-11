@@ -3,6 +3,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationIn
 from numpy.typing import NDArray
 
 from tabularepimdl.Rule import Rule
+from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList, UniqueNonEmptyStrIntList
 
 
 class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
@@ -31,12 +32,12 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
     waifw_matrix: NDArray[np.float64] = Field(description = "the waifw transmission rate matrix.")
     inf_col: str = Field(description = "the infection state column for this infectious process.")
     group_col: str = Field(description = "the group where infection is applied.")
-    group_col_all_categories: list[str | int] = Field(description = "all the categories the group column should have.")
+    group_col_all_categories: UniqueNonEmptyStrIntList = Field(description = "all the categories the group column should have.")
     s_st: str = Field(default="S", description = "the state for susceptibles.")
     i_st: str = Field(default="I", description = "the state for infectious.")
     inf_to: str = Field(default="I", description = "the state susceptible population go to.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
-    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
+    infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
 
     _s_code: int | None = PrivateAttr(default=None)
     _i_code: int | None = PrivateAttr(default=None)
@@ -77,17 +78,15 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         
         return matrix_parameters.T #transpose the input matrix
     
-    @field_validator("group_col_all_categories", mode='before')
+    @field_validator("group_col_all_categories", mode='after')
     @classmethod
-    def validate_group_col_all_categories(cls, category_vals):
-        if not category_vals:
-            raise ValueError("The group_col_all_categories values must not be empty.")
-        
+    def validate_group_col_all_categories(cls, category_vals, field: ValidationInfo):
+        """Validate all elements in the list have the same data type."""
         first_element_type = type(category_vals[0])
         for item in category_vals[1:]:
             if type(item) != first_element_type:
                 raise ValueError(
-                    f"All elements in group_col_all_categories must be of the same datatype. "
+                    f"All elements in {field.field_name} must be of the same datatype. "
                     f"Found both {first_element_type.__name__} and {type(item).__name__}."
                 )
         return category_vals

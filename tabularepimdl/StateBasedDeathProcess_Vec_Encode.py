@@ -1,5 +1,6 @@
 import numpy as np
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, PrivateAttr
+from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 
 from tabularepimdl.Rule import Rule
 
@@ -18,23 +19,16 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
     """
 
     column: str = Field(description = "one column that we will check states against.")
-    column_states: list[str] = Field(description = "all the states of the single column.")
-    target_states: list[str] = Field(description = "targeted states to be processed of single column.")
+    column_states: UniqueNonEmptyStrList = Field(description = "all the states of the single column.")
+    target_states: UniqueNonEmptyStrList = Field(description = "targeted states to be processed of single column.")
     rate: float = Field(ge=0, description = "the rate at whihc people will die from.")
     stochastic: bool = Field(default=False, description = "whether the transition is stochastic or deterministic.")
-    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
+    infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
 
     #_columns_code: list[str] | None = PrivateAttr(default_factory=list) #not needed given it is single column
     _states_code: list[str] | None = PrivateAttr(default_factory=list)
 
-    @field_validator("column_states", "target_states", mode="before") #validate list type
-    @classmethod
-    def validate_list(cls, list_parameters, field: ValidationInfo):
-        """Ensure the input is a list."""
-        if not isinstance(list_parameters, list):
-            raise ValueError(f"{cls.__name__} expects a list for {field.field_name}, received {type(list_parameters)}.")
-        return list_parameters
-    
+        
     def model_post_init(self, _):
         """
         Encode the input states based on each column's attribute values.

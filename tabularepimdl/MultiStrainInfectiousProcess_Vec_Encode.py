@@ -2,7 +2,7 @@ import numpy as np
 from pydantic import BaseModel, Field, ConfigDict, ValidationInfo, field_validator, model_validator, PrivateAttr
 
 from tabularepimdl.Rule import Rule
-
+from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 
 class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
     """
@@ -26,7 +26,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     betas: np.ndarray = Field(description = "a beta for each strain.")
-    columns: list[str] = Field(description = "the strain columns for infection state.")
+    columns: UniqueNonEmptyStrList = Field(description = "the strain columns for infection state.")
     columns_all_categories: list[str] = Field(description = "all the infection state categories the strain columns should have.")
     cross_protect: np.ndarray = Field(description = "a N(strain)*N(strain) matrix of cross protections.")
     s_st: str = Field(default="S", description = "the state for susceptibles.")
@@ -35,7 +35,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
     inf_to: str = Field(default="I", description = "the state infectious folks go to.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
     freq_dep: bool = Field(default=True, description = "whether this model is a frequency dependent model.")
-    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
+    infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
 
     _s_code: int | None = PrivateAttr(default=None)
     _i_code: int | None = PrivateAttr(default=None)

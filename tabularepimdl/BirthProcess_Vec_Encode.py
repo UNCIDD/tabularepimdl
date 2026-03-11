@@ -1,8 +1,8 @@
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, field_validator, PrivateAttr, ValidationInfo
 
 from tabularepimdl.Rule import Rule
-
+from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 
 class BirthProcess_Vec_Encode(Rule, BaseModel):
     """
@@ -20,13 +20,14 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
       
     rate: float = Field(ge=0, description = "birth rate at per time step (where N*rate births occur).")
-    column_to_sort: str = Field(description="Specify which input field is used to sort the dataset in ascending order.")
-    stochastic: bool = Field(False, description = "whether the transition is stochastic or deterministic.")
-    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
+    column_to_sort: str = Field(description="specify which input field is used to sort the dataset in ascending order.")
+    stochastic: bool = Field(default=False, description = "whether the transition is stochastic or deterministic.")
+    infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
 
     _start_state_sig: np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) #initial state configuration for new births.
     _start_state_saved: bool = PrivateAttr(default=False) #to identify if a valid value has been assigned to _start_state_sig
 
+    
     def combination_of_input_states(self) -> int: 
         """
         Return the number of combinations of different input states of the rule.

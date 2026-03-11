@@ -2,6 +2,7 @@ import numpy as np
 from pydantic import BaseModel, Field, ConfigDict, model_validator, PrivateAttr
 
 from tabularepimdl.Rule import Rule
+from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 
 class HospRule_Vec_Encode(Rule, BaseModel):
     '''
@@ -27,17 +28,17 @@ class HospRule_Vec_Encode(Rule, BaseModel):
     
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    strain_cols: list[str] = Field(description = "the strain columns with infection states.")
-    hosp_cols: list[str] = Field(description = "hospitalization columns with hospitalized states.")
-    strain_cols_all_categories: list[str] = Field("all the infection categories used in strain_cols.")
-    hosp_cols_all_categories: list[str] = Field("all the hospitalization categories used in hosp_cols.")
+    strain_cols: UniqueNonEmptyStrList = Field(description = "the strain columns with infection states.")
+    hosp_cols: UniqueNonEmptyStrList = Field(description = "hospitalization columns with hospitalized states.")
+    strain_cols_all_categories: UniqueNonEmptyStrList = Field("all the infection categories used in strain_cols.")
+    hosp_cols_all_categories: UniqueNonEmptyStrList = Field("all the hospitalization categories used in hosp_cols.")
     infect_status: str = Field(default="I", description = "the state for infectious.")
     recover_status: str = Field(default="R", description = "the state for recovery.")
     hosp_status: str = Field(default="H", description = "the state for hospitalization.")
     prim_hrate: float = Field(ge=0, description = "chance of being hospitalized from a primary infection.")
     sec_hrate: float = Field(ge=0, description = "chance of being hospitalized from a secondary infection.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
-    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
+    infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
 
     _strain_columns_idx: list[int] = PrivateAttr(default_factory=list) #the column index for each strain column
     _strain_columns_all_categories_code: list[int] | None = PrivateAttr(default_factory=None) #the numerical codes for all categories used by all strain columns

@@ -2,6 +2,7 @@ import numpy as np
 from pydantic import BaseModel, Field, field_validator, PrivateAttr
 
 from tabularepimdl.Rule import Rule
+from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList, UniqueNonEmptyStrIntList
 
 
 class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
@@ -25,25 +26,22 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     in_beta: float = Field(ge=0, description = "transmission rate if trait shared.")
     out_beta: float = Field(ge=0, description = "transmission rate if trait not shared.")
     trait_col: str = Field(description = "the trait column shared by different populations.")
-    trait_col_all_categories: list[str | int] = Field(description = "all the categories the trait column should have.")
+    trait_col_all_categories: UniqueNonEmptyStrIntList = Field(description = "all the categories the trait column should have.")
     s_st: str = Field(default="S", description = "the state for susceptibles.")
     i_st: str = Field(default="I", description = "the state for infectious.")
     inf_to: str = Field(default="I", description = "the state susceptible population go to.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
-    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
+    infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
 
     _s_code: int | None = PrivateAttr(default=None)
     _i_code: int | None = PrivateAttr(default=None)
     _inf_to_code: int | None = PrivateAttr(default=None)
     _trait_col_all_categories_code: list[int] = PrivateAttr(default_factory=list)
 
-    @field_validator("trait_col_all_categories", mode='before')
+    @field_validator("trait_col_all_categories", mode='after')
     @classmethod
     def validate_group_col_all_categories(cls, category_vals):
         """Validate all elements in the list have the same data type."""
-        if not category_vals:
-            raise ValueError("The trait_col_all_categories values must not be empty.")
-        
         first_element_type = type(category_vals[0])
         for item in category_vals[1:]:
             if type(item) != first_element_type:
