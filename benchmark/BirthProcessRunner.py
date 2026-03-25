@@ -94,6 +94,7 @@ class BirthProcessRunner(BaseModel):
                         column_to_sort=self.column_to_sort,
                         start_state_sig = start_state_sig_dict,
                         stochastic=self.stochastic,
+                        infstate_compartments=self.infstate_compartments
                     )
                     #print('dispatcher created ok\n')
                     if struct  == 'Pandas':

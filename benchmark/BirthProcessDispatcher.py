@@ -21,6 +21,7 @@ class BirthProcessDispatcher(BaseModel):
     start_state_sig: dict = Field(description = "initial state configuration for new births.")
     column_to_sort: str = Field(description="Specify which input field is used to sort the dataset in ascending order.")
     stochastic: bool = Field(False, description = "whether the transition is stochastic or deterministic.")
+    infstate_compartments: list[str] = Field(description = "the infection compartments used in epidemics.")
 
     #Dispatcher
     _dispatcher: Union[BirthProcess, BirthProcess_Vec_Encode] = PrivateAttr(default=None)
@@ -36,7 +37,8 @@ class BirthProcessDispatcher(BaseModel):
             self._dispatcher = BirthProcess_Vec_Encode(
                 rate=self.rate,
                 column_to_sort=self.column_to_sort,
-                stochastic=self.stochastic
+                stochastic=self.stochastic,
+                infstate_compartments=self.infstate_compartments
             )
         else:
             raise ValueError(f"Unknown structure: {self.structure}")
