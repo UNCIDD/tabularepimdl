@@ -1,6 +1,7 @@
 import numpy as np
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, PrivateAttr
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
+from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
 
 from tabularepimdl.Rule import Rule
 
@@ -28,7 +29,11 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
     #_columns_code: list[str] | None = PrivateAttr(default_factory=list) #not needed given it is single column
     _states_code: list[str] | None = PrivateAttr(default_factory=list)
 
-        
+    _check_domain_membership = domain_membership_validator(
+            attribute_fields = ("target_states"),
+            domain_fields = ("column_states")
+        )
+    
     def model_post_init(self, _):
         """
         Encode the input states based on each column's attribute values.

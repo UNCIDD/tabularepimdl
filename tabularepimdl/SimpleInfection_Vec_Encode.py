@@ -1,8 +1,9 @@
 import numpy as np
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, Field, model_validator, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
+from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
 
 class SimpleInfection_Vec_Encode(Rule, BaseModel):
     """
@@ -23,9 +24,9 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
 
     beta: float = Field(ge=0, description = "the transmission parameter.")
     column: str = Field(description = "name of the column this rule applies to.")
-    s_st: str = Field(description = "the state for susceptibles, assumed to be S.")
-    i_st: str = Field(description = "the state for infectious, assumed to be I.")
-    inf_to: str = Field(description = "the state infectious folks go to, assumed to be I.")
+    s_st: str = Field(default='S', description = "the state for susceptibles, assumed to be S.")
+    i_st: str = Field(default='I', description = "the state for infectious, assumed to be I.")
+    inf_to: str = Field(default='I', description = "the state infectious folks go to, assumed to be I.")
     freq_dep: bool = Field(default=True, description = "whether this model is a frequency dependent model.")
     stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
     column_categories: UniqueNonEmptyStrList = Field(description = "all the categories the column should have.")
@@ -34,6 +35,11 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
     _s_code: int | None = PrivateAttr(default=None)
     _i_code: int | None = PrivateAttr(default=None)
     _inf_to_code: int | None = PrivateAttr(default=None)
+
+    _check_domain_membership = domain_membership_validator(
+            attribute_fields = ("s_st", "i_st", "inf_to"),
+            domain_fields = ("column_categories", "infstate_compartments")
+        )
 
     def model_post_init(self, _):
         """

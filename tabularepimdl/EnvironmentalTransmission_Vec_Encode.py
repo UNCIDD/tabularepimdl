@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, field_validator, PrivateAttr, ValidationI
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
+from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
 
 
 class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
@@ -29,6 +30,11 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
 
     _s_code: int | None = PrivateAttr(default=None)
     _inf_to_code: int | None = PrivateAttr(default=None)
+
+    _check_domain_membership = domain_membership_validator(
+           attribute_fields = ("s_st", "inf_to"),
+            domain_fields = ("inf_col_categories", "infstate_compartments")
+        )
 
     def model_post_init(self, _):
         """

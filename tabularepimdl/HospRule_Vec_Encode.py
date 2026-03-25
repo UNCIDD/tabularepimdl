@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, ConfigDict, model_validator, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
+from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
 
 class HospRule_Vec_Encode(Rule, BaseModel):
     '''
@@ -51,6 +52,10 @@ class HospRule_Vec_Encode(Rule, BaseModel):
     _h_code: int | None = PrivateAttr(default=None) #may not be needed
     _u_code: int | None = PrivateAttr(default=None) #may not be needed
 
+    _check_domain_membership = domain_membership_validator(
+            attribute_fields = ("infect_status", "recover_status", "hosp_status"),
+            domain_fields = ("strain_cols_all_categories", "hosp_cols_all_categories", "infstate_compartments")
+        )
     
     @model_validator(mode="after")
     def validate_number_of_elements_(self):

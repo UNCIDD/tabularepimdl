@@ -2,7 +2,8 @@ import numpy as np
 from pydantic import BaseModel, Field, field_validator, PrivateAttr, ValidationInfo
 
 from tabularepimdl.Rule import Rule
-from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList, UniqueNonEmptyStrIntList
+from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList, UniqueNonEmptyStrIntUniformList
+from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
 
 
 class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
@@ -26,7 +27,7 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     in_beta: float = Field(ge=0, description = "transmission rate if trait shared.")
     out_beta: float = Field(ge=0, description = "transmission rate if trait not shared.")
     trait_col: str = Field(description = "the trait column shared by different populations.")
-    trait_col_all_categories: UniqueNonEmptyStrIntList = Field(description = "all the categories the trait column should have.")
+    trait_col_all_categories: UniqueNonEmptyStrIntUniformList = Field(description = "all the categories the trait column should have.")
     s_st: str = Field(default="S", description = "the state for susceptibles.")
     i_st: str = Field(default="I", description = "the state for infectious.")
     inf_to: str = Field(default="I", description = "the state susceptible population go to.")
@@ -38,18 +39,10 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     _inf_to_code: int | None = PrivateAttr(default=None)
     _trait_col_all_categories_code: list[int] = PrivateAttr(default_factory=list)
 
-    @field_validator("trait_col_all_categories", mode='after')
-    @classmethod
-    def validate_group_col_all_categories(cls, category_vals, field: ValidationInfo):
-        """Validate all elements in the list share the same data type."""
-        first_element_type = type(category_vals[0])
-        for item in category_vals[1:]:
-            if type(item) != first_element_type:
-                raise ValueError(
-                    f"All elements in {field.field_name} must be of the same datatype. "
-                    f"Found both {first_element_type.__name__} and {type(item).__name__}."
-                )
-        return category_vals
+    _check_domain_membership = domain_membership_validator(
+            attribute_fields = ("s_st", "i_st", "inf_to"),
+            domain_fields = ("trait_col_all_categories", "infstate_compartments")
+        )
     
     def model_post_init(self, _):
         """

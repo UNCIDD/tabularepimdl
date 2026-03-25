@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
+from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
 
 
 class SimpleTransition_Vec_Encode(Rule, BaseModel):
@@ -31,6 +32,11 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     _from_code: int | None = PrivateAttr(default=None)
     _to_code: int | None = PrivateAttr(default=None)
 
+    _check_domain_membership = domain_membership_validator(
+            attribute_fields = ("from_st", "to_st"),
+            domain_fields = ("column_categories", "infstate_compartments")
+        )
+    
     def model_post_init(self, _):
         """
         Encode the input states based on each column's attribute values.

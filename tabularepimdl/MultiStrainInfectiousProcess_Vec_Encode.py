@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field, ConfigDict, ValidationInfo, field_validat
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
+from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
+
 
 class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
     """
@@ -44,6 +46,11 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
     _columns_idx: list[int] = PrivateAttr(default_factory=list)
     _columns_all_categories_code: list[int] | None = PrivateAttr(default_factory=None)
 
+    _check_domain_membership = domain_membership_validator(
+            attribute_fields = ("s_st", "i_st", "r_st", "inf_to"),
+            domain_fields = ("columns_all_categories", "infstate_compartments")
+        )
+
     @field_validator("betas", "cross_protect", mode="before") #validate array type and its element sign
     @classmethod
     def validate_numpy_array(cls, array_parameters, field: ValidationInfo):
@@ -69,20 +76,6 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
             raise ValueError("Arrays must not contain NaN or Infinity values.")
         
         return array_parameters
-
-    @field_validator("columns_all_categories", mode='after')
-    @classmethod
-    def validate_group_col_all_categories(cls, category_vals, field: ValidationInfo):
-        """Validate all elements in the list share the same data type."""
-        first_element_type = type(category_vals[0])
-        for item in category_vals[1:]:
-            if type(item) != first_element_type:
-                raise ValueError(
-                    f"All elements in {field.field_name} must be of the same datatype. "
-                    f"Found both {first_element_type.__name__} and {type(item).__name__}."
-                )
-        
-        return category_vals
     
     @model_validator(mode="after") #after all fields are validated, check cross fields relationship
     def check_dimensions(self):

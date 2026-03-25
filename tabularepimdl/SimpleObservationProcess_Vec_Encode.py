@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
+from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
+
 
 class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
     """!
@@ -41,6 +43,11 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
     _unobs_code: int | None = PrivateAttr(default=None)
     _incobs_code: int | None = PrivateAttr(default=None)
     _prevobs_code: int | None = PrivateAttr(default=None)
+
+    _check_domain_membership = domain_membership_validator(
+            attribute_fields = ("source_state", "unobs_state", "incobs_state", "prevobs_state"),
+            domain_fields = ("source_col_all_categories", "obs_col_all_categories", "infstate_compartments")
+        )
 
     def model_post_init(self, _):
         """
