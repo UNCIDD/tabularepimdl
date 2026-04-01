@@ -51,7 +51,9 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             ValueError: If the `_start_state_sig` is empty.
         """
         if self._start_state_sig.size == 0:
-            raise ValueError(f"No start state data is available due to no input current state data is provided to get_deltas() of the rule.")
+            raise ValueError(f"No start state data is available due to no input current state data is provided. "
+                             f"Please provide a non-empty current state data to the get_deltas() of the rule first."
+                             )
         else:
             return self._start_state_sig
 
