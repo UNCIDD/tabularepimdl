@@ -49,8 +49,8 @@ class HospRule_Vec_Encode(Rule, BaseModel):
     _infect_status_code: int | None = PrivateAttr(default=None)
     _recover_status_code: int | None = PrivateAttr(default=None)
     _hosp_status_code: int | None = PrivateAttr(default=None)
-    _h_code: int | None = PrivateAttr(default=None) #may not be needed
-    _u_code: int | None = PrivateAttr(default=None) #may not be needed
+    _h_code: int | None = PrivateAttr(default=None) #placeholder
+    _u_code: int | None = PrivateAttr(default=None) #placeholder
 
     _check_domain_membership = domain_membership_validator(
             attribute_fields = ("infect_status", "recover_status", "hosp_status"),
@@ -60,7 +60,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
     @model_validator(mode="after")
     def validate_number_of_elements_(self):
         """Ensure then number of elements in strain_cols and hosp_cols are the same."""
-        if len(self.strain_cols) != len(self.hosp_cols): #convert list to array
+        if len(self.strain_cols) != len(self.hosp_cols):
             raise ValueError(f"Expecte the same number of elements in strain_cols and hosp_cols "
                              f"received {len(self.strain_cols)} strain_cols and {len(self.hosp_cols)} hosp_cols.")
         return self
@@ -75,12 +75,12 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         Notes:
             infstate_to_int (dict): A placeholder (not being used in this rule). Mapping of infection states of infstate_compartments to their index positions.
         """
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}, not used in this rule
+        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #placeholder
         
         self._strain_columns_all_categories_code = {v: i for i, v in enumerate(sorted(self.strain_cols_all_categories))} #encode each category
         self._hosp_columns_all_categories_code = {v: i for i, v in enumerate(sorted(self.hosp_cols_all_categories))} #encode each category
 
-        #input data columns should be values like strain type or hospitalization type, but not 'infstate'
+        #input data columns should be values like strain type or hospitalization type
         self._infect_status_code = self._strain_columns_all_categories_code.get(self.infect_status)
         self._recover_status_code = self._strain_columns_all_categories_code.get(self.recover_status)
         self._hosp_status_code = self._hosp_columns_all_categories_code.get(self.hosp_status)
@@ -187,7 +187,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         rate_const = 1.0 - np.exp(-dt * hosp_rate[infected_that_qualify_hospitalization])
 
         if stochastic:
-            changed_N = -np.random.binomial(rows_with_infected[:, n_idx], rate_const)
+            changed_N = -np.random.binomial(rows_with_infected[:, n_idx].astype(np.int32), rate_const)
         else:
             changed_N = -rows_with_infected[:, n_idx] * rate_const
 
