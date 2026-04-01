@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, ConfigDict, ValidationInfo, field_validat
 
 from tabularepimdl.Rule import Rule
 
-
+### Not a useful and updated version, for reference only ###
 class MultiStrainInfectiousProcess_Vec_Encode_2(Rule, BaseModel):
     """
     Rule that takes a cross protection matrix, a list of infection state columns and an array of betas 
