@@ -100,7 +100,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         Notes:
             infstate_to_int (dict): A placeholder (not being used in this rule). Mapping of infection states of infstate_compartments to their index positions.
         """
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}, not used in this rule
+        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #placeholder
         
         self.columns_all_categories = sorted(self.columns_all_categories) #sort the columns' all categories
         self._columns_all_categories_code = {v: i for i, v in enumerate(self.columns_all_categories)} #encode each category
@@ -159,14 +159,10 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         n_idx = col_idx_map['N']
         total_population: float = np.sum(current_state[:, n_idx])
 
-        if total_population != 0:
-            if self.freq_dep:
-                betas = self.betas/total_population
-            else:
-                betas = self.betas
+        if total_population != 0 and self.freq_dep:
+            betas = self.betas / total_population
         else:
             betas = self.betas
-
         #print('betas:', betas) #debug
 
         #get number of infections for each strain type
