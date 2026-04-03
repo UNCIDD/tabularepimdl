@@ -6,7 +6,7 @@ import numpy as np
 from tabularepimdl.SimpleTransition import SimpleTransition
 from tabularepimdl.SimpleTransition_Vec import SimpleTransition_Vec
 from tabularepimdl.SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
-from tabularepimdl.ST_Josh_Encode_Vec import SimpleTransition as Josh_SimpleTransition
+from tabularepimdl.ST_Josh_Encode_Vec import SimpleTransition as Josh_SimpleTransition #this rule was tested and failed comparison, it will not be used in future runner test
 
 class SimpleTransitionDispatcher(BaseModel):
     """
@@ -75,13 +75,12 @@ class SimpleTransitionDispatcher(BaseModel):
         @param col_idx_map: mapping of input data columns and their column index. Default is None so Pandas version's get_deltas() can invoke dispather's get_deltas().
         @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. Default is None so Pandas version's get_deltas() can invoke dispather's get_deltas().
         @param dt: size of the timestep.
-        No need to add stochastic argument to dispatcher's get_deltas() method.
         """
         if self.structure == 'Pandas' or self.structure == 'Numpy':
             return self._dispatcher.get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
         elif self.structure == 'Numpy_Encode':
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)
-
+        
     def apply(self, state: np.ndarray, col_idx: dict[str, int], dt: float) -> np.ndarray: #run Josh's code
             return self._dispatcher.apply(state=state, col_idx=col_idx, dt=dt)
     

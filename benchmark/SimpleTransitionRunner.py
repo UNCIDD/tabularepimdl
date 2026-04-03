@@ -52,7 +52,7 @@ class SimpleTransitionRunner(BaseModel):
             #infstate_values = ['S', 'I', 'R', 'S', 'I', 'R']#np.random.choice(self.infstate_compartments, size=size) #column InfState values setup
             #n_values = [10, 5, 0, 20, 0, 0]#np.random.randint(1, 10, size=size) #column N values setup
             infstate_values = np.random.choice(self.infstate_compartments, size=size) #column InfState values setup
-            n_values = np.random.randint(1, 10, size=size) #column N values setup
+            n_values = np.random.randint(1, 100, size=size) #column N values setup
             for struct in self.structures:
                 for iters in self.iterations:
                     print(f"\nRunning {struct} | size={size} | iterations={iters}")
@@ -74,11 +74,12 @@ class SimpleTransitionRunner(BaseModel):
                         infstate_idx = self.col_idx_map[self.column]
                         #print('infstate_idx:', infstate_idx)
                         arr_numba[:, infstate_idx] = [self._infstate_comp_map[val] for val in arr[:, infstate_idx]]
-                        arr_numba = arr_numba.astype(np.float64)
-                        #print('arr_numba\n', arr_numba)
+                        #print('arr_numba before float type\n', arr_numba, arr_numba.dtype)
+                        arr_numba = arr_numba.astype(np.float64) #should STOP using np.float64 given encoded states and N values are actually integers
+                        #print('arr_numba after float type\n', arr_numba, arr_numba.dtype)
                         n_rows = arr_numba.shape[0] #detect the number of rows and columns in input array
                         n_cols = arr_numba.shape[1]
-                        result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
+                        result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array with float64 type
                     elif struct == 'Josh_Encode_Vec': #speical value creation for Josh's class
                         arr = np.column_stack((infstate_values, n_values))
                         arr_numba = arr.copy()
@@ -117,19 +118,19 @@ class SimpleTransitionRunner(BaseModel):
                         t1 = time.perf_counter()
                         peak = tracemalloc.get_traced_memory()[1]
                         tracemalloc.stop()
-                    elif struct == 'Josh_Encode_Vec':
-                        gc.collect()
+                    #elif struct == 'Josh_Encode_Vec': #this rule was tested and failed comparison, it will not be used in future runner test
+                    #    gc.collect()
                         #converting compartments to code first
                         #comp_map = {label: i for i, label in enumerate (sorted(self.infstate_compartments))}
                         #print('comp_map:', comp_map)
-                        dispatcher.compile(comp_map)
-                        tracemalloc.start() #track memory
-                        t0 = time.perf_counter() #track time
-                        for _ in range(iters):
-                            deltas = dispatcher.apply(state=arr_numba, col_idx=self.col_idx_map, dt=1.0)
-                        t1 = time.perf_counter()
-                        peak = tracemalloc.get_traced_memory()[1]
-                        tracemalloc.stop()
+                    #    dispatcher.compile(comp_map)
+                    #    tracemalloc.start() #track memory
+                    #    t0 = time.perf_counter() #track time
+                    #    for _ in range(iters):
+                    #        deltas = dispatcher.apply(state=arr_numba, col_idx=self.col_idx_map, dt=1.0)
+                    #    t1 = time.perf_counter()
+                    #    peak = tracemalloc.get_traced_memory()[1]
+                    #    tracemalloc.stop()
 
                     print(f"Sample deltas for {struct}:\n{deltas}\n, data length: {len(deltas)}\n, non-zero counts: {np.count_nonzero(deltas[:, self.col_idx_map['N']] if isinstance(deltas, np.ndarray) else deltas.loc[:, 'N'])}") #debug
 

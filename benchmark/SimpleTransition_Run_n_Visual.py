@@ -3,9 +3,9 @@ from benchmark.Visualizer import Visualizer
 
 def STrans_Run_n_Visual():
     runner = SimpleTransitionRunner(
-        data_sizes= [15],#[10**6, 10**7], #15, 15000, 15000000 works for Josh's code
-        structures= ['Pandas', 'Numpy', 'Numpy_Encode', 'Josh_Encode_Vec'],#['Josh_Encode_Vec'],
-        iterations= [1],#[100, 300, 500, 700],
+        data_sizes= [10**6],#[10**6, 10**7], #15, 15000, 15000000 works for Josh's code
+        structures= ['Pandas', 'Numpy', 'Numpy_Encode'],#['Josh_Encode_Vec'],
+        iterations= [100],#[100, 300, 500, 700],
         column='InfState',
         from_st='S',
         to_st='I',
