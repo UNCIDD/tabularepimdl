@@ -29,7 +29,7 @@ current_state = pd.DataFrame({
 ###===random data===###
 
 n_samples = size
-random_indices = np.random.randint(0, size, size=n_samples)
+random_indices = np.random.choice(size, size=n_samples, replace=False)
 random_cats = [f'catg_{i}' for i in random_indices]
 #print('random cats:', random_cats) #debug
 
