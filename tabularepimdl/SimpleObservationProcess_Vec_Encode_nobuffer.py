@@ -5,6 +5,7 @@ from tabularepimdl.Rule import Rule
 
 #This class removes the pre-allocated buffer parameter from get_deltas() method
 #This class is used to compare performance to the class that has pre-allocated buffer
+### Not a useful and updated version, for reference only ###
 class SimpleObservationProcess_Vec_Encode_nobuffer(Rule, BaseModel):
     """
     Rule that captures a simple generic observation process where people from a particular state are

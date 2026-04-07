@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 
 from tabularepimdl.Rule import Rule
 
-
+### Not a useful and updated version, for reference only ###
 class WAIFWTransmission_Vec_Encode_Numba(Rule, BaseModel):
     """!
     Rule that does transmission based on a simple WAIFW transmission matrix.
