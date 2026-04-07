@@ -4,7 +4,7 @@ from numpy.typing import NDArray
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList, UniqueNonEmptyStrIntUniformList
-from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
+from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
 
 
 class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):

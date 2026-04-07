@@ -1,7 +1,7 @@
 import numpy as np
-from pydantic import BaseModel, Field, ValidationInfo, field_validator, PrivateAttr
+from pydantic import BaseModel, Field, PrivateAttr
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
-from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
+from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
 
 from tabularepimdl.Rule import Rule
 

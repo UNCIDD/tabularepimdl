@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, ConfigDict, ValidationInfo, field_validat
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
-from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
+from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
 
 
 class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):

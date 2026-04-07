@@ -3,8 +3,8 @@ from pydantic import BaseModel, Field, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList, UniqueNonEmptyStrIntUniformList
-from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
-from tabularepimdl._validators.rule_doamin_fields_against_data_domain_fields import validate_rule_fields_against_data_column_fields
+from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
+
 
 class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     """
@@ -132,11 +132,6 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         infstate_idx = col_idx_map[self.inf_col]
         trait_col_idx = col_idx_map[self.trait_col]
         n_idx = col_idx_map['N']
-
-        #validate_rule_fields_against_data_column_fields(rule_column_categories = self.trait_col_all_categories, data = current_state, data_column_index = trait_col_idx)
-        
-        #if len(set(self.trait_col_all_categories)) < len(set(current_state[:, trait_col_idx])):
-        #    raise ValueError(f"Number of elements in trait_col_all_categories is less than the number of categories of input data, please check trait_col_all_categories and input data.")
 
         mask_s_idxs = current_state[:, infstate_idx] == self._s_code
         if mask_s_idxs.size == 0:
