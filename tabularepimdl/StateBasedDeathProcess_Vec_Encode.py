@@ -28,6 +28,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
 
     #_columns_code: list[str] | None = PrivateAttr(default_factory=list) #not needed given it is single column
     _states_code: list[str] | None = PrivateAttr(default_factory=list)
+    _state_encoding_by_engine : bool = PrivateAttr(default=False)
 
     _check_domain_membership = domain_membership_validator(
             attribute_fields = ("target_states"),
@@ -40,10 +41,16 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         
         Returns:
             Numerical values of encoded column states.
+
+        Notes:
+            Retain rule-level state encoding to support users who test rules individually.
         """
-        states_sorted = sorted(self.column_states)
-        colstate_to_int = {s: i for i, s in enumerate(states_sorted)} #for the single column mapping
-        self._states_code = [colstate_to_int[state] for state in states_sorted if state in self.target_states] #encoded column states
+        if not self._state_encoding_by_engine:
+            states_sorted = sorted(self.column_states)
+            colstate_to_int = {s: i for i, s in enumerate(states_sorted)} #for the single column mapping
+            self._states_code = [colstate_to_int[state] for state in states_sorted if state in self.target_states] #encoded column states
+        else:
+            pass
 
     #set up a property to return all the required compartments used in infstate column
     @property
@@ -55,7 +62,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
             A list of strings of all the required infection compartments if the `column` takes 'infstate' value.
         """
         return self.infstate_compartments
-    
+
     #set up a property to return all the required states used in general column
     @property
     def column_all(self) -> list[str]:
@@ -66,12 +73,22 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
             A list of strings of all the required categories if the `column` takes other string values.
         """
         return self.column_states
-    
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.column_states)*len(self.infstate_compartments), len(self.target_states)*len(self.infstate_compartments))
-        
+
+    def _encode_categorical_states(self, data_domains) -> None:
+        """
+        Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+        """
+        mapping = data_domains[self.column]
+        self._states_code = [mapping[state] for state in self.target_states if state in mapping]
+
+        self._state_encoding_by_engine = True
+
+
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         Compute the population deltas for the current state at a given time step.

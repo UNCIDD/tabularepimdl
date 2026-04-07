@@ -31,6 +31,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
 
     _from_code: int | None = PrivateAttr(default=None)
     _to_code: int | None = PrivateAttr(default=None)
+    _state_encoding_by_engine : bool = PrivateAttr(default=False) #determine if the state encoding is done by the engine or the rule
 
     _check_domain_membership = domain_membership_validator(
             attribute_fields = ("from_st", "to_st"),
@@ -43,15 +44,23 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         
         Returns:
             Numerical values of encoded infection states.
+
+        Notes:
+            Retain rule-level state encoding to support users who test rules individually.
         """
-        if self.column.lower() == 'infstate': #column is infection state
-            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
-            self._from_code = infstate_to_int.get(self.from_st)
-            self._to_code = infstate_to_int.get(self.to_st)
-        else: #column is other attribute
-            col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.column_categories))}  #encode column strings to integers {'0 to 4': 0, '5 to 9': 1}
-            self._from_code = col_cat_to_int.get(self.from_st)
-            self._to_code = col_cat_to_int.get(self.to_st)
+        if not self._state_encoding_by_engine:
+            if self.column.lower() == 'infstate': #column is infection state
+                infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
+                self._from_code = infstate_to_int.get(self.from_st)
+                self._to_code = infstate_to_int.get(self.to_st)
+            else: #column is other attribute
+                col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.column_categories))}  #encode column strings to integers {'0 to 4': 0, '5 to 9': 1}
+                self._from_code = col_cat_to_int.get(self.from_st)
+                self._to_code = col_cat_to_int.get(self.to_st)
+        else:
+            pass
+        
+        print("rule encodes categorical states:", self._from_code, self._to_code, self._state_encoding_by_engine) #debug
 
     #set up a property to return all the required compartments used in infstate column
     @property
@@ -79,6 +88,19 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input row."""
         return max(len(self.infstate_compartments), len(self.column_categories))
+    
+    def _encode_categorical_states(self, data_domains) -> None:
+        """
+        Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+        """
+        mapping = data_domains[self.column]
+        self._from_code = mapping[self.from_st]
+        self._to_code = mapping[self.to_st]
+
+        self._state_encoding_by_engine = True
+
+        print("engine encodes categorical states:", self._from_code, self._to_code, self._state_encoding_by_engine) #debug
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """

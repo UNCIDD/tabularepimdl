@@ -44,10 +44,11 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
     _i_code: int | None = PrivateAttr(default=None)
     _inf_to_code: int | None = PrivateAttr(default=None)
     _group_col_all_categories_code: list[int] | None = PrivateAttr(default=None)
+    _state_encoding_by_engine : bool = PrivateAttr(default=False)
 
     _check_domain_membership = domain_membership_validator(
             attribute_fields = ("s_st", "i_st", "inf_to"),
-            domain_fields = ("group_col_all_categories", "infstate_compartments")
+            domain_fields = ("infstate_compartments")
         )
 
     @field_validator("waifw_matrix", mode="before") #validate array type and its element sign
@@ -83,22 +84,28 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
             raise ValueError("Matrix must not contain NaN or Infinity values.")
         
         return matrix_parameters.T #transpose the input matrix
-    
-    
+
+
     def model_post_init(self, _):
         """
         Encode the input states based on each column's attribute values.
         
         Returns:
             Numerical values of encoded infection states.
-        """
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
-        self._s_code = infstate_to_int.get(self.s_st)
-        self._i_code = infstate_to_int.get(self.i_st)
-        self._inf_to_code = infstate_to_int.get(self.inf_to)
 
-        self.group_col_all_categories = sorted(self.group_col_all_categories) #sort the group_col's all categories
-        self._group_col_all_categories_code = [i for i, v in enumerate(self.group_col_all_categories)] #encode each category, keeping numbers only
+        Notes:
+            Retain rule-level state encoding to support users who test rules individually.
+        """
+        if not self._state_encoding_by_engine:
+            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
+            self._s_code = infstate_to_int.get(self.s_st)
+            self._i_code = infstate_to_int.get(self.i_st)
+            self._inf_to_code = infstate_to_int.get(self.inf_to)
+
+            self.group_col_all_categories = sorted(self.group_col_all_categories) #sort the group_col's all categories
+            self._group_col_all_categories_code = [i for i, v in enumerate(self.group_col_all_categories)] #placeholder
+        else:
+            pass
 
     #set up a property to return all the required compartments used in infstate column
     @property
@@ -110,7 +117,7 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
             A list of strings of all the required infection compartments if the `inf_col` takes 'infstate' value.
         """
         return self.infstate_compartments
-    
+
     #set up a property to return all the required categories used in group_col
     @property
     def group_col_all(self) -> list[str]:
@@ -121,11 +128,23 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
             A list of strings of all the required categories the `group_col` uses.
         """
         return self.group_col_all_categories
-    
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return len(self.group_col_all_categories)*len(self.infstate_compartments)
+
+    def _encode_categorical_states(self, data_domains) -> None:
+        """
+        Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+        """
+        mapping = data_domains[self.inf_col]
+        self._s_code = mapping[self.s_st]
+        self._i_code =  mapping[self.i_st]
+        self._inf_to_code = mapping[self.inf_to]
+
+        self._state_encoding_by_engine = True
+
     
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -164,16 +183,15 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
 
         #Check if the number of unique categories in current_state's group_col matches waifw matrix's size
         #unique_val_group_col = np.unique(current_state[:, group_col_idx])
-        if len(self._group_col_all_categories_code) != len(self.waifw_matrix):
+        if len(self.group_col_all_categories) != len(self.waifw_matrix):
             raise ValueError(f"Mismatch between the number of unique categories of input data and WAIFW matrix size. "
-                             f"Expected {len(self.waifw_matrix)} categories, but found {len(self._group_col_all_categories_code)}. "
-                             f"Categories: {self._group_col_all_categories_code}."
+                             f"Expected {len(self.waifw_matrix)} categories, but received {len(self.group_col_all_categories)} categories."
                             )
 
         ##create an array for the total number of infections in each unique group. Only records with i_st are sumed, other records's N are filled with 0.
         #inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col, observed=False)['N'].sum(numeric_only=True).values #moved ['N'] position #groupby approach
         
-        num_of_categories = len(self._group_col_all_categories_code)
+        num_of_categories = len(self.group_col_all_categories)
         present_category_codes = current_state[:, group_col_idx].astype(np.int64)
         infected_mask = current_state[:, infstate_idx] == self._i_code
         infected_group_codes = present_category_codes[infected_mask]

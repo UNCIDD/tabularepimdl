@@ -51,6 +51,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
     _hosp_status_code: int | None = PrivateAttr(default=None)
     _h_code: int | None = PrivateAttr(default=None) #placeholder
     _u_code: int | None = PrivateAttr(default=None) #placeholder
+    _state_encoding_by_engine : bool = PrivateAttr(default=False)
 
     _check_domain_membership = domain_membership_validator(
             attribute_fields = ("infect_status", "recover_status", "hosp_status"),
@@ -73,17 +74,21 @@ class HospRule_Vec_Encode(Rule, BaseModel):
             Numerical values of encoded infection states, recover states and hosp states.
 
         Notes:
-            infstate_to_int (dict): A placeholder (not being used in this rule). Mapping of infection states of infstate_compartments to their index positions.
+            - infstate_to_int (dict): A placeholder (not being used in this rule). Mapping of infection states of infstate_compartments to their index positions.
+            - Retain rule-level state encoding to support users who test rules individually.
         """
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #placeholder
+        if not self._state_encoding_by_engine:
+            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #placeholder
         
-        self._strain_columns_all_categories_code = {v: i for i, v in enumerate(sorted(self.strain_cols_all_categories))} #encode each category
-        self._hosp_columns_all_categories_code = {v: i for i, v in enumerate(sorted(self.hosp_cols_all_categories))} #encode each category
+            self._strain_columns_all_categories_code = {v: i for i, v in enumerate(sorted(self.strain_cols_all_categories))} #encode each category
+            self._hosp_columns_all_categories_code = {v: i for i, v in enumerate(sorted(self.hosp_cols_all_categories))} #encode each category
 
-        #input data columns should be values like strain type or hospitalization type
-        self._infect_status_code = self._strain_columns_all_categories_code.get(self.infect_status)
-        self._recover_status_code = self._strain_columns_all_categories_code.get(self.recover_status)
-        self._hosp_status_code = self._hosp_columns_all_categories_code.get(self.hosp_status)
+            #input data columns should be values like strain type or hospitalization type
+            self._infect_status_code = self._strain_columns_all_categories_code.get(self.infect_status)
+            self._recover_status_code = self._strain_columns_all_categories_code.get(self.recover_status)
+            self._hosp_status_code = self._hosp_columns_all_categories_code.get(self.hosp_status)
+        else:
+            pass
 
     #set up a property to return all the required compartments used in infstate column
     @property
@@ -122,6 +127,19 @@ class HospRule_Vec_Encode(Rule, BaseModel):
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.strain_cols_all_categories)*len(self.infstate_compartments), self.infstate_compartments)
+    
+    def _encode_categorical_states(self, data_domains) -> None:
+        """
+        Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+        """
+        mapping_strain_col = data_domains[self.strain_cols]
+        self._infect_status_code = mapping_strain_col[self.infect_status]
+        self._recover_status_code = mapping_strain_col[self.recover_status]
+
+        mapping_hosp_col = data_domains[self.hosp_cols]
+        self._hosp_status_code = mapping_hosp_col[self.hosp_cols]
+
+        self._state_encoding_by_engine = True
 
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:

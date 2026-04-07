@@ -45,6 +45,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
     _inf_to_code: int | None = PrivateAttr(default=None)
     _columns_idx: list[int] = PrivateAttr(default_factory=list)
     _columns_all_categories_code: list[int] | None = PrivateAttr(default_factory=None)
+    _state_encoding_by_engine : bool = PrivateAttr(default=False)
 
     _check_domain_membership = domain_membership_validator(
             attribute_fields = ("s_st", "i_st", "r_st", "inf_to"),
@@ -76,7 +77,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
             raise ValueError("Arrays must not contain NaN or Infinity values.")
         
         return array_parameters
-    
+
     @model_validator(mode="after") #after all fields are validated, check cross fields relationship
     def check_dimensions(self):
         """Ensure betas and cross_protect have matching dimensions."""
@@ -89,7 +90,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
             )
         
         return self
-        
+
     def model_post_init(self, _):
         """
         Encode the input states based on each column's attribute values.
@@ -98,18 +99,23 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
             Numerical values of encoded infection states, recover states and hosp states.
         
         Notes:
-            infstate_to_int (dict): A placeholder (not being used in this rule). Mapping of infection states of infstate_compartments to their index positions.
-        """
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #placeholder
-        
-        self.columns_all_categories = sorted(self.columns_all_categories) #sort the columns' all categories
-        self._columns_all_categories_code = {v: i for i, v in enumerate(self.columns_all_categories)} #encode each category
+            - infstate_to_int (dict): A placeholder (not being used in this rule). Mapping of infection states of infstate_compartments to their index positions.
+            - Retain rule-level state encoding to support users who test rules individually.
 
-        #input data columns should be values like strain type, but not 'infstate'
-        self._s_code = self._columns_all_categories_code.get(self.s_st)
-        self._i_code = self._columns_all_categories_code.get(self.i_st)
-        self._r_code = self._columns_all_categories_code.get(self.r_st)
-        self._inf_to_code = self._columns_all_categories_code.get(self.inf_to)
+        """
+        if not self._state_encoding_by_engine:
+            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #placeholder
+        
+            self.columns_all_categories = sorted(self.columns_all_categories) #sort the columns' all categories
+            self._columns_all_categories_code = {v: i for i, v in enumerate(self.columns_all_categories)} #encode each category
+
+            #input data columns should be values like strain type, but not 'infstate'
+            self._s_code = self._columns_all_categories_code.get(self.s_st)
+            self._i_code = self._columns_all_categories_code.get(self.i_st)
+            self._r_code = self._columns_all_categories_code.get(self.r_st)
+            self._inf_to_code = self._columns_all_categories_code.get(self.inf_to)
+        else:
+            pass
 
     #set up a property to return all the required categories used in columns
     @property
@@ -121,11 +127,25 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
             A list of strings of all the required categories the `columns` uses.
         """
         return self.columns_all_categories
-    
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.columns_all_categories), len(self.infstate_compartments))
+
+    def _encode_categorical_states(self, data_domains) -> None:
+        """
+        Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+        """
+        single_strain_column = self.columns[0]
+        mapping = data_domains[single_strain_column]
+        self._s_code = mapping[self.s_st]
+        self._i_code = mapping[self._i_code]
+        self._r_code = mapping[self._r_code]
+        self._inf_to_code = mapping[self.inf_to]
+
+        self._state_encoding_by_engine = True
+
     
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """

@@ -35,6 +35,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
     _s_code: int | None = PrivateAttr(default=None)
     _i_code: int | None = PrivateAttr(default=None)
     _inf_to_code: int | None = PrivateAttr(default=None)
+    _state_encoding_by_engine : bool = PrivateAttr(default=False)
 
     _check_domain_membership = domain_membership_validator(
             attribute_fields = ("s_st", "i_st", "inf_to"),
@@ -47,17 +48,23 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         
         Returns:
             Numerical values of encoded infection states.
+
+        Notes:
+            Retain rule-level state encoding to support users who test rules individually.
         """
-        if self.column.lower() == 'infstate': #column is infection state
-            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
-            self._s_code = infstate_to_int.get(self.s_st)
-            self._i_code = infstate_to_int.get(self.i_st)
-            self._inf_to_code = infstate_to_int.get(self.i_st) #inf_to code might be defined in infstate_compartments as well if needed
-        else: #column is other attribute
-            col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.column_categories))}  #encode infstate strings to integers {'0 to 4': 0, '5 to 9': 1}
-            self._s_code = col_cat_to_int.get(self.s_st)
-            self._i_code = col_cat_to_int.get(self.i_st)
-            self._inf_to_code = col_cat_to_int.get(self.i_st)
+        if not self._state_encoding_by_engine:
+            if self.column.lower() == 'infstate': #column is infection state
+                infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
+                self._s_code = infstate_to_int.get(self.s_st)
+                self._i_code = infstate_to_int.get(self.i_st)
+                self._inf_to_code = infstate_to_int.get(self.i_st) #inf_to code might be defined in infstate_compartments as well if needed
+            else: #column is other attribute
+                col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.column_categories))}  #encode infstate strings to integers {'0 to 4': 0, '5 to 9': 1}
+                self._s_code = col_cat_to_int.get(self.s_st)
+                self._i_code = col_cat_to_int.get(self.i_st)
+                self._inf_to_code = col_cat_to_int.get(self.i_st)
+        else:
+            pass
 
     #set up a property to return all the required compartments used in infstate column
     @property
@@ -86,6 +93,18 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.infstate_compartments), len(self.column_categories))
     
+    def _encode_categorical_states(self, data_domains) -> None:
+        """
+        Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+        """
+        mapping = data_domains[self.column]
+        self._s_code = mapping[self.s_st]
+        self._i_code = mapping[self.i_st]
+        self._inf_to_code = mapping[self.inf_to]
+
+        self._state_encoding_by_engine = True
+
+
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         Compute the population deltas for the current state at a given time step.

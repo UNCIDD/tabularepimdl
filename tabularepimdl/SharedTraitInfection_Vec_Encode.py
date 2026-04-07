@@ -1,10 +1,10 @@
 import numpy as np
-from pydantic import BaseModel, Field, field_validator, PrivateAttr, ValidationInfo
+from pydantic import BaseModel, Field, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList, UniqueNonEmptyStrIntUniformList
 from tabularepimdl._validators.domain_attribute_validators import domain_membership_validator
-
+from tabularepimdl._validators.rule_doamin_fields_against_data_domain_fields import validate_rule_fields_against_data_column_fields
 
 class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     """
@@ -38,26 +38,33 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     _i_code: int | None = PrivateAttr(default=None)
     _inf_to_code: int | None = PrivateAttr(default=None)
     _trait_col_all_categories_code: list[int] = PrivateAttr(default_factory=list)
+    _state_encoding_by_engine : bool = PrivateAttr(default=False)
 
     _check_domain_membership = domain_membership_validator(
             attribute_fields = ("s_st", "i_st", "inf_to"),
             domain_fields = ("trait_col_all_categories", "infstate_compartments")
         )
-    
+
     def model_post_init(self, _):
         """
         Encode the input states based on each column's attribute values.
         
         Returns:
             Numerical values of encoded infection states, recover states and hosp states.
-        """
-        infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
-        self._s_code = infstate_to_int.get(self.s_st)
-        self._i_code = infstate_to_int.get(self.i_st)
-        self._inf_to_code = infstate_to_int.get(self.inf_to)
 
-        self.trait_col_all_categories = sorted(self.trait_col_all_categories) #sort the trait_col's all categories
-        self._trait_col_all_categories_code = [i for i, v in enumerate(self.trait_col_all_categories)] #encode each category, keeping numbers only
+        Notes:
+            Retain rule-level state encoding to support users who test rules individually.
+        """
+        if not self._state_encoding_by_engine:
+            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
+            self._s_code = infstate_to_int.get(self.s_st)
+            self._i_code = infstate_to_int.get(self.i_st)
+            self._inf_to_code = infstate_to_int.get(self.inf_to)
+
+            self.trait_col_all_categories = sorted(self.trait_col_all_categories) #sort the trait_col's all categories
+            self._trait_col_all_categories_code = [i for i, v in enumerate(self.trait_col_all_categories)] #encode each category, keeping numbers only
+        else:
+            pass
 
     #set up a property to return all the required compartments used in infstate column
     @property
@@ -80,11 +87,23 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
             A list of strings of all the required categories the `trait_col` uses.
         """
         return self.trait_col_all_categories
-    
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.trait_col_all_categories), len(self.infstate_compartments))
+
+    def _encode_categorical_states(self, data_domains) -> None:
+        """
+        Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+        """
+        mapping_inf_col = data_domains[self.inf_col]
+        self._s_code = mapping_inf_col[self.s_st]
+        self._i_code = mapping_inf_col[self.i_st]
+        self._inf_to_code = mapping_inf_col[self.inf_to]
+
+        self._state_encoding_by_engine = True
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -114,8 +133,10 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         trait_col_idx = col_idx_map[self.trait_col]
         n_idx = col_idx_map['N']
 
-        if len(set(self.trait_col_all_categories)) < len(set(current_state[:, trait_col_idx])):
-            raise ValueError(f"Number of elements in trait_col_all_categories is less than the number of categories of input data, please check trait_col_all_categories and input data.")
+        #validate_rule_fields_against_data_column_fields(rule_column_categories = self.trait_col_all_categories, data = current_state, data_column_index = trait_col_idx)
+        
+        #if len(set(self.trait_col_all_categories)) < len(set(current_state[:, trait_col_idx])):
+        #    raise ValueError(f"Number of elements in trait_col_all_categories is less than the number of categories of input data, please check trait_col_all_categories and input data.")
 
         mask_s_idxs = current_state[:, infstate_idx] == self._s_code
         if mask_s_idxs.size == 0:

@@ -43,6 +43,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
     _unobs_code: int | None = PrivateAttr(default=None)
     _incobs_code: int | None = PrivateAttr(default=None)
     _prevobs_code: int | None = PrivateAttr(default=None)
+    _state_encoding_by_engine : bool = PrivateAttr(default=False)
 
     _check_domain_membership = domain_membership_validator(
             attribute_fields = ("source_state", "unobs_state", "incobs_state", "prevobs_state"),
@@ -55,18 +56,24 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         
         Returns:
             Numerical values of encoded infection states and observation states.
+
+        Notes:
+            Retain rule-level state encoding to support users who test rules individually.
         """
-        if self.source_col.lower() == 'infstate': #column is infection state
-            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate domain values to integers {'I': 0, 'R': 1, 'S': 2}
-            self._source_state_code = infstate_to_int.get(self.source_state)
-        else: #column takes other attribute value
-            source_col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.source_col_all_categories))}  #encode column domain values to integers
-            self._source_state_code = source_col_cat_to_int.get(self.source_state)
+        if not self._state_encoding_by_engine:
+            if self.source_col.lower() == 'infstate': #column is infection state
+                infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate domain values to integers {'I': 0, 'R': 1, 'S': 2}
+                self._source_state_code = infstate_to_int.get(self.source_state)
+            else: #column takes other attribute value
+                source_col_cat_to_int =  {s: i for i, s in enumerate(sorted(self.source_col_all_categories))}  #encode column domain values to integers
+                self._source_state_code = source_col_cat_to_int.get(self.source_state)
         
-        observation_to_int = {obs: i for i, obs in enumerate(sorted(self.obs_col_all_categories))} #encode observation strings to integer
-        self._unobs_code = observation_to_int.get(self.unobs_state)
-        self._incobs_code = observation_to_int.get(self.incobs_state)
-        self._prevobs_code = observation_to_int.get(self.prevobs_state)
+            observation_to_int = {obs: i for i, obs in enumerate(sorted(self.obs_col_all_categories))} #encode observation strings to integer
+            self._unobs_code = observation_to_int.get(self.unobs_state)
+            self._incobs_code = observation_to_int.get(self.incobs_state)
+            self._prevobs_code = observation_to_int.get(self.prevobs_state)
+        else:
+            pass
 
     #set up a property to return all the required compartments used in infstate column
     @property
@@ -78,7 +85,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
             A list of strings of all the required infection compartments if the `source_col` takes 'infstate' value.
         """
         return self.infstate_compartments
-    
+
     #set up a property to return all the required categories used in obs_col
     @property
     def obs_col_all(self) -> list[str]:
@@ -105,6 +112,21 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input row."""
         return max(len(self.infstate_compartments)*len(self.obs_col_all_categories), len(self.source_col_all_categories)*len(self.obs_col_all_categories))
+    
+    def _encode_categorical_states(self, data_domains) -> None:
+        """
+        Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+        """
+        mapping_source_col = data_domains[self.source_col]
+        self._source_state_code = mapping_source_col[self.source_state]
+        
+        mapping_obs_col = data_domains[self.obs_col]
+        self._unobs_code = mapping_obs_col[self.unobs_state]
+        self._incobs_code = mapping_obs_col[self.incobs_state]
+        self._prevobs_code = mapping_obs_col[self.prevobs_state]
+
+        self._state_encoding_by_engine = True
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
