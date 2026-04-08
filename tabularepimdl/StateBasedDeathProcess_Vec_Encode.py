@@ -31,8 +31,8 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
     _state_encoding_by_engine : bool = PrivateAttr(default=False)
 
     _check_domain_membership = domain_membership_validator(
-            attribute_fields = ("target_states"),
-            domain_fields = ("column_states")
+            attribute_fields = ("target_states",),
+            domain_fields = ("column_states",)
         )
     
     def model_post_init(self, _):

@@ -48,7 +48,7 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
 
     _check_domain_membership = domain_membership_validator(
             attribute_fields = ("s_st", "i_st", "inf_to"),
-            domain_fields = ("infstate_compartments")
+            domain_fields = ("infstate_compartments",)
         )
 
     @field_validator("waifw_matrix", mode="before") #validate array type and its element sign
