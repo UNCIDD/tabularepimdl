@@ -55,7 +55,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     _agg_cols: set[str] = PrivateAttr(default_factory = lambda:{'N', 'T'})
     _grouping_cols: list[str] = PrivateAttr(default_factory = lambda:['InfState']) #e.g. ['InfState', 'Age', 'Location']
 
-    #domains for each column
+    #domains for each column, including domain values from both rules and the input data
     _domains: dict[str, Any] = PrivateAttr(default_factory=dict) #e.g. {'InfState': {'I', 'R', 'S'}, 'Location': {'A', 'B'}, 'Age': {'adult', 'child'}}
 
     #domains for column InfState
@@ -191,6 +191,8 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         
         self._update_col_domain_values_from_rules(input_data=self.init_state) #update each rule's selected column's unique domain values
         self._setup_internal_attributes(input_data=self.init_state) #set up all internal attributes
+        self._encode_rule_level_categorical_states() #encode each rule's column categorical states
+
         self.current_state_array = self._convert_input_data_to_arrays(input_data=self.init_state)#[-8:-4] #initalize current_state_array only
         #print('init state\n', self.init_state)
         #print('initial converted current state array\n', self.current_state_array, '\n', self.current_state_array.shape)
@@ -314,7 +316,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             for rule in ruleset:
                 rule_field_name_set = list(rule.model_fields_set) #return the set of fields that have been explicitly set on the rule instance
                 
-                #new addtion 12/4, before going through all attributes, checking if input data has 'infstate' column and update its domain values
+                #new addtion 12/4, special case: before going through all attributes, checking if input data has 'infstate' column and update its domain values
                 if 'infstate'.lower() in (k.lower() for k in self._domains.keys()): #if 'infstate' is a col name in init_state dataframe
                     #print('infstate is in keys')
                     try:
@@ -355,7 +357,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                             continue
 
                         if data_col_name.lower() == "infstate": #Special case: if column value equals 'infstate' (case-insensitive)
-                            try:
+                            try: #this try-except block can be replaced with continue-operation since "infstate" is checked above
                                 infstate_all_compartments = getattr(rule, 'infstate_all')
                                 #print('infstate full:', infstate_all_compartments)
                             except Exception:
@@ -380,9 +382,9 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                                         self._domains[data_col_name].update(property_value)
                                         #print('update with property then domain_values:', self._domains)
        
-        #print('final domains per column:', self._domains) #debug
+        print('final domains per column:', self._domains) #debug
 
-
+    
     def _setup_internal_attributes(self, input_data: pd.DataFrame):
         """
         Set up internal private attributes with values from init_state and rule list.
@@ -413,7 +415,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             #print('vals:', vals)
             self._grouping_col_map[col] = {v: i for i, v in enumerate(vals)} #encode each grouping column's values
             self._inverse_grouping_col_map[col] = {i: v for v, i in self._grouping_col_map[col].items()} #reverse the above encoding
-        #print('grouping col map:', self._grouping_col_map) #debug
+        print('grouping col map:', self._grouping_col_map) #debug
         #print('inverse grouping col map:', self._inverse_grouping_col_map)
 
         #fetch column order of init_state
@@ -430,6 +432,15 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         #print('_n_idx:', self._n_idx, '_t_idx:', self._t_idx, '_grouping_col_idx:', self._grouping_col_idx)
         
 
+    def _encode_rule_level_categorical_states(self) -> None:
+        """
+        Use the fully updated data columns' domain mapping values to encode each rule's own column state values.
+        """
+        for ruleset in self.rules:
+            for rule in ruleset:
+                rule._encode_categorical_states(data_domains = self._grouping_col_map)
+
+    
     def _convert_input_data_to_arrays(self, input_data: pd.DataFrame) -> np.ndarray: #might be benificial to add array args to the method and return current_state and full_epi
         """
         Convert init_state DataFrame to Numpy array. Save the array to current_state_array.
