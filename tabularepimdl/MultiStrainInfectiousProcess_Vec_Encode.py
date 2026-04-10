@@ -140,8 +140,8 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         single_strain_column = self.columns[0]
         mapping = data_domains[single_strain_column]
         self._s_code = mapping[self.s_st]
-        self._i_code = mapping[self._i_code]
-        self._r_code = mapping[self._r_code]
+        self._i_code = mapping[self.i_st]
+        self._r_code = mapping[self.r_st]
         self._inf_to_code = mapping[self.inf_to]
 
         self._state_encoding_by_engine = True
