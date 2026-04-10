@@ -39,11 +39,18 @@ def init_df(switch):
             'T': [0, 0]
         })
     else:
-        n = 1_000000
+        n = 1_000_000
         infstate_values = np.random.choice(['S', 'I', 'R'], size=n)
         n_values = np.random.randint(1, 10, size=n)
-        t_values = np.full(n, 0.0)
+        t_values = np.full(n, 0)
         random_values = [f'catg_{i}' for i in range(n)]
+        
+        #add a couple of fixed values on top of the randomness
+        #infstate_values = np.concatenate((['S', 'I'], infstate_values))
+        #n_values = np.concatenate(([9, 1], n_values))
+        #t_values = np.concatenate(([0, 0], t_values))
+        #random_values = np.concatenate((['a', 'b'], random_values))
+        
         df = pd.DataFrame({
             'InfState': infstate_values,
             'N': n_values,
