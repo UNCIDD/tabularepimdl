@@ -23,7 +23,9 @@ from .WAIFWTransmission_Vec_Encode_Bincount import WAIFWTransmission_Vec_Encode_
 # Moved to scripts/experimental_rules/ (less efficient than Bincount; see issue #52):
 # from .WAIFWTransmission_Vec_Encode_Numba import WAIFWTransmission_Vec_Encode_Numba
 
-# Experimental engine versions moved to scripts/experimental_engines/
+from .EpiModel_Vec_Encode1_5 import EpiModel_Vec_Encode_1_5
+
+# Earlier/experimental engine versions in scripts/experimental_engines/
 # from .EpiModel_Vec_Encode2 import EpiModel_Vec_Encode_2
 # from .EpiModel_Vec_Encode1 import EpiModel_Vec_Encode_1
 # from .EpiModel_Vec_Encode1_2 import EpiModel_Vec_Encode_1_2
