@@ -11,9 +11,6 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-import os
-import sys
-sys.path.append('../')
 from tabularepimdl.SimpleTransition import SimpleTransition
 
 @pytest.fixture
@@ -108,7 +105,7 @@ def test_str(simple_transition):
     Args: simple_transition object.
     """
     expected_str = simple_transition.__str__()
-    assert expected_str == "S --> I at rate 0.3"
+    assert expected_str == "SimpleTransition: S --> I at rate 0.3"
 
 
 def test_to_yaml(simple_transition):

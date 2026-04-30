@@ -1,15 +1,17 @@
-from tabularepimdl.Rule import Rule
+from typing import Annotated
+
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
-from typing import Annotated
+
+from tabularepimdl.Rule import Rule
+
 
 class SimpleTransition(Rule, BaseModel):
     """! Class is going to represent a simple transition from one state to another, 
     such that if a column has the from specified value, it creates transitions with the to
     specified value at the given rate."""
 
-    #def __init__(self, column, from_st, to_st, rate: float, stochastic=False) -> None:
     """! Initialization.
     @param column: Name of the column this rule applies to.
     @param from_st: the state that column transitions from.
@@ -25,7 +27,7 @@ class SimpleTransition(Rule, BaseModel):
     stochastic: bool = False
     #print('end simple transition init')
 
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.
@@ -39,22 +41,21 @@ class SimpleTransition(Rule, BaseModel):
             stochastic = self.stochastic
             
         deltas = current_state.loc[current_state[self.column]==self.from_st].copy()
-        print('st rule\n') #debug
-        print('st\'s current_state is\n', current_state) #debug
+        #print('st rule\n') #debug
+        #print('st\'s current_state is\n', current_state) #debug
+        #subtractions
         if not stochastic:
-            #subtractions
             deltas["N"] = -deltas["N"] * (1 - np.exp(-dt*self.rate))
         else:
             deltas["N"] = -np.random.binomial(deltas["N"], 1 - np.exp(-dt*self.rate))
 
         #additions
-        #deltas_add = deltas.copy()
         deltas_add = deltas.assign(**{self.column: self.to_st, "N": -deltas["N"]})
         #print('st-rule delta is\n', deltas) #debug
         return pd.concat([deltas, deltas_add]).reset_index(drop=True)
     
     def __str__(self) -> str:
-        return "SimpleTransition: {} --> {} at rate {}".format(self.from_st, self.to_st, self.rate)
+        return f"SimpleTransition: {self.from_st} --> {self.to_st} at rate {self.rate}"
     
     def to_yaml(self) -> dict:
         rc = {
@@ -62,3 +63,7 @@ class SimpleTransition(Rule, BaseModel):
         }
 
         return rc
+    
+    def to_dict(self) -> dict:
+        """to accomodate the to_dict() addition in base Rule"""
+        pass

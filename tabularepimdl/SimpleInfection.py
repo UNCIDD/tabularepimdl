@@ -1,14 +1,16 @@
-from tabularepimdl.Rule import Rule
+from typing import Annotated
+
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
-from typing import Annotated
+
+from tabularepimdl.Rule import Rule
+
 
 class SimpleInfection(Rule, BaseModel):
     """!Class represents a simple infection process where people in one column are infected by people
     in a given state in that same column with a probability."""
 
-    #def __init__(self, beta:float, column, s_st="S", i_st="I", inf_to="I", freq_dep=True, stochastic=False) -> None:
     """!Initialization. 
     @param beta: the transmission parameter. 
     @param column: name of the column this rule applies to.
@@ -26,7 +28,7 @@ class SimpleInfection(Rule, BaseModel):
     freq_dep: bool = True
     stochastic: bool = False
 
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float =1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float =1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.
@@ -54,6 +56,7 @@ class SimpleInfection(Rule, BaseModel):
         deltas = current_state.loc[current_state[self.column]==self.s_st].copy()
 
         exp_change_rate = np.power(np.exp(-dt*beta), infectious)
+        
         if not stochastic:
             deltas["N"] = -deltas["N"] * (1 - exp_change_rate)
         else:
@@ -63,7 +66,9 @@ class SimpleInfection(Rule, BaseModel):
         
         return pd.concat([deltas, deltas_add]).reset_index(drop=True)
         
-        
+    def __str__(self) -> str:
+        return f"SimpleInfection: {self.s_st} --> {self.inf_to} at rate {self.beta}"
+       
     def to_yaml(self) -> dict:
         """
         return the rule's attributes to a dictionary.
@@ -72,3 +77,7 @@ class SimpleInfection(Rule, BaseModel):
             'tabularepimdl.SimpleInfection': self.model_dump()
         }
         return rc        
+
+    def to_dict(self) -> dict:
+        """to accomodate the to_dict() addition in base Rule"""
+        pass

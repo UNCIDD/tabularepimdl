@@ -1,0 +1,721 @@
+from typing import Any
+
+import math
+import numpy as np
+import pandas as pd
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
+
+from tabularepimdl.Rule import Rule
+from typing import Iterable
+
+#Vec_Encode_1_3 is derived from Vec_Encode_1_2, it uses rule input state-based pre-allocated buffer, which sits outside timestep()
+class EpiModel_Vec_Encode_1_3(BaseModel):
+    """
+    Class that that applies a list of rules to a changing current state through 
+    some number of time steps to produce an epidemic.
+
+    Args:
+        init_state: A pandas DataFrame with the initial epidemic fields such as infection state, grouping state, population size and time.
+                    It must have at minimum columns `'T'` and `'N'`.
+    Example:
+        Location	Age     InfState    N   T
+    0	       A  adult	           S  100  20
+    1	       A  adult	           I    5	0
+    2	       A  child            R   50	0
+    3	       B  adult            S   80	0
+    
+        current_state_array: A numpy array represents the current epidemic state.
+        full_epi_array: A numpy array contains full epidemic history.
+        rules: A list of epidemic rules that represents the epidemic process. Must be a flat list or a list of lists. E.g. [[B], [SI, ST], [W]]
+        stoch_policy: Whether the entire epidemic process is rule based or centralized with either deterministic or stochastic.
+        compartment_col: A placeholder (not being used in model engine). A string indicating the column name that is used for saving infection compartments.
+    
+    Notes:
+        Maintain a _delta_buffer
+        Track its capacity
+        Grow only when required
+        Rules write into it
+        Engine slices valid rows
+    """
+
+    # Pydantic Configuration
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    init_state: pd.DataFrame = Field(default_factory=pd.DataFrame)
+    current_state_array: np.ndarray = Field(default_factory=lambda: np.array([]))
+    full_epi_array: np.ndarray = Field(default_factory=lambda: np.array([]))
+    rules: list[list[Rule]]
+    stoch_policy: str = "rule_based"
+    #compartment_col: str = 'InfState' #model engine does not need this attribute
+
+    #columns listed in the input data, separating column N and T from other columns
+    _agg_cols: set[str] = PrivateAttr(default_factory = lambda:{'N', 'T'})
+    _grouping_cols: list[str] = PrivateAttr(default_factory = lambda:['InfState']) #e.g. ['InfState', 'Age', 'Location']
+
+    #domains for each column
+    _domains: dict[str, Any] = PrivateAttr(default_factory=dict) #e.g. {'InfState': {'I', 'R', 'S'}, 'Location': {'A', 'B'}, 'Age': {'adult', 'child'}}
+
+    #domains for column InfState
+    _infstate_all_comps: list[str] = PrivateAttr(default_factory=list) #e.g. ['S', 'I', 'R']
+    _num_comps: int = PrivateAttr(default=None) #e.g. 3
+
+    #encoding map and inverse encoding map for infstate comp, not needed, keep them here for now
+    #these two variables are not set in the class since _grouping_col_map and _inverse_grouping_col_map do the same function
+    #_infstate_comp_map: Dict[str, int] = PrivateAttr(default_factory=dict) #e.g. {'S': 0, 'I': 1, 'R': 2}
+    #_inverse_infstate_comp_map: Dict[int, str] = PrivateAttr(default_factory=dict) #e.g. {0: 'S', 1: 'I', 2: 'R'}
+
+    #encoding maps and inverse encoding maps for each grouping column
+    _grouping_col_map: dict[str, dict[str, int]] = PrivateAttr(default_factory=dict) #e.g. { 'InfState': {'I': 0, 'S': 1}, 'Age': {'adult': 0, 'child': 1} }
+    _inverse_grouping_col_map: dict[str, dict[int, str]] = PrivateAttr(default_factory=dict) #e.g. { 'InfState': {0: 'I', 1: 'S'}, 'Age': {0: 'adult', 1: 'child'} }
+    
+    #column names order in init_state
+    _init_state_col_order: list[str] = PrivateAttr(default_factory=list) #e.g. ['InfState', 'N', 'T', 'Group']
+    _col_idx_map: dict[str, int] = PrivateAttr(default_factory=dict) #e.g. {'InfState' : 0, 'N': 1, 'T': 2}
+
+    #column index value of InfState, N, T and all grouping columns including InfState
+    #_infstate_idx: int = PrivateAttr(default=None) #e.g. _infstate_idx=0 #model engine does not need this attribute
+    _n_idx: int = PrivateAttr(default=None) #e.g. _n_idx=1
+    _t_idx: int = PrivateAttr(default=None) #e.g. _t_idx=2
+    _grouping_col_idx: list[int] = PrivateAttr(default_factory=list) #e.g. infstate, x, y, z = [0, 3, 4, 5]
+
+    #current result array pr-eallocation
+    _current_result_preallocation: np.ndarray = PrivateAttr(default_factory=lambda: np.array([]))
+
+    #full epi list to contain full epi array
+    _full_epi_list: list[np.ndarray] = PrivateAttr(default_factory=list)
+
+    #initial current_state_array, used to save the converted initial current_state_array
+    _initial_current_state_array: np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) 
+
+    #new data flag, used for identifying if the added new data to current state has value changed or remained
+    _new_data_flag: bool = PrivateAttr(default=True)
+    _previous_data_copy: pd.DataFrame = PrivateAttr(default_factory=pd.DataFrame) #a dataframe for saving previous new data
+    _new_data_array:  np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) #an array for saving the converted added dataframe and avoid NameError
+
+    # reusable delta buffer
+    _delta_buffer: np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) #originally as _current_result_preallocation
+    _delta_capacity: int = PrivateAttr(default=0) #this may not be needed
+    _max_expansion_factor: int = PrivateAttr(default=0)
+    
+    @field_validator("init_state", mode="before")
+    @classmethod
+    def validate_init_state(cls, initial_state) -> pd.DataFrame:
+        """Ensure input data is pandas DataFrame type with required minimum columns"""
+        #Type check
+        if not isinstance(initial_state, pd.DataFrame): #check if init_state is a dataFrame
+            raise TypeError(f"Expected a DataFrame, received {type(initial_state).__name__} instead.")
+        
+        #Required columns check
+        required_cols = {'N', 'T'}
+        missing = required_cols - set(initial_state.columns)
+        if missing: #check if column T and N are in the dataframe
+            raise ValueError(f"init_state is missing required columns: {missing}.")
+        
+        #Numeric-type validation for column N and T #12/16, #by default, data type validation of column N and T
+        for col in ["N", "T"]:
+            if not pd.api.types.is_numeric_dtype(initial_state[col]):
+                raise ValueError(
+                    f"Column '{col}' must contain numeric values only. Found dtype: {initial_state[col].dtype}. Please check the input data."
+                )
+        
+        #Ensure all column names of init_state are string types
+        non_string_col_names = [col for col in initial_state.columns if not isinstance(col, str)]
+
+        if non_string_col_names:
+            raise ValueError(f"Non-string column names found: {non_string_col_names}. Please check the input data and use meaningful string column names.")
+
+
+        return initial_state
+    
+    #rules list validation
+    @field_validator("rules", mode="before")
+    @classmethod
+    def validate_rules_list(cls, input_rules) -> list[list[Rule]]:
+        """Check if the rules is a flat list or list of lists."""
+        # Case 1: Wrap single Rule instance
+        if isinstance(input_rules, Rule):
+            return [[input_rules]]
+
+        # Case 2: Ensure input is list-like
+        if not isinstance(input_rules, list):
+            raise TypeError(f"rules must be an epidemic Rule or a list (or list of lists) of epidemic Rules. Received {type(input_rules).__name__}.")
+        
+        # Case 3: list of individual Rules stay in one group
+        if all(isinstance(item, Rule) for item in input_rules):
+            return [input_rules]
+
+        # Case 4: mixed list
+        normalized_list = []
+        for i, item in enumerate(input_rules):
+            if isinstance(item, Rule):
+                normalized_list.append([item]) #Single rule instance: wrap it in list
+            elif isinstance(item, list): # Sublist: validate contents
+                if not item:
+                    raise ValueError("Rule sublists cannot be empty.")
+                for j, subitem in enumerate(item):
+                    if isinstance(subitem, Rule):
+                        continue
+                    elif isinstance(subitem, list):
+                        raise TypeError(
+                            f"Too much nesting at input rules[{i}][{j}], element is {subitem} with type {type(subitem).__name__}. " 
+                            f"Expected an epidemic Rule, received nested list with depth > 2."
+                        )
+                    else:
+                        raise TypeError(
+                            f"Invalid type at input rules[{i}][{j}]: expected an epidemic Rule, received {subitem} with type {type(subitem).__name__}."
+                        )
+                normalized_list.append(item)
+            else:
+                raise TypeError(f"Element {subitem} at input rules[{i}] must be an epidemic Rule or a list of epidemic Rules. Received {type(item).__name__}.")
+
+        return normalized_list
+
+    def model_post_init(self, _):
+        """
+        Prepare the model engine with the following steps:
+        1. shuffle init_state column order
+        2. group collumn values
+        3. update column domain values
+        4. set up model's internal attributes
+        5. initialize current_state_arrays
+        6. initialize full_epi_array.
+        """
+        #self.init_state.columns = self._init_state_column_names_upper_case(input_data=self.init_state) #convert all column names of init_state to lowercase, this will cause many string handling changes in rules, not implement it for now
+        self.init_state = self._input_data_column_order_shuffle(input_data=self.init_state) #shuffle init_state column order
+        #print('shuffle init state\n', self.init_state) #debug
+        self.init_state = self._input_data_column_values_grouping(input_data=self.init_state) #grouping init_state column values
+        #print('after grouping init state\n', self.init_state, '\n', self.init_state.dtypes) #debug
+        
+        self._update_col_domain_values_from_rules(input_data=self.init_state) #update each rule's selected column's unique domain values
+        self._setup_internal_attributes(input_data=self.init_state) #set up all internal attributes
+        #print('before slicing current state\n', self._convert_input_data_to_arrays(input_data=self.init_state))
+        self.current_state_array = self._convert_input_data_to_arrays(input_data=self.init_state)#[-8:-4] #initalize current_state_array only
+        #print('init state\n', self.init_state)
+        #print('initial converted current state array\n', self.current_state_array, '\n', self.current_state_array.shape)
+        self._save_initial_current_state_array()
+        self._initalize_full_epi_array() #initalize full_epi_array only
+
+        self._setup_preallocated_buffer() #set up pre-allocated buffer
+
+    #def _init_state_column_names_upper_case(self, input_data: pd.DataFrame): #new addtion, 12/4, this requires all individual rules to convert their values to upper case, not efficient
+    #    """Convert all column names of init_state to lowercase."""
+    #    return input_data.columns.str.upper()
+    #    print(input_data.columns.str.upper())
+
+    def _setup_preallocated_buffer(self) -> np.ndarray:
+        #print('initial _delta buffer\n', self._delta_buffer)
+        
+        buffer_cols = self.current_state_array.shape[1]
+        #print('buff cols num:', buffer_cols)
+
+        rule_flat_list = [item for sublist in self.rules for item in sublist]
+        #print('rule flat list:', rule_flat_list)
+
+        self._max_expansion_factor = math.prod(rule.expansion_factor for rule in rule_flat_list) #max all rules' combination of input states
+        #print('_max_expansion_factor:', self._max_expansion_factor)
+
+        buffer_rows = self.current_state_array.shape[0] + (self.current_state_array.shape[0] * self._max_expansion_factor) #the input array's total rows * total input states -> the possible max number of rows needed in buffer
+        #print('buff rows num:', buffer_rows)
+
+        self._delta_buffer = np.empty((buffer_rows, buffer_cols), dtype=np.float64) #preallocate a result array
+        #print('1_3 created _delta buffer\n', self._delta_buffer, '\n', self._delta_buffer.shape)
+
+    
+    def _input_data_column_order_shuffle(self, input_data: pd.DataFrame):
+        """
+        Move column N and T to the last two columns in init_state before all internal attributes and data processing steps occure.
+
+        Args:
+            input_data: A pandas DataFrame of the initial state.
+
+        Returns:
+            A pandas DataFrame with column order re-organized.
+        """
+        cols = input_data.columns.tolist()
+
+        # Define the target columns to move
+        cols_to_move = ['N', 'T']
+
+        # Filter out the columns_to_move from the list and sort the remaining columns alphabetically
+        remaining_cols = sorted([col for col in cols if col not in cols_to_move])
+
+        # Build the new column order
+        new_col_order = remaining_cols + cols_to_move
+
+        # Reorder the DataFrame init_state
+        return input_data[new_col_order]
+    
+
+    def _input_data_column_values_grouping(self, input_data: pd.DataFrame):
+        """
+        Group each column of init_state and aggregate column N and T in case the input raw data has duplicate rows.
+        
+        Args:
+            input_data: A pandas DataFrame of the initial state.
+
+        Returns:
+            A pandas DataFrame with column values grouped.
+        """
+        #collect column names for aggregating columns and rest grouping columns
+        self._agg_cols = {'N', 'T'}
+        self._grouping_cols = [c for c in input_data.columns if c not in self._agg_cols]
+        #print('grouping col:', self._grouping_cols)
+        #print('before grouping init state\n', self.init_state) #debug
+        #grouping column values, only the categories that are actually present in the data will be included in the groups.
+        return input_data.groupby(self._grouping_cols, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
+        
+
+    def _match_domain_key(self, col_name: str) -> str | None:
+        """
+        Case-insensitive lookup: return the matching key for column names of input data or None.
+        
+        Args:
+            col_name: A string of column name used in the initial state.
+
+        Returns:
+            The column name or None.
+        """
+        if col_name is None:
+            return None
+        if not isinstance(col_name, str): #12/15 new: if attribute value passed through col_name is not string, no need to process
+            return None
+        col_name_lower = col_name.lower()
+        for key in self._domains.keys():
+            if key.lower() == col_name_lower:
+                return key
+        return None
+
+
+    def _update_col_domain_values_from_rules(self, input_data: pd.DataFrame) -> None:
+        """
+        Walk through rules list and update each rule's selected column's unique domain values in place.
+        Rules must be instances of BaseModel (Pydantic), and rule attributes that include keyword 'col' in the attribute name will be inspected.
+
+        Args:
+            input_data: A pandas DataFrame of the initial state.
+        
+        Returns:
+            Objects of updated domain values of each column.
+
+        Raises:
+            ValueError: If a rule's attribute's value is not a string or a list.
+        """
+        #unique domain values per grouping column (excludes N and T) in init_state
+        #self._domains = {col: set(input_data[col].astype(str).tolist()) for col in self._grouping_cols} #convert col values to strings but not mess up the numerics
+        self._domains = {col: set(input_data[col].tolist()) for col in self._grouping_cols} #12/15 new: remove astype(str)
+        #print('initial domain value:', self._domains)
+        #collect domain values that exist in each rule's properties but not in init_state data columns
+        for ruleset in self.rules:
+            for rule in ruleset:
+                rule_field_name_set = list(rule.model_fields_set) #return the set of fields that have been explicitly set on the rule instance
+                
+                #new addtion 12/4, before going through all attributes, checking if input data has 'infstate' column and update its domain values
+                if 'infstate'.lower() in (k.lower() for k in self._domains.keys()): #if 'infstate' is a col name in init_state dataframe
+                    #print('infstate is in keys')
+                    try:
+                        infstate_all_compartments = getattr(rule, 'infstate_all')
+                        #print('infstate full:', infstate_all_compartments)
+                    except Exception:
+                        infstate_all_compartments = None
+
+                    if infstate_all_compartments: #a rule has infstate_all property
+                        if isinstance(infstate_all_compartments, (list, set, tuple, Iterable)):
+                            self._domains['InfState'].update(infstate_all_compartments) #to-do: case-sensitive InfState, may need to line up case-sensitivity across engine and rules
+
+                for attribute_name in rule_field_name_set: #iterate all attributes that have been explicitly set in the rule instance
+                    #print('attribute name:', attribute_name)
+                    if 'col' not in attribute_name.lower(): #search keyword 'col' in rule's attribute names
+                        continue
+
+                    try:
+                        attribute_value = getattr(rule, attribute_name) #if attribute_name has 'col', then obtain its value
+                        #print('attribute_name\'s value :', attribute_value)
+                    except Exception:
+                        continue
+                    
+                    # Normalize: always work with a list of column names
+                    if isinstance(attribute_value, str):
+                        attribute_value_list = [attribute_value]
+                    elif isinstance(attribute_value, list):
+                        attribute_value_list = attribute_value
+                    else:
+                        raise ValueError(f"Expect attribute value to be a string or list, received {type(attribute_value)}.")
+                    #print('attribute value list:', attribute_value_list)    
+                    
+                    for value in attribute_value_list:
+                        data_col_name = self._match_domain_key(col_name = value) #check if attribute value exists in domain keys
+                        #print('found data col name in domain:', data_col_name)
+
+                        if data_col_name is None: #attribute name has 'col' but its value is not in domain keys
+                            continue
+
+                        if data_col_name.lower() == "infstate": #Special case: if column value equals 'infstate' (case-insensitive)
+                            try:
+                                infstate_all_compartments = getattr(rule, 'infstate_all')
+                                #print('infstate full:', infstate_all_compartments)
+                            except Exception:
+                                infstate_all_compartments = None
+
+                            if infstate_all_compartments: #a rule has infstate_all property
+                                if isinstance(infstate_all_compartments, (list, set, tuple, Iterable)):
+                                    self._domains[data_col_name].update(infstate_all_compartments)
+                                    #print('infstate domain_values:', self._domains)
+                       
+                        else: #Generic case: look for property named "<data_col_name>_all"
+                            property_name = f"{attribute_name}_all"
+                            if hasattr(rule, property_name):
+                                try:
+                                    property_value = getattr(rule, property_name)
+                                    #print('property_value:', property_value)
+                                except Exception:
+                                    property_value = None
+            
+                                if property_value:
+                                    if isinstance(property_value, (list, set, tuple, Iterable)):
+                                        self._domains[data_col_name].update(property_value)
+                                        #print('update with property then domain_values:', self._domains)
+       
+        #print('final domains per column:', self._domains) #debug
+
+
+    def _setup_internal_attributes(self, input_data: pd.DataFrame):
+        """
+        Set up internal private attributes with values from init_state and rule list.
+
+        Args:
+            input_data: A pandas DataFrame of the initial state.
+
+        Returns:
+            1. A dictionary of mapping of each column's domain values to their index positions.
+            2. The column order in the input pandas DataFrame.
+            3. A dictionary of mapping of column names to their orders.
+        """
+        #self._infstate_all_comps = sorted(self._domains[self.compartment_col]) #keep a variable to save column InfState's compartment values
+        #self._num_comps = len(self._infstate_all_comps) #keep a variable to save the number of compartments in column InfState
+        #print('infstate_all_comps:', self._infstate_all_comps, 'num_comps:', self._num_comps)
+
+         #create compartment and its associated index mapping, and reverse the mapping
+         #used for converting column's string values to numbers
+        #self._infstate_comp_map = {comp: i for i, comp in enumerate(infstate_all_comps)}
+        #print('infstate_comp_map:', self._infstate_comp_map)
+        #self._inverse_infstate_comp_map = {i: comp for comp, i in self._infstate_comp_map.items()}
+        #print('inverse_infstate_comp_map:', self._inverse_infstate_comp_map)
+        
+        #build encoding maps and inverse encoding maps for each grouping column's domain values including column infstate
+        for col in self._grouping_cols:
+            #print('col:', col)
+            vals = sorted(self._domains[col]) #sort each grouping column's unique domain values
+            #print('vals:', vals)
+            self._grouping_col_map[col] = {v: i for i, v in enumerate(vals)} #encode each grouping column's values
+            self._inverse_grouping_col_map[col] = {i: v for v, i in self._grouping_col_map[col].items()} #reverse the above encoding
+        #print('grouping col map:', self._grouping_col_map) #debug
+        #print('inverse grouping col map:', self._inverse_grouping_col_map)
+
+        #fetch column order of init_state
+        self._init_state_col_order = [col for col in input_data.columns] #get all column names into a list, e.g. ['InfState', 'N', 'T']
+        self._col_idx_map = {col: i for i, col in enumerate(self._init_state_col_order)} #e.g. {'Location': 0, 'Age': 1, 'InfState': 2, 'N': 3, 'T': 4}
+        #print('col_idx_map:', self._col_idx_map) #debug
+
+        #all columns indicies are included in _col_idx_map, extract invidual ones for separate use
+        #Locate each column's index of init_state, used in array column operation.
+        #self._infstate_idx = self._col_idx_map[self.compartment_col] #unused/unneeded attribute
+        self._n_idx = self._col_idx_map['N'] #the code has to know/use a few fixed column names in order to get column indicies
+        self._t_idx = self._col_idx_map['T']
+        self._grouping_col_idx = [self._col_idx_map[c] for c in self._grouping_cols]
+        #print('_n_idx:', self._n_idx, '_t_idx:', self._t_idx, '_grouping_col_idx:', self._grouping_col_idx)
+        
+
+    def _convert_input_data_to_arrays(self, input_data: pd.DataFrame) -> np.ndarray: #might be benificial to add array args to the method and return current_state and full_epi
+        """
+        Convert init_state DataFrame to Numpy array. Save the array to current_state_array.
+
+        Args:
+            input_data: A pandas DataFrame of the initial state.
+        
+        Returns:
+            A Numpy array of encoded input_data or an empty array.
+        """
+        
+        #this code block is for debugging only
+        #infstate_values = self.init_state[self.compartment_col].map(self._infstate_comp_map).to_numpy() #encode compartment strings with integers
+        #n_values = self.init_state['N'].to_numpy()
+        #t_values = self.init_state['T'].to_numpy()
+
+        #self.current_state_array = np.column_stack((infstate_values, n_values, t_values))
+        #self.current_state_array = self.current_state_array.astype(np.float64)
+        #print('converted input array\n', self.current_state_array)
+
+        #process each column individually (including N and T) and build a current_state array without modifying original init_state
+        #by default, column N and T should already be numerical values and verified in model instantiation stage
+        encoded_columns = [] #to save each grouping column's converted array based on the column values
+        for col in self._init_state_col_order:
+            if col in self._grouping_col_map: #process grouping cols
+                col_array = input_data[col].map(self._grouping_col_map[col]).to_numpy()
+            else: #process column N, T
+                col_array = input_data[col].to_numpy()
+            encoded_columns.append(col_array)
+        
+        if encoded_columns: #check encoded columns empty or not and convert all values to float64
+            return np.column_stack(encoded_columns).astype(np.float64)
+        else:
+            return np.empty((0, len(self._init_state_col_order)), dtype=np.float64)
+
+        #pre-allocation of result array -- to be checked/verified ##=== MOVE pre-allocation into do_timestep()===##
+        #n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
+        #n_cols = self.current_state_array.shape[1]
+        #self._current_result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
+        #print('initial preallocation buffer\n', self._current_result_preallocation)
+        #return self.current_state_array #return current_state_array only
+    
+    def _save_initial_current_state_array(self) -> np.ndarray:
+            """
+            After init_state DataFrame is converted to current_state_array, save the array's initial values.
+
+            Returns:
+                A Numpy array of initial state of the input data.
+            """
+            self._initial_current_state_array = self.current_state_array.copy()
+            
+    def _initalize_full_epi_array(self) -> np.ndarray:
+        """
+        Initialize full_epi_array with initial current_state_array.
+
+        Returns:
+            A Numpy array of initial state of the input data saved in the full epi array.
+        """
+        self._full_epi_list = [self._initial_current_state_array] #make current_state_array the 1st elment in full_epi_array
+        self.full_epi_array = np.vstack(self._full_epi_list)
+        return self.full_epi_array
+    
+    def _covnert_list_of_arrays_to_df(self, list_of_arr: list[np.ndarray]) -> pd.DataFrame:
+        """
+        Convert list of arrays returned from do_timestep() to a pandas DataFrame as full epidemic history.
+
+        Args:
+            list_of_arr: A list of arrays, each array is a epidemic historical data.
+
+        Returns:
+            A pandas DataFrame containing full epidemic history. This method may be removed given it duplicates the function of full_epi() method.
+        """
+        # _full_epi_list could be used to replace list_of_arr and remove the this argument from method definition
+        if len(list_of_arr) == 0: #return empty dataframe if input list of arrays is empty
+            return pd.DataFrame(columns=self._init_state_col_order)
+        self.full_epi_array = np.vstack(list_of_arr)
+        df_reconstructed = pd.DataFrame(self.full_epi_array, columns=self._init_state_col_order)
+        
+        for col in self._inverse_grouping_col_map: #convert grouping col's numeric values to domain values (not including N and T)
+            df_reconstructed[col] = df_reconstructed[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
+        return df_reconstructed
+    
+    def current_state(self) -> pd.DataFrame:
+        """
+        Convert current_state_array from array to pandas dataframe with original input data column names.
+        
+        Returns:
+            A pandas DataFrame containing current state values.
+        """
+        if len(self.current_state_array) == 0:
+            return pd.DataFrame(columns=self._init_state_col_order)
+        df_constructed_current_state = pd.DataFrame(self.current_state_array, columns=self._init_state_col_order)
+
+        for col in self._inverse_grouping_col_map: #convert grouping col's numeric values to domain values (not including N and T)
+            df_constructed_current_state[col] = df_constructed_current_state[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
+        return df_constructed_current_state
+
+    def full_epi(self) -> pd.DataFrame:
+        """
+        Convert _full_epi_list from a list of array to pandas dataframe with original input data column names.
+        
+        Returns:
+            A pandas DataFrame containing full epidemic history.
+        """
+        if len(self._full_epi_list) == 0:
+            return pd.DataFrame(columns=self._init_state_col_order)
+        self.full_epi_array = np.vstack(self._full_epi_list)
+        df_reconstructed_full_epi = pd.DataFrame(self.full_epi_array, columns=self._init_state_col_order)
+        
+        for col in self._inverse_grouping_col_map: #convert grouping col's numeric values to domain values (not including N and T)
+            df_reconstructed_full_epi[col] = df_reconstructed_full_epi[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
+        return df_reconstructed_full_epi
+
+    def Reset(self):
+        """
+        Reset the values of current_state_array and full_epi_array to be the init_state values.
+        only call back initial_current_state_array value and invoke _initalize_full_epi_array().
+        """
+        self.current_state_array = self._initial_current_state_array.copy()
+        self._initalize_full_epi_array()
+
+
+    def add_new_data_to_current_state(self, new_data: pd.DataFrame) -> np.ndarray:
+        """
+        Add new data to the current state of epidemics. The input is a pandas Dataframe, the output is a Numpy array.
+        
+        Args:
+            new_data: a pandas DataFrame of new data point to be used in simulations such as a new infected person.
+
+        Returns:
+            A Numpy array containing the current state plus the new data.
+
+        Raises:
+            TypeError: If the added new data is not in pandas DataFrame type.
+            ValueError: If the added new data has different number of columns than that of the original input data.
+            ValueError: If the added new data has different column names than that of the original input data.
+        """
+        #verify if the input data is a dataframe
+        if not isinstance(new_data, pd.DataFrame):
+            raise TypeError(f"Expected a DataFrame, recieved {type(new_data).__name__} instead.")
+        
+        #verify if the input data has the same number of columns as the init_state
+        if len(new_data.columns) != len(self.init_state.columns): #init_state is used within this method directly as the method only takes parameter new_data input
+            raise ValueError(f"Expected {len(self.init_state.columns)} columns in new_data, received {len(new_data.columns)}.")
+
+        #verify if the new data has the exact column names as init_state
+        cols_new = set(new_data.columns.str.lower())
+        cols_init = set(self.init_state.columns.str.lower())
+
+        if cols_new != cols_init:
+            missing_in_new = cols_init - cols_new
+            extra_in_new = cols_new - cols_init
+
+            raise ValueError(
+                "Column name mismatch (case-insensitive) between new data and initial state.\n"
+                f"Missing in new data: {sorted(missing_in_new)}.\n"
+                f"Extra in new data: {sorted(extra_in_new)}."
+            )
+        
+        #check if the current new data is the same as the previous new data copy. 
+        #If no, then update the previous new data copy. If yes, flip the new_data_flag to False.
+        if not self._previous_data_copy.equals(new_data):
+            self._new_data_flag = True #yes, new data
+            #print('not same, it is new data.')
+            self._previous_data_copy = new_data.copy() #save new_data
+        else:
+            self._new_data_flag = False #not new data or an empty new_data equals to the initial empty previous_data_copy
+   
+        if self._new_data_flag: #yes, new data comes
+            new_data = self._input_data_column_values_grouping(input_data = new_data) #grouping new_data column values
+            #print('after grouping new data\n', new_data) #debug
+            new_data = self._input_data_column_order_shuffle(input_data = new_data) #shuffle new_data column order
+            #print('new data frame\n', new_data) #debug
+            #convert input new data to array and save it
+            self._new_data_array = self._convert_input_data_to_arrays(input_data = new_data)
+            #print('new data array\n', self._new_data_array)
+            #print('current state array\n', self.current_state_array)
+            #flip new_data_flag to False and add new data to current_state_array
+            self._new_data_flag = False
+            self.current_state_array = np.vstack([self.current_state_array, self._new_data_array])
+            #print('vec after adding new data, current array\n', self.current_state_array)
+        
+        else: #not new data, it is the same as previous data, can use the saved new_data_array if this array is not empty
+            if self._new_data_array.size != 0:
+                self.current_state_array = np.vstack([self.current_state_array, self._new_data_array])
+            else:
+                pass
+
+        return self.current_state_array
+        
+    
+    def do_timestep(self, dt: int | float =1.0) -> np.ndarray:
+        """
+        Do a timestep process, updating the epidemic current state by applying each epidemic rule to the current state data.
+        Append each iteration's current state to the full epidemic history.
+        
+        Args:
+            dt: A floating number of the time step.
+
+        Returns:
+            A list of Numpy arrays with each array representing an epidemic historical data in time T.
+        """
+        #print('timestep level index map\n', self._build_index_map())#debug only
+
+        for ruleset in self.rules:
+            #print('1. vec current ruleset:', ruleset)
+            #print('ruleset level index map\n', self._build_index_map())#debug only
+            #print('vec current state\n', self.current_state_array)
+            ruleset_deltas_list = []
+            ruleset_deltas_list.append(self.current_state_array)
+            write_cursor = 0 #reset write_cursor of the buffer for each ruleset
+            #current_state_array_row_size = self.current_state_array.shape[0]
+            #print('start new ruleset, write_curose:', write_cursor)
+            
+            for rule in ruleset:
+                #print('2. current rule:', rule)
+                #print('in rule Before loop preallocation buffer\n', self._current_result_preallocation)
+                # Allocate non-overlapping slice
+                #print('write_cusor now is:', write_cursor)
+                
+                buff_slice = self._delta_buffer[write_cursor:, :] #from the current write_cusor to the end of the rows and select all columns
+                #print('buff slice\n', buff_slice)
+                #encoded_data_index_map = self._build_index_map() #build encoded data index for each data column of input data at rule level
+                #print('rule level index map\n', encoded_data_index_map)
+                if self.stoch_policy == "rule_based":
+                    rule_deltas = rule.get_deltas(current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=buff_slice, dt=dt)
+                else:
+                    rule_deltas = rule.get_deltas(current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=buff_slice, dt=dt, stochastic = (self.stoch_policy=="stochastic"))
+                #print('rule detlas\n', rule_deltas)
+                #print('in rule After loop preallocation buffer\n', self._current_result_preallocation)
+                #print('before append, ruleset_deltas_list\n', ruleset_deltas_list)
+                if rule_deltas is not None and len(rule_deltas) > 0: #add non-None rule_deltas to the list
+                    rows_written = rule_deltas.shape[0] #get the number of rows from rule returned deltas
+                    #print('rows_written:', rows_written)
+                    ruleset_deltas_list.append(rule_deltas) #add current rule_deltas to list
+                    write_cursor = write_cursor + rows_written #move write_cursor to next location
+                    #print('write_cursor will be:', write_cursor)
+                    #print('rule deltas\n', rule_deltas)
+
+                #print('after append, ruleset_deltas_list\n', ruleset_deltas_list)
+                #if rule is not ruleset[-1]: #debug
+                #    print('---next rule---') #debug
+                #else: print('finished current ruleset, moving to next ruleset') #debug
+
+            if len(ruleset_deltas_list) == 0: #if no data added to ruleset_deltas_list, go to next ruleset
+                #print('list is empty, go to next ruleset')
+                continue
+
+            #ruleset_deltas_list.append(self.current_state_array) #add current_state_array to the list, move it under ruleset loop
+            #print('after append cur_state_array, ruleset_deltas_list\n', ruleset_deltas_list)
+
+            self.current_state_array = np.vstack(ruleset_deltas_list) #convert list of arrays to array and save it to current_state_array
+            # Sort by third column (index 2)
+            #self.current_state_array = self.current_state_array[np.argsort(self.current_state_array[:, 2])] #debug
+            #print('before grouping, cur_array\n', self.current_state_array)
+
+            #grouping columns, sum N for each group, pick max T out of all groups
+            #process grouping columns
+            grouping_col_arrays = self.current_state_array[:, self._grouping_col_idx] #arrays from each grouping colum
+            #print('grouping col arrays\n', grouping_col_arrays)
+
+            unique_col_value, unique_value_inverse_idx = np.unique(grouping_col_arrays, axis=0, return_inverse=True) #unique values of each grouping column
+            unique_value_inverse_idx = unique_value_inverse_idx.flatten() #indicies of unique values
+            #print('uniqe value\n', unique_col_value)
+            #print('unique value inverse idx', unique_value_inverse_idx)
+
+            #process column N and T
+            num_groups = unique_col_value.shape[0] #the number of unique groups for grouping purpose
+            sum_col_N_per_group = np.zeros(num_groups, dtype=np.float64)
+            max_col_T_per_group = np.full(num_groups, -np.inf)
+
+            np.add.at(sum_col_N_per_group, unique_value_inverse_idx, self.current_state_array[:, self._n_idx]) #sum of N per group
+            np.maximum.at(max_col_T_per_group, unique_value_inverse_idx, self.current_state_array[:, self._t_idx]) #max T per group
+            max_col_T_per_group[:] = np.max(max_col_T_per_group) #global max T
+
+            self.current_state_array = np.column_stack((unique_col_value, sum_col_N_per_group, max_col_T_per_group)) #order of cols is grouping_cols, N, T
+            
+            #remove all rows where column N has a value of 0
+            self.current_state_array = self.current_state_array[self.current_state_array[:, self._n_idx] != 0]
+            #self.current_state_array = self.current_state_array[np.argsort(self.current_state_array[:, 3])] #debug
+            #print('after grouping & dropping 0s, before adding dt, current array\n', self.current_state_array)
+
+            #if ruleset is not self.rules[-1]: #debug
+            #    print('-------next ruleset--------') #debug
+            #else: print('all rulesets done, for loop ends') #debug
+
+        self.current_state_array[:, self._t_idx] = self.current_state_array[:, self._t_idx] + dt #increase T value by dt
+        #print('add dt, engine vec1_3 final current_state_array:\n', self.current_state_array) #debug
+            
+        #append the updated current state to the epidemic history no matter if there is deltas generated, history should capture all timesteps
+        self._full_epi_list.append(self.current_state_array) #this is a list of arrays
+        #print('full epi list\n', self._full_epi_list)
+        
+

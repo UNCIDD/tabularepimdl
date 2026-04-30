@@ -8,8 +8,6 @@ import pytest
 import pandas as pd
 import numpy as np
 import yaml
-import sys
-sys.path.append('../')
 from my_module import MyRule
 
 @pytest.fixture
@@ -37,30 +35,20 @@ def test_from_yaml(myrule):
     Test the from_yaml() defined in Rule module.
     Args: myrule object.
     """
-    assert isinstance(myrule, MyRule)
-    assert myrule.param1 == 1.0
-    assert myrule.param2 == 2.0
+    assert myrule.stochastic == False
+    assert myrule.rate == 0.1
+    pd.testing.assert_frame_equal(myrule.start_state_sig, pd.DataFrame([{'age': 10, 'health': 'good'}]))
 
-def test_get_deltas(myrule):
-    """
-    Test the get_deltas() defined in MyRule module.
-    Args: myrule object.
-    """
-    current_state = 10
-    dt = 1.0
-    expected_deltas = {"state": 11.0}
-    returned_deltas = myrule.get_deltas(current_state, dt, stochastic=False)
-    assert returned_deltas == expected_deltas
-    
 def test_to_yaml(myrule):
     """
     Test the to_yaml() defined in MyRule module.
     Args: myrule object.
     """
     expected_yaml = {
-            "my_module.MyRule": {
-                "param1": 1.0,
-                "param2": 2.0
+            "tabularepimdl.BirthProcess": {
+                "start_state_sig": {'age': 10, 'health': 'good'},
+                "rate": 0.1,
+                'stochastic': False
             }
         }
     returned_to_yaml = myrule.to_yaml()

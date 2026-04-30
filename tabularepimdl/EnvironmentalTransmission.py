@@ -1,13 +1,16 @@
-import pandas as pd
-import numpy as np
-from tabularepimdl.Rule import Rule
-from pydantic import BaseModel, Field
 from typing import Annotated
+
+import numpy as np
+import pandas as pd
+from pydantic import BaseModel, Field
+
+from tabularepimdl.Rule import Rule
+
 
 class EnvironmentalTransmission(Rule, BaseModel):
     """!Class represents disease transmission that happens in nature environment without any human-to-human or cross-species infection.
     """
-    #def __init__(self, beta: float, inf_col: str, trait_col: str, s_st: str = "S", i_st: str = "I", inf_to: str = "I", stochastic: bool = False) -> None:
+    
     '''!Initialization.
     @param beta: transmission risk if trait shared.
     @param inf_col: the column designating infection state.
@@ -19,13 +22,13 @@ class EnvironmentalTransmission(Rule, BaseModel):
     '''
     beta: Annotated[int | float, Field(ge=0)]
     inf_col: str
-    trait_col:str
+    #trait_col:str
     s_st: str = "S"
     i_st: str = "I"
     inf_to: str = "I"
     stochastic: bool = False
         
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float =1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float =1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.
@@ -40,8 +43,7 @@ class EnvironmentalTransmission(Rule, BaseModel):
 
         current_state["N"] = current_state["N"].astype(np.float64) #converting column N to float type
 
-        ##first let's get folks who are susceptible. These are the states we will actually
-        ##see deltas from.
+        #first get folks who are susceptible. These are the states we will actually see deltas from.
         deltas = current_state.loc[current_state[self.inf_col]==self.s_st].copy() #extract S folks only
         #print('ST rule input deltas\n', deltas) #debug
 
@@ -56,13 +58,13 @@ class EnvironmentalTransmission(Rule, BaseModel):
         else:
             deltas["N"] = -np.random.binomial(deltas["N"], deltas["prI"])
         
-        #drop temporary columns inI, outI, prI
+        #drop temporary columns prI
         deltas.drop(["prI"], axis=1, inplace=True)
         
         #Update deltas_add DataFrames, folks into I
         deltas_add = deltas.assign(**{self.inf_col: self.inf_to, "N": -deltas["N"]})
         
-        rc = pd.concat([deltas,deltas_add])
+        rc = pd.concat([deltas, deltas_add])
         print('env combined deltas are\n', rc) #debug
         return rc.loc[rc["N"]!=0].reset_index(drop=True) #reset index for the new dataframe
     
@@ -74,3 +76,7 @@ class EnvironmentalTransmission(Rule, BaseModel):
             'tabularepimdl.EnvironmentalTransmission': self.model_dump()
         }
         return rc
+    
+    def to_dict(self) -> dict:
+        """to accomodate the to_dict() addition in base Rule"""
+        pass

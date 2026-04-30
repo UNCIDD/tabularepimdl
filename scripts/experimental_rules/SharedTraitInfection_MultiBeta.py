@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 from tabularepimdl.Rule import Rule
 
 
@@ -35,7 +36,7 @@ class SharedTraitInfection_MultiBeta(Rule):
         self.inf_to = inf_to
         self.stochastic = stochastic
         
-    def get_deltas(self, current_state: pd.DataFrame, dt=1.0, stochastic=None):
+    def get_deltas(self, current_state: pd.DataFrame, dt=1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.

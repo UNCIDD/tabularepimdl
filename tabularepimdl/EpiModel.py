@@ -17,7 +17,6 @@ class EpiModel(BaseModel):
     @param stoch_policy: whether the entire epidemic process is rule based or centralized with either deterministic or stochastic.
     """
     
-    #def __init__(self, init_state, rules:list, stoch_policy = "rule_based") -> None:
     # Pydantic Configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -32,7 +31,7 @@ class EpiModel(BaseModel):
     @classmethod
     def validate_init_state(cls, initial_state) -> pd.DataFrame: 
         if not isinstance(initial_state, pd.DataFrame): #check if init_state is a dataFrame
-            raise TypeError(f"Expected a DataFrame, but got {type(initial_state).__name__} instead.")
+            raise TypeError(f"Expected a DataFrame, received {type(initial_state).__name__} instead.")
         required_cols = {"T", "N"}
         missing = required_cols - set(initial_state.columns)
         if missing: #check if column T and N are in the dataframe
@@ -41,20 +40,27 @@ class EpiModel(BaseModel):
     
     @field_validator("rules", mode="before")
     @classmethod
-    def validate_rules_list(cls, input_rules) -> List[List[Rule]]: #check if the rules is a list or list of lists
-        # Step 1: Wrap single Rule instance
+    def validate_rules_list(cls, input_rules) -> list[list[Rule]]: #check if the rules is a list or list of lists
+        # Case 1: Wrap single Rule instance
         if isinstance(input_rules, Rule):
             return [[input_rules]]
 
-        # Step 2: Ensure input is list-like
+        # Case 2: Ensure input is list-like
         if not isinstance(input_rules, list):
             raise TypeError(f"rules must be an epidemic Rule or a list (or list of lists) of epidemic Rules. Received {type(input_rules).__name__}.")
         
+        # Case 3: list of individual Rules stay in one group
+        if all(isinstance(item, Rule) for item in input_rules):
+            return [input_rules]
+
+        # Case 4: mixed list
         normalized_list = []
         for i, item in enumerate(input_rules):
             if isinstance(item, Rule):
                 normalized_list.append([item]) #Single rule instance: wrap it in list
             elif isinstance(item, list): # Sublist: validate contents
+                if not item:
+                    raise ValueError("Rule sublists cannot be empty.")
                 for j, subitem in enumerate(item):
                     if isinstance(subitem, Rule):
                         continue
@@ -74,10 +80,46 @@ class EpiModel(BaseModel):
         return normalized_list
             
     def model_post_init(self, _) -> pd.DataFrame:
+        self._init_state_column_order_shuffle() #shuffle init_state column order
+        self._init_state_column_values_grouping() #grouping init_state column values
+        
         if self.cur_state is None:
             self.cur_state = copy.deepcopy(self.init_state)
         if self.full_epi is None:
-            self.full_epi = copy.deepcopy(self.init_state)    
+            self.full_epi = copy.deepcopy(self.init_state)
+
+    def _init_state_column_order_shuffle(self):
+        """
+        Move column N and T to the last two columns in init_state before all internal attributes and data processing steps occure.
+        """
+        cols = self.init_state.columns.tolist()
+
+        # Define the target columns to move
+        cols_to_move = ['N', 'T']
+
+        # Filter out the columns to move from the list (preserves order of others)
+        remaining_cols = sorted([col for col in cols if col not in cols_to_move])
+
+        # Build the new column order
+        new_col_order = remaining_cols + cols_to_move
+
+        # Reorder the DataFrame init_state
+        self.init_state = self.init_state[new_col_order]
+
+    def _init_state_column_values_grouping(self):
+        """
+        Grouping each column of init_state and aggregate column N and T in case the input raw data has duplicate rows.
+        This ensures rules that have categorical column(s) can accurately check the input raw data aginst their input categories.
+        """
+        #collect column names for aggregating columns and rest grouping columns
+        agg_cols = {'N', 'T'}
+        grouping_cols = [c for c in self.init_state.columns if c not in agg_cols]
+        #print('grouping col:', self._grouping_cols)
+        #print('before grouping init state\n', self.init_state) #debug
+        #grouping column values, only the categories that are actually present in the data will be included in the groups.
+        self.init_state = self.init_state.groupby(grouping_cols, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
+        #print('after grouping init state\n', self.init_state) #debug
+        
 
     def reset(self) -> pd.DataFrame:
         '''! Resets the class state to have the initial state. 
@@ -98,7 +140,7 @@ class EpiModel(BaseModel):
         
         init_state = pd.DataFrame(epi_yaml['init_state'])
 
-        #Check stochastc, defaulting to rule based. 
+        #check stochastic, defaulting to rule based. 
         if 'stoch_policy' in epi_yaml.keys():
             stoch_policy = epi_yaml['stoch_policy']
         else:
@@ -107,20 +149,10 @@ class EpiModel(BaseModel):
         #now instantiate rules. Important to work on a copy
         rules_dict = copy.deepcopy(epi_yaml['rules'])
 
-        #make sure rules have nested structure
-        #if not isinstance(rules[0],list):
-        #    rules = [rules]
-        
-        #now iterate over rulesets...turning dicts into rules.
-        #for ruleset in rules:
-            #keys = list(ruleset.keys())
-        #    for i in range(len(ruleset)):
-        #        ruleset[i] = Rule.from_yaml(ruleset[i])
-        print('start processing rules from yaml dict.')
+        #make sure rules have nested structure and turn dicts into rules.
         processed_rules = cls.instantiate_rules(rules_section=rules_dict) #instantiated rules are returned
-        print('end process rules from yaml dict.')
-        print('processed rules parameters are\n', processed_rules)
-        print('the type is\n', type(processed_rules))
+        #print('processed rules parameters are\n', processed_rules) #debug
+        
         return cls(init_state=init_state, rules=processed_rules, stoch_policy=stoch_policy) #keyword is required when returning a class object due to use of Pydantic
     
     @staticmethod
@@ -175,22 +207,22 @@ class EpiModel(BaseModel):
         Recursively traverses the to_yaml dictionary and converts any non-serializable types into YAML-friendly formats.
         """
         if isinstance(data, dict):
-            print('it is dict data:\n', data) #debug
+            #print('it is dict data:\n', data) #debug
             return {key: EpiModel.convert_to_yaml_friendly(value) for key, value in data.items()}
         elif isinstance(data, list):
-            print('it is list:\n', data) #debug
+            #print('it is list:\n', data) #debug
             return [EpiModel.convert_to_yaml_friendly(item) for item in data]
         elif isinstance(data, pd.DataFrame):
-            print('it is dataframe:\n', data) #debug
+            #print('it is dataframe:\n', data) #debug
             if len(data) == 1: #if single row in dataframe
                 return data.iloc[0].to_dict()
             else:
                 return data.to_dict(orient='list')#if multiple-rows in dataframe
         elif isinstance(data, np.ndarray):
-            print('it is array:\n', data) #debug
+            #print('it is array:\n', data) #debug
             return data.tolist()
         else:
-            print('data returned:\n', data)
+            #print('data returned:\n', data)
             return data    
     
     def do_timestep(self, dt: int | float =1.0, ret_cur_state: bool = False) -> pd.DataFrame:
@@ -203,19 +235,22 @@ class EpiModel(BaseModel):
         #iterates through the rulesets, gets delta out of each rule, updates the current state with deltas,
         #and record each current state to full epidemic history.
         
-        print('initial current_state of each dt is\n', self.cur_state) #debug
-        print('Epi model starts!!!') #debug
+        #print('initial current_state of each dt is\n', self.cur_state) #debug
+        #print('Epi model starts!!!') #debug
 
         for ruleset in self.rules:
-            print('current ruleset is\n', ruleset) #debug
+            #print('pandas current ruleset is\n', ruleset) #debug
+            #print('pandas current state\n', self.cur_state)
             all_deltas = pd.DataFrame()
             #Processes cur_state and obtain all_detlas within the current ruleset
             for rule in ruleset:
-                print('current rule is\n', rule) #debug
+                #print('current rule is\n', rule) #debug
+                #print('current state\n', self.cur_state)
                 if self.stoch_policy == "rule_based":
-                    print('epi model rule based') #debug
+                    #print('epi model rule based') #debug
                     nw_deltas = rule.get_deltas(self.cur_state, dt = dt)
-                    print('nw_delta is\n', nw_deltas) #debug
+                    #print('nw_delta is\n', nw_deltas) #debug
+                    #print('after processed by this rule, current state:\n', self.cur_state)
                 else:
                     #print('check stochastic: ', rule.stochastic) #debug
                     nw_deltas = rule.get_deltas(self.cur_state, dt = dt, stochastic = (self.stoch_policy=="stochastic"))
@@ -225,10 +260,10 @@ class EpiModel(BaseModel):
                     all_deltas = all_deltas
                 else: 
                     all_deltas = pd.concat([all_deltas, nw_deltas]) #may not need add reset index before passing 
-                print('all_deltas is\n', all_deltas) #debug
-                if rule is not ruleset[-1]: #debug
-                    print('---next rule---') #debug
-                else: print('finished current ruleset, moving on') #debug
+                #print('all_deltas is\n', all_deltas) #debug
+                #if rule is not ruleset[-1]: #debug
+                #    print('---next rule---') #debug
+                #else: print('finished current ruleset, moving to next ruleset') #debug
                 
             if all_deltas.shape[0]==0: #no changes out of the processed rule
                 continue
@@ -245,41 +280,41 @@ class EpiModel(BaseModel):
             #Prepares updated cur_state for the next ruleset
             #appends all deltas to the current state, grouping all features except N and T and aggregate N and T 
             #Need to make sure the T for all deltas has non-negative values first.
-            print('before concat cur_state and all_deltas, cur_state is\n', self.cur_state)
-            print('before concat cur_state and all_deltas, all_deltas is\n', all_deltas)
+            #print('before concat cur_state and all_deltas, cur_state is\n', self.cur_state)
+            #print('before concat cur_state and all_deltas, all_deltas is\n', all_deltas)
             nw_state = pd.concat([self.cur_state, all_deltas])#.reset_index(drop=True) #1st change, confirmed this reset_index is not needed for MultiStrainSI 
-            print('after concat but before grouping nw_state is\n', nw_state) #debug
+            #print('after concatenation but before grouping nw_state is\n', nw_state) #debug
 
             # Get grouping columns
             agg_col = {'N','T'} #rename the variable from tbr to agg_col
             gp_cols = [item for item in nw_state.columns if item not in agg_col]
             
-            print('group cols are: ', gp_cols)
+            #print('group cols are: ', gp_cols)
 
             #groups all feature columns and aggregates N and T
             if gp_cols:
                 nw_state = nw_state.groupby(gp_cols, dropna=False, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index(drop=False) #reset_index is to convert groupers back to columns, drop=False #question: add dropna=False option in case combined dataset nw_state has NaN so groupby() can handle them.
                 
-            print("***")
-            print('after grouping new state is\n', nw_state)
+            #print("***")
+            #print('after grouping new state is\n', nw_state)
             
             nw_state = nw_state[nw_state["N"]!=0].reset_index(drop=True) #3rd change, reset index to have clean nw_state and cur_state
-            #print('remove 0 rows, nw_state is\n', nw_state)
+            #print('after grouping and remove 0 rows, nw_state is\n', nw_state)
 
             self.cur_state = nw_state
-            print('before adding dt, current_state is\n', self.cur_state) #debug
-            if ruleset is not self.rules[-1]: #debug
-                print('-------next ruleset--------') #debug
-            else: print('for loop ends') #debug
+            #print('after grouping&dropping 0s, before adding dt, current_state is\n', self.cur_state) #debug
+            #if ruleset is not self.rules[-1]: #debug
+            #    print('-------next ruleset--------') #debug
+            #else: print('all rulesets done, for loop ends') #debug
     
       
         self.cur_state = self.cur_state.assign(T=max(self.cur_state['T'])+dt) #T is forward with dt after each timestep iteration
-        print('final current_state is\n', self.cur_state) #debug
+        #print('add dt, final current_state is\n', self.cur_state) #debug
         
         # append the updated current state to the epidemic history.
         self.full_epi = pd.concat([self.full_epi, self.cur_state]).reset_index(drop=True)
-        print('full epi is\n', self.full_epi)#debug
-        print('----') #debug
+        #print('pandas full epi is\n', self.full_epi)#debug
+        #print('----') #debug
 
         if ret_cur_state:
             return self.cur_state

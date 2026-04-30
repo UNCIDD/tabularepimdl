@@ -1,14 +1,16 @@
-from tabularepimdl.Rule import Rule
+from typing import Annotated
+
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
-from typing import Annotated
+
+from tabularepimdl.Rule import Rule
+
 
 class SimpleObservationProcess(Rule, BaseModel):
     '''! This rule captures a simple generic observation process where people from a particular state are
     observed to move into another state at some constant rate.'''
 
-    #def __init__(self, source_col, source_state, obs_col, rate:float,  unobs_state="U", incobs_state="I", prevobs_state="P", stochastic = False) -> None:
     """Initialization.
     @param source_col: the column containing source_state for the observation process.
     @param source_state: the state individuals start.
@@ -29,7 +31,7 @@ class SimpleObservationProcess(Rule, BaseModel):
     prevobs_state: str = 'P'
     stochastic: bool = False
 
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a data frame (at the moment) w/ the current epidemic state.
         @param dt: the size of the timestep.
@@ -50,27 +52,39 @@ class SimpleObservationProcess(Rule, BaseModel):
 
         #out_of_unobs supports deterministic and stochastic
         out_of_unobs = current_state.loc[(current_state[self.source_col]==self.source_state) & (current_state[self.obs_col]==self.unobs_state)].copy() #un-observed individuals with source_state
+        #print('out of unobs\n', out_of_unobs) #debug
+
+        if out_of_unobs.empty: #no rows meet the InfState and Obs_col requirements
+            return current_state.iloc[0:0] #return an empty dataframe with the same columns and types
 
         exp_change_rate = np.exp(-dt*self.rate)
+        
         if not stochastic:
             #subtractions
             out_of_unobs["N"] = -out_of_unobs["N"] * (1-exp_change_rate)
         else:
             out_of_unobs["N"] = -np.random.binomial(out_of_unobs["N"], 1-exp_change_rate)
+        
             
         #additions, changes in in_ and out_ incobs and prevobs only require deterministic process
         into_incobs = out_of_unobs.assign(**{self.obs_col: self.incobs_state, "N": -out_of_unobs["N"]})
-        
+        #print('into incobs\n', into_incobs) #debug
+
         #move folks out of current_state incobs state
         out_of_incobs = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
         out_of_incobs["N"] = -out_of_incobs["N"]
+        #print('out of incobs\n', out_of_incobs) #debug
 
         #move folks out of the incident state and into the previous state
         into_prev = current_state.loc[current_state[self.obs_col]==self.incobs_state].copy()
         into_prev[self.obs_col] = self.prevobs_state
+        #print('into prev\n', into_prev)
         
         return(pd.concat([out_of_unobs, into_incobs, out_of_incobs, into_prev]).reset_index(drop=True)) 
 
+    def __str__(self) -> str:
+        return f"SimpleObservationProcess."
+    
     def to_yaml(self) -> dict:
         """
         return the rule's attributes to a dictionary.
@@ -80,3 +94,6 @@ class SimpleObservationProcess(Rule, BaseModel):
         }
         return rc        
 
+    def to_dict(self) -> dict:
+        """to accomodate the to_dict() addition in base Rule"""
+        pass

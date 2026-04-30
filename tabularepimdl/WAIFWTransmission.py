@@ -1,15 +1,16 @@
-from tabularepimdl.Rule import Rule
 import numpy as np
 import pandas as pd
 from numba import njit
-from pydantic import BaseModel, field_validator, ValidationInfo, ConfigDict
-from typing import List
+from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
+from numpy.typing import NDArray
+
+from tabularepimdl.Rule import Rule
+
 
 class WAIFWTransmission(Rule, BaseModel):
     """!
     Rule that does transmission based on a simple WAIFW transmission matrix."""
 
-    #def __init__(self, waifw_matrix, inf_col, group_col, s_st="S", i_st="I", inf_to="I", stochastic=False) -> None:
     """!Initialization.
     @param waifw_martrix: the waifw transmission rate matrix, a square matrix is required.
     @param inf_col: the column for this infectious process.
@@ -25,7 +26,7 @@ class WAIFWTransmission(Rule, BaseModel):
     # Pydantic Configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    waifw_matrix: List[List] | np.ndarray
+    waifw_matrix: NDArray[np.float64] #list[list] | np.ndarray
     inf_col: str
     group_col: str
     s_st: str = "S"
@@ -38,10 +39,10 @@ class WAIFWTransmission(Rule, BaseModel):
     def validate_waifw_matrix(cls, matrix_parameters, field: ValidationInfo):
         """Ensure the input matrix is a 2-diemnsional array with sqaure shape and all elements are non-negative values."""
         #1. check list or array type.
-        if isinstance(matrix_parameters, List): #convert list to array
-            matrix_parameters = np.array(matrix_parameters)
+        if isinstance(matrix_parameters, list): #convert list to array
+            matrix_parameters = np.array(matrix_parameters, dtype = np.float64)
         elif isinstance(matrix_parameters, np.ndarray):
-            matrix_parameters = matrix_parameters
+            matrix_parameters = matrix_parameters.astype(np.float64, copy = False)
         else:
             raise TypeError(f"{cls.__name__} expects a NumPy array for {field.field_name}, received {type(matrix_parameters)}.")
         
@@ -49,13 +50,13 @@ class WAIFWTransmission(Rule, BaseModel):
         if matrix_parameters.ndim !=2 or (matrix_parameters.shape[0] != matrix_parameters.shape[1]):
             raise ValueError(f"{cls.__name__} expects a 2-dimensional square matrix for {field.field_name}, received {matrix_parameters.shape}.")
         
-        #3. check for non-empty matrix
+        #3. check for non-empty matrix.
         if matrix_parameters.size == 0:
-            raise ValueError(f"Matrix must not be empty.")
+            raise ValueError("Matrix must not be empty.")
         
         #4. check for numeric data type.
         if not np.issubdtype(matrix_parameters.dtype, np.number):
-            raise ValueError(f"Matrix must contain numeric data, received dtype {matrix_parameters.dtype}.")
+            raise ValueError(f"Matrix must contain numeric data, received data type {matrix_parameters.dtype}.")
                              
         #5. check if all elements are non-negative values.
         if np.any(matrix_parameters < 0):
@@ -69,7 +70,7 @@ class WAIFWTransmission(Rule, BaseModel):
     
     @staticmethod    
     @njit
-    def compute_infection_array(present_cat_codes, weights, num_of_categories):
+    def compute_infection_array(present_cat_codes, weights, num_of_categories) -> np.ndarray:
         
         #Optimized function using numba to compute the number of infected individuals per group.
         
@@ -80,12 +81,12 @@ class WAIFWTransmission(Rule, BaseModel):
     
     @staticmethod
     @njit
-    def compute_prI(waifw_matrix, inf_array, dt):
+    def compute_prI(waifw_matrix, inf_array, dt) -> np.ndarray:
         
         #Computes probabilities of infection using numba.
         #Equivalent to: prI = 1 - np.power(np.exp(-dt*self.waifw_matrix), inf_array)
         matrix_size = len(waifw_matrix)
-        prI = np.ones(matrix_size, dtype=np.float64) #initialize prI with 1s
+        prI: np.ndarray = np.ones(matrix_size, dtype=np.float64) #initialize prI with 1s
 
         expo = np.exp(-dt * waifw_matrix)
         infection_power = np.power(expo, inf_array)
@@ -98,7 +99,7 @@ class WAIFWTransmission(Rule, BaseModel):
         
 
 
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a data frame (at the moment) w/ the current epidemic state.
         @param dt: the size of the timestep.
@@ -111,10 +112,7 @@ class WAIFWTransmission(Rule, BaseModel):
         if stochastic is None:
             stochastic = self.stochastic
 
-        #question: since group_col needs to be categorical type, do we want to convert current_state[group_col] to pd.categorical in this rule? 
-        #Instead of doing the conversion in model applications such as AgingPopulation?
-
-        #quesiton and fix: convert group_col to categorical type first, so groupby observed=False generate full list of array values
+        #convert group_col to categorical type first, so groupby observed=False generate full list of array values
         if not isinstance(current_state[self.group_col].dtype, pd.CategoricalDtype):
             current_state[self.group_col]=pd.Categorical(current_state[self.group_col])
 
@@ -142,7 +140,7 @@ class WAIFWTransmission(Rule, BaseModel):
         #prI = 1-prI.prod(axis=1)
         
         prI = self.compute_prI(self.waifw_matrix, inf_array, dt) #numba approach
-
+        #print('prI:', prI)
 
         ##get folks in susceptible states which link to all unique groups
         is_susceptible = current_state[self.inf_col] == self.s_st
@@ -150,9 +148,10 @@ class WAIFWTransmission(Rule, BaseModel):
         #print('deltas is\n', deltas, '\n') #debug
         #print('prI codes are\n', prI[deltas[self.group_col].cat.codes], '\n') #debug
 
-        ##do infectious process, getting the number of individuals who get infected from susceptible status
+        #infectious process, getting the number of individuals who get infected from susceptible status
         susceptible_group_codes = present_category_codes[is_susceptible.to_numpy()]
         prI_per_group = prI[susceptible_group_codes]
+        #print('prI per group:', prI_per_group)
 
         if not stochastic:
             deltas["N"] = -deltas["N"] * prI_per_group
@@ -170,9 +169,10 @@ class WAIFWTransmission(Rule, BaseModel):
         """
         return the rule's attributes to a dictionary.
         """
+                
         rc = {
             'tabularepimdl.WAIFWTransmission' : {
-                'waifw_matrix' : self.waifw_matrix.T, #when write rule waifw matrix to yaml file, should it be transposed back as initial order?
+                'waifw_matrix' : self.waifw_matrix.T, #transpose waifw matrix back to its initial order before writting the attributes to dict
                 'inf_col' : self.inf_col,
                 'group_col' : self.group_col,
                 's_st': self.s_st,
@@ -184,7 +184,9 @@ class WAIFWTransmission(Rule, BaseModel):
         
         return rc
 
-
+    def to_dict(self) -> dict:
+        """to accomodate the to_dict() addition in base Rule"""
+        pass
     
 
 

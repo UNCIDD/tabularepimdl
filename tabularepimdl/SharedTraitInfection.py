@@ -1,12 +1,14 @@
-import pandas as pd
-import numpy as np
-from tabularepimdl.Rule import Rule
-from pydantic import BaseModel, Field
 from typing import Annotated
+
+import numpy as np
+import pandas as pd
+from pydantic import BaseModel, Field
+
+from tabularepimdl.Rule import Rule
+
 
 class SharedTraitInfection(Rule, BaseModel):
 
-    #def __init__(self,in_beta:float, out_beta:float, inf_col, trait_col, s_st="S", i_st="I", inf_to="I", stochastic = False) -> None:
     '''!
     @param in_beta: transmission risk if trait shared.
     @param out_beta: transmission risk if trait not shared.
@@ -28,7 +30,7 @@ class SharedTraitInfection(Rule, BaseModel):
     stochastic: bool = False
         
 
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state: a dataframe (at the moment) representing the current epidemic state. Must include column 'N'.
         @param dt: size of the timestep.
@@ -53,24 +55,17 @@ class SharedTraitInfection(Rule, BaseModel):
         #print('ST rule original input infect\n', infect_only) #debug
 
         #Grouping records that have the same trait_col value
-        infect_only = infect_only.groupby([self.trait_col], dropna=False, observed=True).agg({'N': 'sum'}).reset_index()
+        infect_only = infect_only.groupby([self.trait_col], dropna=False, observed=True).agg({'N': 'sum'}).reset_index(drop=False)
         #print('ST rule grouped input infect\n', infect_only) #debug
 
         total_infect = infect_only["N"].sum() #sum all the infected people no matter what trait it is
         
         trait_N_map = infect_only.set_index(self.trait_col)["N"] #set trait value as index, N remains to be the value for each trait
         
-        #Now loop over folks in this state. 
-        #There might be faster ways to do this.
-        #for ind, row in deltas.iterrows():
-        #    inI = current_state.loc[(current_state[self.trait_col]==row[self.trait_col]) & (current_state[self.inf_col]==self.i_st)].N.sum()
-        #    outI = current_state.loc[(current_state[self.trait_col]!=row[self.trait_col]) & (current_state[self.inf_col]==self.i_st)].N.sum()
-        #    prI = 1-np.power(np.exp(-dt*self.in_beta),inI)*np.power(np.exp(-dt*self.out_beta),outI)
-
         #print('train_N_map is\n', trait_N_map) #debug
 
 
-        #A faster way to get inI, outI and prI values that deltas needs
+        #get inI, outI and prI values that deltas needs
         # Map the number of infected folks of each trait to the correponding trait in deltas
         deltas["inI"]  = deltas[self.trait_col].map(trait_N_map).fillna(0) #the number of infected folks inside each trait
         #print('deltas is\n', deltas) #debug
@@ -106,3 +101,7 @@ class SharedTraitInfection(Rule, BaseModel):
             'tabularepimdl.SharedTraitInfection': self.model_dump()
         }
         return rc
+    
+    def to_dict(self) -> dict:
+        """to accomodate the to_dict() addition in base Rule"""
+        pass

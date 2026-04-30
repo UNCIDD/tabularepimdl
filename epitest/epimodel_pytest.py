@@ -9,9 +9,6 @@ import pytest
 import pandas as pd
 import numpy as np
 
-import sys
-sys.path.append('../')
-from tabularepimdl.Rule import Rule
 from tabularepimdl.BirthProcess import BirthProcess
 from tabularepimdl.SimpleInfection import SimpleInfection
 from tabularepimdl.SimpleTransition import SimpleTransition

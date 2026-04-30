@@ -9,9 +9,6 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-import os
-import sys
-sys.path.append('../')
 from tabularepimdl.SharedTraitInfection import SharedTraitInfection
 
 @pytest.fixture

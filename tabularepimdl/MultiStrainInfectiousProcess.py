@@ -1,14 +1,14 @@
-
-from tabularepimdl.Rule import Rule
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator, model_validator
+
+from tabularepimdl.Rule import Rule
+
 
 class MultiStrainInfectiousProcess(Rule, BaseModel):
     """! Simple multi strain infectious process. Takes a cross protection matrix, a list of infection state 
     columns and an array of betas. Does not allow co-infections"""
     
-    #def __init__(self, betas: np.array, columns, cross_protect:np.array, s_st="S", i_st="I", r_st="R", inf_to="I", stochastic=False, freq_dep=True) -> None:
     """!Initialization. 
     @param betas: a beta for each strain.
     @param columns: the columns for the infection process. Should be same length and order as betas.
@@ -37,11 +37,26 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
     @classmethod
     def validate_numpy_array(cls, array_parameters, field: ValidationInfo):
         """Ensure the input is a NumPy array and all elements are non-negative values."""
-        if not isinstance(array_parameters, np.ndarray):
-            raise ValueError(f"{cls.__name__} expects a NumPy array for {field.field_name}, got {type(array_parameters)}")
+        #1. check list or array type.
+        if isinstance(array_parameters, list): #convert list to array
+            array_parameters = np.array(array_parameters)
+        elif isinstance(array_parameters, np.ndarray):
+            array_parameters = array_parameters
+        else:
+            raise ValueError(f"{cls.__name__} expects a NumPy array for {field.field_name}, received {type(array_parameters)}.")
         
+        #2. check for numeric data type.
+        if not np.issubdtype(array_parameters.dtype, np.number):
+            raise ValueError(f"Array must contain numeric data, received data type {array_parameters.dtype}.")
+        
+        #3. check if all elements are non-negative values.
         if np.any(array_parameters < 0):
-            raise ValueError(f"All elements in {field.field_name} must be non-negative, but got {array_parameters}.")
+            raise ValueError(f"All elements in {field.field_name} must be non-negative, but received {array_parameters}.")
+        
+        #4. check for NaN or Inf.
+        if np.isnan(array_parameters).any() or np.isinf(array_parameters).any():
+            raise ValueError("Matrix must not contain NaN or Infinity values.")
+        
         return array_parameters
 
     
@@ -53,16 +68,17 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         cross_protect = parameter_values.cross_protect
 
         if len(columns) != len(betas):
-            raise ValueError(f"'columns' length ({len(columns)}) must match 'betas' length ({len(betas)}).")
+            raise ValueError(f"The number of 'columns' ({len(columns)}) must match the number of 'betas' ({len(betas)}).")
 
         if cross_protect.shape[0] != cross_protect.shape[1] or cross_protect.shape[0] != len(betas):
             raise ValueError(
                 f"'cross_protect' must be a square matrix of size {len(betas)}x{len(betas)}, got {cross_protect.shape}."
             )
+        
         return parameter_values
    
     
-    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool = None) -> pd.DataFrame:
+    def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
         @param current_state, a data frame (at the moment) w/ the current epidemic state.
         @param dt, the size of the timestep.
@@ -86,63 +102,59 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
         #print('Multistrain, current_state is\n', current_state)#debug
         infectious = ((current_state[self.columns] == self.i_st).multiply(current_state["N"], axis=0)).sum(axis=0) #when no value 'I' exists in columns, infectious values are all zeros
         infectious = np.array(infectious)
-        #print('infectious value: ', infectious) #debug
+        #print('infectious (mask) value: ', infectious) #debug
         if sum(infectious)==0: #there are cases that infecious==0
+            #print('no infection, return none.')
             return None
         
         ##calculate the strain specific FOI (force of infection) for each row for each strain.
 
         #first get the cross protections
-        #row_beta_mult = 1-current_state[self.columns].apply(
-        #    lambda x: (np.array((x==self.r_st)) * self.cross_protect).max(axis=1),
-        #    axis=1,
-        #    result_type='expand'
-        #    ) #original code
         recovered_mask = (current_state[self.columns] == self.r_st).values #extract R folks only from each strain column
-        row_beta_mult = 1 - np.max(recovered_mask[:, np.newaxis] * self.cross_protect, axis=2)
+        row_beta_mult = 1 - np.max(recovered_mask[:, np.newaxis, :] * self.cross_protect, axis=2)
         row_beta_mult = pd.DataFrame(row_beta_mult)
         #print('row beta mult is\n', row_beta_mult) #debug
         #now we turn that into a strain specific probablity of infection
 
         ## This line does a few things:
-        #   - it calculates cros protection
-        #   - it makes the FOI 0 for folks when folks are not susceptible to a strain
+        # - it calculates cross protection
+        # - it makes the FOI 0 for folks when folks are not susceptible to a strain
         
-        row_beta = (row_beta_mult * betas * (current_state[self.columns]==self.s_st).values)
+        row_beta = (row_beta_mult * betas * (current_state[self.columns] == self.s_st).values)
         #print('row beta before is\n ', row_beta) #debug
         # This makes the probablity of infectoin 0 when folks are infected with a different strain...
         # i.e., no coinfections!
-        # Maybe slightly problematic given the strong assumption of only being infected with 1 strain...max() is better.
-        #row_beta = row_beta.multiply(
-        #    1-(current_state[self.columns] == self.i_st).max(axis=1), axis=0 #changed sum() to max() to make sure only one strain stands out
-        #    ) #original code
         row_beta = row_beta * (1 - np.max((current_state[self.columns] == self.i_st).values, axis=1))[:, np.newaxis]
         #print('row beta after is\n ', row_beta) #debug
-        #prI = 1-(np.exp(-dt*row_beta)).apply(lambda x: np.power(x, infectious), axis=1) #original code
+        
         prI = 1 - np.power(np.exp(-dt * row_beta.values), infectious)
         prI = pd.DataFrame(prI)
         #print('prI is\n', prI) #debug
         #print('current state is\n', current_state) #debug
         #deltas can only happen to rows where we have and FOI>1
-        deltas =  current_state.loc[prI.sum(axis=1)>0].copy() 
+        deltas =  current_state.loc[prI.sum(axis=1) > 0].copy() 
         
         prI = prI.loc[prI.sum(axis=1)>0] 
-        prI.columns = self.columns ##Makes some later stuff easier
+        prI.columns = self.columns
+
         #print('delta is\n', deltas) #debug
         ## now do the infectious process.
         if not stochastic:
             #first the subtractions
             deltas["N"] = -deltas["N"] * (1 - (1-prI).product(axis=1))
             
-            #now allocate those cases prportional to prI
+            #now allocate those cases proportional to prI
             tmp = pd.DataFrame()
             for col in self.columns:
+                #print('col:', col)
+                #print('proportion of PrI:', prI[col]/prI.sum(axis=1))
                 tmp2 = deltas.assign(**{col: self.inf_to, "N": -deltas['N'] * (prI[col]/prI.sum(axis=1))})
+                #print('tmp2\n', tmp2)
                 tmp = pd.concat([tmp, tmp2])
-            deltas = pd.concat([deltas, tmp])#.reset_index(drop=True)
+            deltas = pd.concat([deltas, tmp])
             
         else:
-
+            #np.random.seed(3) #test purpose
             N_index = deltas.columns.get_loc("N")
             #multinomial draw for each delta and create the appropriate deltas.
             for i in range(prI.shape[0]):
@@ -155,10 +167,8 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
                     toadd = deltas.iloc[[i]] #fetch only one row to be modified
                     toadd = toadd.assign(**{self.columns[j]: self.inf_to, "N": tmp[j]})
                     deltas = pd.concat([deltas, toadd])
-            deltas = deltas#.reset_index(drop=True)
-
-        
-        deltas = deltas[deltas["N"]!=0].reset_index(drop=True)
+            
+        #deltas = deltas[deltas["N"] != 0].reset_index(drop=True) #keep all rows with 0 for now, final code should remove 0 records
         #print('multirule final delta is\n', deltas) #debug
         return deltas
 
@@ -171,4 +181,8 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
             'tabularepimdl.MultiStrainInfectiousProcess': self.model_dump()
         }
 
-        return rc    
+        return rc
+    
+    def to_dict(self) -> dict:
+        """to accomodate the to_dict() addition in base Rule"""
+        pass
