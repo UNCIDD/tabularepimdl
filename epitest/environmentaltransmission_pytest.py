@@ -33,7 +33,7 @@ def environmental_transmission():
     Initialize the EnvironmentalTransmission object with specified parameters.
     Returns: Initialized EnvironmentalTransmission object/instance.
     """
-    return(EnvironmentalTransmission(beta=0.2/5, inf_col='InfState', trait_col='HH_Number'))
+    return(EnvironmentalTransmission(beta=0.2/5, inf_col='InfState'))
 
 def test_initialization(environmental_transmission):
     """
@@ -42,7 +42,6 @@ def test_initialization(environmental_transmission):
     """
     assert environmental_transmission.beta == 0.2/5
     assert environmental_transmission.inf_col == 'InfState'
-    assert environmental_transmission.trait_col == 'HH_Number'
     assert environmental_transmission.s_st == 'S'
     assert environmental_transmission.i_st == 'I'
     assert environmental_transmission.inf_to == 'I'
@@ -100,7 +99,6 @@ def test_to_yaml(environmental_transmission):
             'tabularepimdl.EnvironmentalTransmission': {
                 'beta': 0.2/5,
                 'inf_col': 'InfState',
-                'trait_col': 'HH_Number',
                 's_st': 'S',
                 'i_st': 'I',
                 'inf_to':'I',

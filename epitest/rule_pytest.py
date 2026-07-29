@@ -8,16 +8,18 @@ import pytest
 import pandas as pd
 import numpy as np
 import yaml
+from pathlib import Path
 from my_module import MyRule
 
 @pytest.fixture
 def rule_yaml_setUp():
         """
-        Load a yaml file from local working directory.
+        Load a yaml file from the epitest directory (independent of the current working directory).
         Returns: content from the loaded yaml file.
         """
         # Load the YAML file
-        with open("yaml_input.yml", "r") as file:
+        yaml_path = Path(__file__).parent / "yaml_input.yml"
+        with open(yaml_path, "r") as file:
             rule_yaml = yaml.safe_load(file)
         return(rule_yaml)
         
