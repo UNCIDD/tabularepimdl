@@ -20,12 +20,15 @@ def init_state():
     """
     Create a dummy DataFrame to simulate the initial state of a population.
     Returns: DataFrame containing population counts, their infection states and age groups.
+
+    Column order matches what EpiModel.model_post_init produces (non-N/T columns sorted
+    alphabetically, followed by N then T).
     """
     init_state = {
-    'T': [0, 0],
-    'N': [100, 200],
+    'Age_Group': pd.Categorical(['youth', 'adult'], categories=['youth', 'adult']), #links to group_col of WAIFWTransmission, need to designate the order of categories
     'Infection_State': ['S', 'I'],
-    'Age_Group': pd.Categorical(['youth', 'adult'], categories=['youth', 'adult']) #links to group_col of WAIFWTransmission, need to designate the order of categories
+    'N': [100, 200],
+    'T': [0, 0],
     }
     return(pd.DataFrame(init_state))
     
@@ -248,16 +251,16 @@ def test_from_yaml(epimodel, epi_yaml, init_state, b_p, s_i, s_t, w_t):
     pd.testing.assert_frame_equal(returned_class_from_yaml.rules[0][0].start_state_sig, b_p.start_state_sig)
 
     #simple infection
-    assert returned_class_from_yaml.rules[1][0].column == s_i.column
-    assert returned_class_from_yaml.rules[1][0].stochastic == s_i.stochastic
-    
+    assert returned_class_from_yaml.rules[0][1].column == s_i.column
+    assert returned_class_from_yaml.rules[0][1].stochastic == s_i.stochastic
+
     #simple transition
-    assert returned_class_from_yaml.rules[2][0].from_st == s_t.from_st
-    assert returned_class_from_yaml.rules[2][0].rate == s_t.rate
+    assert returned_class_from_yaml.rules[0][2].from_st == s_t.from_st
+    assert returned_class_from_yaml.rules[0][2].rate == s_t.rate
 
     #waifw transmission
-    assert (returned_class_from_yaml.rules[3][0].waifw_matrix == w_t.waifw_matrix).all()
-    assert returned_class_from_yaml.rules[3][0].group_col == w_t.group_col
+    assert (returned_class_from_yaml.rules[0][3].waifw_matrix == w_t.waifw_matrix).all()
+    assert returned_class_from_yaml.rules[0][3].group_col == w_t.group_col
 
 def test_to_yaml(epimodel, init_state, epi_yaml):
     """
