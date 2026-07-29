@@ -168,9 +168,9 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
                     toadd = toadd.assign(**{self.columns[j]: self.inf_to, "N": tmp[j]})
                     deltas = pd.concat([deltas, toadd])
             
-        #deltas = deltas[deltas["N"] != 0].reset_index(drop=True) #keep all rows with 0 for now, final code should remove 0 records
+        #deltas = deltas[deltas["N"] != 0] #keep all rows with 0 for now, final code should remove 0 records
         #print('multirule final delta is\n', deltas) #debug
-        return deltas
+        return deltas.reset_index(drop=True)
 
 
     def to_yaml(self) -> dict:
