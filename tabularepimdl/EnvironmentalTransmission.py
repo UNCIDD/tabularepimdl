@@ -14,7 +14,6 @@ class EnvironmentalTransmission(Rule, BaseModel):
     '''!Initialization.
     @param beta: transmission risk if trait shared.
     @param inf_col: the column designating infection state.
-    @param trait_col: the column designaing the trait.
     @param s_st: the state for susceptibles, assumed to be S
     @param i_st: the state for infectious, assumed to be I
     @param inf_to: the state infectious folks go to, assumed to be I.
@@ -22,7 +21,6 @@ class EnvironmentalTransmission(Rule, BaseModel):
     '''
     beta: Annotated[int | float, Field(ge=0)]
     inf_col: str
-    #trait_col:str
     s_st: str = "S"
     i_st: str = "I"
     inf_to: str = "I"
