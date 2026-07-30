@@ -26,7 +26,7 @@ class MultiStrainInfectiousProcessDispatcher(BaseModel):
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    structure: Literal["Pandas", "Numpy_Vec_Encode_1", "Numpy_Vec_Encode_2"] #Numpy_Vec_Encode_2 is used for MultiStrainInfectiousProcess_Vec_Encode_2
+    structure: Literal["Pandas", "Numpy_Vec_Encode_1"] #Numpy_Vec_Encode_2 is used for MultiStrainInfectiousProcess_Vec_Encode_2
     betas: np.ndarray
     columns: list[str]
     columns_all_categories: list[str]
