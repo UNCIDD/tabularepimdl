@@ -5,7 +5,7 @@ import numpy as np
 
 from tabularepimdl.SimpleObservationProcess import SimpleObservationProcess as SimpleObservationProcess_Pandas
 from tabularepimdl.SimpleObservationProcess_Vec_Encode import SimpleObservationProcess_Vec_Encode as SimpleObservationProcess_Vec_Encode
-from tabularepimdl.SimpleObservationProcess_Vec_Encode_nobuffer import SimpleObservationProcess_Vec_Encode_nobuffer
+#from tabularepimdl.SimpleObservationProcess_Vec_Encode_nobuffer import SimpleObservationProcess_Vec_Encode_nobuffer #SimpleObservationProcess_Vec_Encode_nobuffer has no performance benefit, removed
 
 class SimpleObservationProcessDispatcher(BaseModel):
     """
@@ -24,7 +24,7 @@ class SimpleObservationProcessDispatcher(BaseModel):
     @param observation_compartments: the observation compartments used in epidemics. e.g. ['U', 'P', 'I'], U=unobserved, P=previously-observed, I=incident-observed
     """
 
-    structure: Literal["Pandas", "Numpy_Vec_Encode", "Numpy_Vec_Encode_nobuffer"]
+    structure: Literal["Pandas", "Numpy_Vec_Encode", "Numpy_Vec_Encode_nobuffer"] #"Numpy_Vec_Encode_nobuffer" was used for SimpleObservationProcess_Vec_Encode_nobuffer
     source_col: str
     source_state: str
     source_col_all_categories: list[str]
@@ -38,7 +38,7 @@ class SimpleObservationProcessDispatcher(BaseModel):
     obs_col_all_categories: list[str]
 
     #Dispatcher
-    _dispatcher: Union[SimpleObservationProcess_Pandas, SimpleObservationProcess_Vec_Encode, SimpleObservationProcess_Vec_Encode_nobuffer] = PrivateAttr(default=None)
+    _dispatcher: Union[SimpleObservationProcess_Pandas, SimpleObservationProcess_Vec_Encode,] = PrivateAttr(default=None)
 
     def model_post_init(self, _): #initialize dispatcher based on data structures
         if self.structure == 'Pandas':
@@ -54,20 +54,6 @@ class SimpleObservationProcessDispatcher(BaseModel):
             )
         elif self.structure == 'Numpy_Vec_Encode':
             self._dispatcher = SimpleObservationProcess_Vec_Encode(
-                source_col=self.source_col,
-                source_state=self.source_state,
-                source_col_all_categories = self.source_col_all_categories,
-                obs_col=self.obs_col,
-                rate=self.rate,
-                unobs_state=self.unobs_state,
-                incobs_state=self.incobs_state,
-                prevobs_state=self.prevobs_state,
-                stochastic=self.stochastic,
-                infstate_compartments=self.infstate_compartments,
-                obs_col_all_categories=self.obs_col_all_categories
-            )
-        elif self.structure == 'Numpy_Vec_Encode_nobuffer':
-            self._dispatcher = SimpleObservationProcess_Vec_Encode_nobuffer(
                 source_col=self.source_col,
                 source_state=self.source_state,
                 source_col_all_categories = self.source_col_all_categories,
