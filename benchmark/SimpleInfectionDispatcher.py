@@ -5,7 +5,7 @@ import numpy as np
 
 from tabularepimdl.SimpleInfection import SimpleInfection
 from tabularepimdl.SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
-from tabularepimdl.SI_Josh_Encode_Vec import SimpleInfection as Josh_SimpleInfection
+#from tabularepimdl.SI_Josh_Encode_Vec import SimpleInfection as Josh_SimpleInfection #SI_Josh_Encode_Vec needs specific input data to work and it generates incorrect results.
 
 class SimpleInfectionDispatcher(BaseModel):
     """
@@ -19,7 +19,7 @@ class SimpleInfectionDispatcher(BaseModel):
     @param freq_dep: whether this model is a frequency dependent model.
     @param stochastic: whether the process is stochastic or deterministic.
     """
-    structure: Literal["Pandas", "Numpy", "Numpy_Encode", "Josh_Encode_Vec"]
+    structure: Literal["Pandas", "Numpy", "Numpy_Encode",]
     beta: Annotated[int | float, Field(ge=0)]
     column: str
     s_st: str
@@ -31,7 +31,7 @@ class SimpleInfectionDispatcher(BaseModel):
     stochastic: bool = False
 
     #Dispatcher
-    _dispatcher: Union[SimpleInfection, SimpleInfection_Vec_Encode, Josh_SimpleInfection] = PrivateAttr(default=None)
+    _dispatcher: Union[SimpleInfection, SimpleInfection_Vec_Encode,] = PrivateAttr(default=None)
 
     def model_post_init(self, _): #initialize dispatcher based on data structures
         if self.structure == 'Pandas':
@@ -55,11 +55,6 @@ class SimpleInfectionDispatcher(BaseModel):
                 infstate_compartments=self.infstate_compartments,
                 column_categories=self.column_categories,
                 stochastic=self.stochastic
-            )
-        elif self.structure == 'Josh_Encode_Vec':
-            self._dispatcher = Josh_SimpleInfection(
-                beta=self.beta,
-                column=self.column,
             )
         else:
             raise ValueError(f"Unknown structure: {self.structure}")
