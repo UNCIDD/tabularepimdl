@@ -4,7 +4,7 @@ from benchmark.Visualizer import Visualizer
 def SInfect_Run_n_Visual():
     runner = SimpleInfectionRunner(
         data_sizes= [15],#[10**6, 10**7], #15, 15000, 15000000 works for Josh's code
-        structures= ['Pandas', 'Numpy_Encode', 'Josh_Encode_Vec'],#['Josh_Encode_Vec'],
+        structures= ['Pandas', 'Numpy_Encode'],#['Josh_Encode_Vec'],
         iterations= [1],#[100, 300, 500, 700],
         beta=0.1,
         column='InfState',
