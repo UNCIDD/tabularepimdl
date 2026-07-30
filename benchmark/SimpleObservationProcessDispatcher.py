@@ -24,7 +24,7 @@ class SimpleObservationProcessDispatcher(BaseModel):
     @param observation_compartments: the observation compartments used in epidemics. e.g. ['U', 'P', 'I'], U=unobserved, P=previously-observed, I=incident-observed
     """
 
-    structure: Literal["Pandas", "Numpy_Vec_Encode", "Numpy_Vec_Encode_nobuffer"] #"Numpy_Vec_Encode_nobuffer" was used for SimpleObservationProcess_Vec_Encode_nobuffer
+    structure: Literal["Pandas", "Numpy_Vec_Encode"] #"Numpy_Vec_Encode_nobuffer" was used for SimpleObservationProcess_Vec_Encode_nobuffer
     source_col: str
     source_state: str
     source_col_all_categories: list[str]

@@ -47,7 +47,7 @@ def SimpleObservation_Run_n_Visual():
     runner = SimpleObservationProcessRunner(
         data_sizes= [size],
         data_input = current_state,
-        structures= ["Pandas", "Numpy_Vec_Encode", "Numpy_Vec_Encode_nobuffer"],
+        structures= ["Pandas", "Numpy_Vec_Encode"],
         iterations= [500],#[100, 300, 500, 700],
         
         source_col = "InfState",
