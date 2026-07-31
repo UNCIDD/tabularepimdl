@@ -14,7 +14,7 @@ from my_module import MyRule
 @pytest.fixture
 def rule_yaml_setUp():
         """
-        Load a yaml file from the epitest directory (independent of the current working directory).
+        Load a yaml file from the tests directory (independent of the current working directory).
         Returns: content from the loaded yaml file.
         """
         # Load the YAML file
