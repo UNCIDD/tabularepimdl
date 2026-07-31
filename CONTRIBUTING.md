@@ -81,25 +81,25 @@ Include:
 | Directory | Purpose |
 |-----------|---------|
 | `tabularepimdl/` | Installable package — production rules, engine, and utilities |
-| `epitest/` | Pytest test suite |
+| `tests/` | Pytest test suite |
 | `examples/` | User-facing Jupyter notebook examples |
 | `benchmark/` | Performance benchmarking scripts |
-| `scripts/` | Experimental, superseded, and prototype code (see `scripts/README.md`) |
+| `legacy/` | Experimental, superseded, and prototype code (see `legacy/README.md`) |
 | `docs/` | Specification documents |
 
-### What goes in `tabularepimdl/` vs `scripts/`
+### What goes in `tabularepimdl/` vs `legacy/`
 
 - **`tabularepimdl/`**: Code that is part of the public API, imported via `__init__.py`, tested, and documented.
-- **`scripts/`**: Prototypes, superseded versions, project-specific variants, personal experiments, and benchmarking explorations. These are kept for reference but are not importable from the package.
+- **`legacy/`**: Prototypes, superseded versions, project-specific variants, personal experiments, and benchmarking explorations. These are kept for reference but are not importable from the package.
 
-To promote experimental code to production, see `scripts/README.md`.
+To promote experimental code to production, see `legacy/README.md`.
 
 ## Testing
 
-- Add or update tests in `epitest/` for any code change to `tabularepimdl/`.
+- Add or update tests in `tests/` for any code change to `tabularepimdl/`.
 - Run the test suite before opening a PR:
   ```bash
-  pytest epitest/
+  pytest tests/
   ```
 - CI must pass before merge.
 
