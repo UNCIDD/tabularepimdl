@@ -4,9 +4,9 @@ import pandas as pd
 import numpy as np
 
 from tabularepimdl.SimpleTransition import SimpleTransition
-from tabularepimdl.SimpleTransition_Vec import SimpleTransition_Vec
+# from tabularepimdl.SimpleTransition_Vec import SimpleTransition_Vec #SimpleTransition_Vec has no performance benefit, removed
 from tabularepimdl.SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
-from tabularepimdl.ST_Josh_Encode_Vec import SimpleTransition as Josh_SimpleTransition #this rule was tested and failed comparison, it will not be used in future runner test
+#from tabularepimdl.ST_Josh_Encode_Vec import SimpleTransition as Josh_SimpleTransition #ST_Josh_Encode_Vec was tested and failed comparison, removed
 
 class SimpleTransitionDispatcher(BaseModel):
     """
@@ -19,7 +19,7 @@ class SimpleTransitionDispatcher(BaseModel):
     @param stochastic: whether the process is stochastic or deterministic.
     @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R']. 
     """
-    structure: Literal["Pandas", "Numpy", "Numpy_Encode", "Josh_Encode_Vec"]
+    structure: Literal["Pandas", "Numpy_Encode",]
     column: str
     from_st: str
     to_st: str
@@ -29,19 +29,11 @@ class SimpleTransitionDispatcher(BaseModel):
     stochastic: bool = False
 
     #Dispatcher
-    _dispatcher: Union[SimpleTransition, SimpleTransition_Vec, SimpleTransition_Vec_Encode, Josh_SimpleTransition] = PrivateAttr(default=None)
+    _dispatcher: Union[SimpleTransition, SimpleTransition_Vec_Encode,] = PrivateAttr(default=None)
 
     def model_post_init(self, _): #initialize dispatcher based on data structures
         if self.structure == 'Pandas':
             self._dispatcher = SimpleTransition(
-                column=self.column,
-                from_st=self.from_st,
-                to_st=self.to_st,
-                rate=self.rate,
-                stochastic=self.stochastic
-            )
-        elif self.structure == 'Numpy':
-            self._dispatcher = SimpleTransition_Vec(
                 column=self.column,
                 from_st=self.from_st,
                 to_st=self.to_st,
@@ -56,14 +48,6 @@ class SimpleTransitionDispatcher(BaseModel):
                 rate=self.rate,
                 infstate_compartments=self.infstate_compartments,
                 column_categories=self.column_categories,
-                stochastic=self.stochastic
-            )
-        elif self.structure == 'Josh_Encode_Vec':
-            self._dispatcher = Josh_SimpleTransition(
-                column=self.column,
-                from_st=self.from_st,
-                to_st=self.to_st,
-                rate=self.rate,
                 stochastic=self.stochastic
             )
         else:
@@ -84,6 +68,6 @@ class SimpleTransitionDispatcher(BaseModel):
     def apply(self, state: np.ndarray, col_idx: dict[str, int], dt: float) -> np.ndarray: #run Josh's code
             return self._dispatcher.apply(state=state, col_idx=col_idx, dt=dt)
     
-    def compile(self, comp_map: dict[str, int]) -> None: #for Josh's class
+    def comppile(self, comp_map: dict[str, int]) -> None: #for Josh's class
         """Resolve compartment string labels to integer codes."""
         return self._dispatcher.compile(comp_map=comp_map)

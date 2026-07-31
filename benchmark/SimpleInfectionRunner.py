@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, PrivateAttr
 from benchmark.SimpleInfectionDispatcher import SimpleInfectionDispatcher
+from benchmark.comparison_deltas_N import compare_structure_deltas
 from typing import Annotated
 
 import numpy as np
@@ -57,6 +58,7 @@ class SimpleInfectionRunner(BaseModel):
             #n_values = [10, 5, 0, 20, 0, 0] #column N values setup
             infstate_values = np.random.choice(self.infstate_compartments, size=size) #column InfState values setup
             n_values = np.random.randint(1, 10, size=size) #column N values setup
+            struct_last_deltas = {} #each structure's last computed deltas for this size, for cross-structure comparison
             for struct in self.structures:
                 for iters in self.iterations:
                     print(f"\nRunning {struct} | size={size} | iterations={iters}")
@@ -151,4 +153,8 @@ class SimpleInfectionRunner(BaseModel):
                     })
 
                     #print('time_mem_result\n', self.time_mem_results) #debug
+
+                struct_last_deltas[struct] = deltas #keep this structure's last deltas from this size's runs
+
+            compare_structure_deltas(struct_last_deltas, self.col_idx_map, rule_name="SimpleInfection", stochastic=self.stochastic)
         return self.time_mem_results

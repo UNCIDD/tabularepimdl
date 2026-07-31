@@ -60,7 +60,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         else:
             pass
         
-        print("rule encodes categorical states:", self._from_code, self._to_code, self._state_encoding_by_engine) #debug
+        #print("rule encodes categorical states:", self._from_code, self._to_code, self._state_encoding_by_engine) #debug
 
     #set up a property to return all the required compartments used in infstate column
     @property

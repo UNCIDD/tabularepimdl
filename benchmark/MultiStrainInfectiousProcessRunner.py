@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, PrivateAttr, ConfigDict
 from benchmark.MultiStrainInfectiousProcessDispatcher import MultiStrainInfectiousProcessDispatcher
+from benchmark.comparison_deltas_N import compare_structure_deltas
 
 import numpy as np
 import pandas as pd
@@ -67,7 +68,8 @@ class MultiStrainInfectiousProcessRunner(BaseModel):
         Tracks each combination's time and memory usage.
         """
         for size in self.data_sizes:
-            
+            struct_last_deltas = {} #each structure's last computed deltas for this size, for cross-structure comparison
+
             for struct in self.structures:
                 for iters in self.iterations:
                     print(f"\nRunning {struct} | size={len(self.data_input)} | iterations={iters}") #replace size with pop_catg
@@ -140,4 +142,8 @@ class MultiStrainInfectiousProcessRunner(BaseModel):
                     })
 
                     #print('time_mem_result\n', self.time_mem_results) #debug
+
+                struct_last_deltas[struct] = deltas #keep this structure's last deltas from this size's runs
+
+            compare_structure_deltas(struct_last_deltas, self.col_idx_map, rule_name="MultiStrainInfectiousProcess", stochastic=self.stochastic)
         return self.time_mem_results

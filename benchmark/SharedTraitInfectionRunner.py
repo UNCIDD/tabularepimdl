@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, PrivateAttr, ConfigDict
 from benchmark.SharedTraitInfectionDispatcher import SharedTraitInfectionDispatcher
+from benchmark.comparison_deltas_N import compare_structure_deltas
 
 import numpy as np
 import pandas as pd
@@ -69,6 +70,7 @@ class SharedTraitInfectionRunner(BaseModel):
         """
         for size in self.data_sizes:
             #print('populaton\n', pop_catg)
+            struct_last_deltas = {} #each structure's last computed deltas for this size, for cross-structure comparison
 
             for struct in self.structures:
                 for iters in self.iterations:
@@ -134,4 +136,8 @@ class SharedTraitInfectionRunner(BaseModel):
                     })
 
                     #print('time_mem_result\n', self.time_mem_results) #debug
+
+                struct_last_deltas[struct] = deltas #keep this structure's last deltas from this size's runs
+
+            compare_structure_deltas(struct_last_deltas, self.col_idx_map, rule_name="SharedTraitInfection", stochastic=self.stochastic)
         return self.time_mem_results

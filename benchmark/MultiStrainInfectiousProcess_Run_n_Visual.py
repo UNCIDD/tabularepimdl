@@ -61,7 +61,7 @@ def MultiStrainInfectious_Run_n_Visual():
     runner = MultiStrainInfectiousProcessRunner(
         data_sizes= [size],
         data_input = current_state,
-        structures= ["Pandas", "Numpy_Vec_Encode_1", "Numpy_Vec_Encode_2"],
+        structures= ["Pandas", "Numpy_Vec_Encode_1",],
         iterations= [500],#[100, 300, 500, 700],
         
         betas = betas_orig,

@@ -5,7 +5,8 @@ import numpy as np
 
 from tabularepimdl.MultiStrainInfectiousProcess import MultiStrainInfectiousProcess as MultiStrainInfectiousProcess_Pandas
 from tabularepimdl.MultiStrainInfectiousProcess_Vec_Encode import MultiStrainInfectiousProcess_Vec_Encode as MultiStrainInfectiousProcess_Vec_Encode_1
-from tabularepimdl.MultiStrainInfectiousProcess_Vec_Encode_2 import MultiStrainInfectiousProcess_Vec_Encode_2 as MultiStrainInfectiousProcess_Vec_Encode_2
+#from tabularepimdl.MultiStrainInfectiousProcess_Vec_Encode_2 import MultiStrainInfectiousProcess_Vec_Encode_2 as MultiStrainInfectiousProcess_Vec_Encode_2
+#MultiStrainInfectiousProcess_Vec_Encode_2 logic adds unnecessary complexity and the performance benefit is minimal.
 
 class MultiStrainInfectiousProcessDispatcher(BaseModel):
     """
@@ -25,7 +26,7 @@ class MultiStrainInfectiousProcessDispatcher(BaseModel):
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    structure: Literal["Pandas", "Numpy_Vec_Encode_1", "Numpy_Vec_Encode_2"]
+    structure: Literal["Pandas", "Numpy_Vec_Encode_1"] #Numpy_Vec_Encode_2 is used for MultiStrainInfectiousProcess_Vec_Encode_2
     betas: np.ndarray
     columns: list[str]
     columns_all_categories: list[str]
@@ -39,7 +40,7 @@ class MultiStrainInfectiousProcessDispatcher(BaseModel):
     infstate_compartments: list[str]
 
     #Dispatcher
-    _dispatcher: Union[MultiStrainInfectiousProcess_Pandas, MultiStrainInfectiousProcess_Vec_Encode_1, MultiStrainInfectiousProcess_Vec_Encode_2] = PrivateAttr(default=None)
+    _dispatcher: Union[MultiStrainInfectiousProcess_Pandas, MultiStrainInfectiousProcess_Vec_Encode_1, ] = PrivateAttr(default=None)
 
     def model_post_init(self, _): #initialize dispatcher based on data structures
         if self.structure == 'Pandas':
@@ -56,20 +57,6 @@ class MultiStrainInfectiousProcessDispatcher(BaseModel):
             )
         elif self.structure == 'Numpy_Vec_Encode_1':
             self._dispatcher = MultiStrainInfectiousProcess_Vec_Encode_1(
-                betas=self.betas,
-                columns=self.columns,
-                columns_all_categories=self.columns_all_categories,
-                cross_protect=self.cross_protect,
-                s_st=self.s_st,
-                i_st=self.i_st,
-                r_st=self.r_st,
-                inf_to=self.inf_to,
-                stochastic=self.stochastic,
-                freq_dep=self.freq_dep,
-                infstate_compartments=self.infstate_compartments
-            )
-        elif self.structure == 'Numpy_Vec_Encode_2':
-            self._dispatcher = MultiStrainInfectiousProcess_Vec_Encode_2(
                 betas=self.betas,
                 columns=self.columns,
                 columns_all_categories=self.columns_all_categories,
