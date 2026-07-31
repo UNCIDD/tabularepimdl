@@ -34,7 +34,7 @@ pip install "git+https://github.com/UNCIDD/tabularepimdl.git"
 ```
 tabularepimdl/
 ├── docs/                # High-level documents for each epidemic rule
-├── epitest/             # Unit tests
+├── tests/               # Unit tests
 ├── examples/            # Example simulations
 ├── tabularepimdl/       # Individual process rules (infection, birth, death, etc.)
 ├── setup.py             # Package configuration

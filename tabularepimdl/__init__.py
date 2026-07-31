@@ -20,12 +20,12 @@ from .SimpleObservationProcess_Vec_Encode import SimpleObservationProcess_Vec_En
 from .StateBasedDeathProcess_Vec_Encode import StateBasedDeathProcess_Vec_Encode
 from .WAIFWTransmission_Vec_Encode_Bincount import WAIFWTransmission_Vec_Encode_Bincount
 
-# Moved to scripts/experimental_rules/ (less efficient than Bincount; see issue #52):
+# Moved to legacy/experimental_rules/ (less efficient than Bincount; see issue #52):
 # from .WAIFWTransmission_Vec_Encode_Numba import WAIFWTransmission_Vec_Encode_Numba
 
 from .EpiModel_Vec_Encode1_5 import EpiModel_Vec_Encode_1_5
 
-# Earlier/experimental engine versions in scripts/experimental_engines/
+# Earlier/experimental engine versions in legacy/experimental_engines/
 # from .EpiModel_Vec_Encode2 import EpiModel_Vec_Encode_2
 # from .EpiModel_Vec_Encode1 import EpiModel_Vec_Encode_1
 # from .EpiModel_Vec_Encode1_2 import EpiModel_Vec_Encode_1_2

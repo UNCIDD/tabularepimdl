@@ -33,11 +33,11 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
-python_files = ["*_pytest.py", "test_*.py", "*_test.py"]
+testpaths = ["tests"]
 
 [tool.mypy]
 python_version = "3.11"
-files = ["tabularepimdl", "epitest"]
+files = ["tabularepimdl", "tests"]
 ignore_missing_imports = true
 follow_imports = "skip"
 disallow_untyped_defs = false
@@ -66,7 +66,7 @@ docstring-code-line-length = 72
 "docs/**/*" = [
     "INP001", # Implicit namespace package
 ]
-"epitest/**/*" = [
+"tests/**/*" = [
     "INP001", # Implicit namespace package
     "S101",   # Use of `assert` detected
 ]

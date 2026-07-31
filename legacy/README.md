@@ -1,4 +1,4 @@
-# scripts/
+# legacy/
 
 Experimental, superseded, and benchmarking code that is **not part of the
 installable `tabularepimdl` package**. These files are retained for reference
@@ -20,5 +20,5 @@ If an experimental module matures to production quality:
 
 1. Open an issue describing what it does and why it should be promoted.
 2. Move it into `tabularepimdl/` and add it to `__init__.py`.
-3. Add or update tests in `epitest/`.
+3. Add or update tests in `tests/`.
 4. Submit a PR following the workflow in `CONTRIBUTING.md`.
