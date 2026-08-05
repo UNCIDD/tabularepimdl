@@ -96,6 +96,10 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     def _encode_categorical_states(self, data_domains) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+
+        Notes:
+            trait_col values (i.e. trait_col_all_categories) are already encoded by the model engine. So get_deltas()
+            uses whatever encoded values are already in this column as dict keys.
         """
         mapping_inf_col = data_domains[self.inf_col]
         self._s_code = mapping_inf_col[self.s_st]

@@ -17,6 +17,12 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         rate: the rate at whihc people will die from.
         stochastic: whether the process is stochastic or deterministic.
         infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
+
+    Notes:
+        this rule's API is narrower than the pandas StateBasedDeathProcess: the pandas version pairs
+        an arbitrary list of *columns* with a matching list of *states* (zipped together, so different
+        death conditions can each reference a different column). The NumPy version only supports a single
+        `column` with a list of `target_states`.
     """
 
     column: str = Field(description = "one column that we will check states against.")
@@ -116,7 +122,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
 
             column = 'InfState' #one column only
             column_states = ['I', 'R', 'S']
-            target_states = ['I', 'S'] #values from single column
+            target_states = ['I', 'S'] # state values from single column
 
             process_object = StateBasedDeathProcess_Vec_Encode(column, column_states, target_states, ...)
         

@@ -10,15 +10,20 @@ from .SimpleObservationProcess import SimpleObservationProcess
 from .SimpleTransition import SimpleTransition
 from .StateBasedDeathProcess import StateBasedDeathProcess
 from .WAIFWTransmission import WAIFWTransmission
-from .FunctionalTransition import FunctionalTransition
+
 
 ####The following rules are in vectorized/numpy structure#########
 from .BirthProcess_Vec_Encode import BirthProcess_Vec_Encode
+from .EnvironmentalTransmission_Vec_Encode import EnvironmentalTransmission_Vec_Encode
+from .MultiStrainInfectiousProcess_Vec_Encode import MultiStrainInfectiousProcess_Vec_Encode
+from .SharedTraitInfection_Vec_Encode import SharedTraitInfection_Vec_Encode
 from .SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
 from .SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
 from .SimpleObservationProcess_Vec_Encode import SimpleObservationProcess_Vec_Encode
 from .StateBasedDeathProcess_Vec_Encode import StateBasedDeathProcess_Vec_Encode
 from .WAIFWTransmission_Vec_Encode_Bincount import WAIFWTransmission_Vec_Encode_Bincount
+
+
 
 # Moved to legacy/experimental_rules/ (less efficient than Bincount; see issue #52):
 # from .WAIFWTransmission_Vec_Encode_Numba import WAIFWTransmission_Vec_Encode_Numba

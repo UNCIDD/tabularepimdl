@@ -167,6 +167,8 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         #print('current_state\n', current_state)
         mask_source_state_unobs_idxs = np.flatnonzero((current_state[:, infstate_idx] == self._source_state_code) & (current_state[:, obs_col_idx] == self._unobs_code))
         #print('mask_source_state_unobs_idxs:', mask_source_state_unobs_idxs)
+
+        #No one is in source_state + unobs_state -> nothing to observe.
         if mask_source_state_unobs_idxs.size == 0:
             #print('empty mask')
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)

@@ -150,6 +150,8 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
 
         # i_state
         mask_i_idxs = np.flatnonzero(current_state[:, infstate_idx] == self._i_code)
+
+        #no infectious, returns_empty
         if (mask_i_idxs).size == 0:
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
         #print('mask_i_idxs:', mask_i_idxs) 
@@ -159,6 +161,8 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
 
         # s_state
         mask_s_idxs = np.flatnonzero(current_state[:, infstate_idx] == self._s_code)
+
+        #no susceptible, returns empty
         if (mask_s_idxs).size == 0:
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
         #print('mask_s_idxs:', mask_s_idxs)

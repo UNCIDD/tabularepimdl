@@ -55,5 +55,3 @@ def test_to_yaml(myrule):
         }
     returned_to_yaml = myrule.to_yaml()
     assert returned_to_yaml == expected_yaml
-    
-

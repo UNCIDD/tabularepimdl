@@ -80,6 +80,11 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
 
         Raises:
             ValueError: If the column `'N'` is missing in `current_state`.
+
+        Notes:
+            This rule *derives* a newborn's state signature from the input data itself: on its first call it
+            sorts current_state by `column_to_sort` and remembers the first row's non-N values, then reuses
+            that saved signature (with a freshly computed N) on every subsequent call.       
         """
         N: float #sum of population
         
