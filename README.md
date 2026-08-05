@@ -34,7 +34,8 @@ tabularepimdl/
 ├── docs/                # High-level documents for each epidemic rule
 ├── tests/               # Unit tests
 ├── examples/            # Example simulations
-├── tabularepimdl/       # Individual process rules (infection, birth, death, etc.)
+├── src/
+│   └── tabularepimdl/   # Individual process rules (infection, birth, death, etc.)
 ├── pyproject.toml       # Package configuration and dependencies
 ├── LICENSE              # MIT license
 └── README.md            # Project description

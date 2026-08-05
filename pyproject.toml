@@ -37,7 +37,7 @@ testpaths = ["tests"]
 
 [tool.mypy]
 python_version = "3.11"
-files = ["tabularepimdl", "tests"]
+files = ["src/tabularepimdl", "tests"]
 ignore_missing_imports = true
 follow_imports = "skip"
 disallow_untyped_defs = false
@@ -50,6 +50,7 @@ pretty = true
 target-version = "py311"
 line-length = 100
 exclude = ["__pycache__", ".venv"]
+src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I", "UP"]
@@ -72,5 +73,4 @@ docstring-code-line-length = 72
 ]
 
 [tool.setuptools.packages.find]
-include = ["tabularepimdl*"]
-exclude = ["legacy*"]
+where = ["src"]
