@@ -7,7 +7,7 @@ Purpose: The 'WAIFWTransmission' is a subclass of 'Rule' class. It provides a st
 
 ## 2. Getting Started
 ### Installation
-pip install -r requirements.txt
+pip install -e ".[test,dev]"
 
 ### Dependency
 * Python 3.11.9

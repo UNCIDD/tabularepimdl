@@ -7,7 +7,7 @@ Purpose: The 'Rule' class serves as an abstract base class for defining specific
 
 ## 2. Getting Started
 ### Installation
-pip install -r requirements.txt
+pip install -e ".[test,dev]"
 
 ### Dependency (module and unit test)
 * Python 3.11.9
