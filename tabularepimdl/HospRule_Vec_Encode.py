@@ -7,9 +7,9 @@ from tabularepimdl._validators.rule_domain_membership_validator import domain_me
 
 class HospRule_Vec_Encode(Rule, BaseModel):
     '''
-    This rule takes multiple columns. You have some risk of hospitalization if infected from any column,
-    but that probability is reduced if you are recovered in any column. We will additionally track which strain you were
-    hospitalized with. Only tracking total hospitalizations.
+    This rule models hospitalization risk from any of several tracked strains, with a reduced rate
+    (sec_hrate instead of prim_hrate) if the individual has already recovered from a different strain.
+    We will additionally track which strain you were hospitalized with. Only tracking total hospitalizations.
     
     Attributes:
         strain_cols: the strain columns with infection states.
@@ -126,7 +126,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
-        return max(len(self.strain_cols_all_categories)*len(self.infstate_compartments), self.infstate_compartments)
+        return max(len(self.strain_cols_all_categories)*len(self.infstate_compartments), len(self.infstate_compartments))
     
     def _encode_categorical_states(self, data_domains) -> None:
         """
