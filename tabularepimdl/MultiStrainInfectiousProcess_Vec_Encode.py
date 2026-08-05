@@ -136,6 +136,10 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
     def _encode_categorical_states(self, data_domains) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+
+        Notes:
+            All strain_cols are presumed to share the same domain of category values, 
+            so the first column of each stands in for the group.
         """
         single_strain_column = self.columns[0]
         mapping = data_domains[single_strain_column]

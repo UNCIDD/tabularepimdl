@@ -7,7 +7,7 @@ Purpose: The 'SimpleInfection' is a subclass of 'Rule' class. It provides a stan
 
 ## 2. Getting Started
 ### Installation
-pip install -r requirements.txt
+pip install -e ".[test,dev]"
 
 ### Dependency
 * Python 3.11.9

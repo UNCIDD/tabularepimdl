@@ -14,10 +14,8 @@ cd tabularepimdl
 python -m venv .venv
 .venv\Scripts\activate # Windows
 source .venv/bin/activate # macOS/Linux
-# 3. Install dependencies
-pip install -r requirements.txt
-# 4. Install the package in "editable" mode
-pip install --editable .
+# 3. Install the package in "editable" mode, with test and dev dependencies
+pip install -e ".[test,dev]"
 ```
 
 or from github:
@@ -37,8 +35,7 @@ tabularepimdl/
 ├── tests/               # Unit tests
 ├── examples/            # Example simulations
 ├── tabularepimdl/       # Individual process rules (infection, birth, death, etc.)
-├── setup.py             # Package configuration
-├── requirements.txt     # Package dependencies
+├── pyproject.toml       # Package configuration and dependencies
 ├── LICENSE              # MIT license
 └── README.md            # Project description
 ```

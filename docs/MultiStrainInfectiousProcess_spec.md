@@ -7,7 +7,7 @@ Purpose: The 'MultiStrainInfectiousProcess' is a subclass of 'Rule' class. It pr
 
 ## 2. Getting Started
 ### Installation
-pip install -r requirements.txt
+pip install -e ".[test,dev]"
 
 ### Dependency
 * Python 3.11.9

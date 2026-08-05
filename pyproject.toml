@@ -70,3 +70,7 @@ docstring-code-line-length = 72
     "INP001", # Implicit namespace package
     "S101",   # Use of `assert` detected
 ]
+
+[tool.setuptools.packages.find]
+include = ["tabularepimdl*"]
+exclude = ["legacy*"]
