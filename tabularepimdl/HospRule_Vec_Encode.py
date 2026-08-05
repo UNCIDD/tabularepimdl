@@ -125,12 +125,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
     
     @property
     def expansion_factor(self) -> int:
-        """Maximum number of rows this rule can return per input rows.
-
-        get_deltas produces exactly one subtraction row and one addition row per matching input
-        row (no per-category fan-out), so this is always 2, independent of how many strain/hosp
-        categories exist.
-        """
+        """Maximum number of rows this rule can return per input rows."""
         return max(len(self.strain_cols_all_categories)*len(self.infstate_compartments), self.infstate_compartments)
     
     def _encode_categorical_states(self, data_domains) -> None:
@@ -139,8 +134,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
 
         Notes:
             All strain_cols (and separately all hosp_cols) are presumed to share the same domain of
-            category values, so the first column of each stands in for the group -- same pattern as
-            MultiStrainInfectiousProcess_Vec_Encode._encode_categorical_states.
+            category values, so the first column of each stands in for the group.
         """
         mapping_strain_col = data_domains[self.strain_cols[0]]
         self._infect_status_code = mapping_strain_col[self.infect_status]
