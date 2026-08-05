@@ -15,6 +15,7 @@ from .WAIFWTransmission import WAIFWTransmission
 ####The following rules are in vectorized/numpy structure#########
 from .BirthProcess_Vec_Encode import BirthProcess_Vec_Encode
 from .EnvironmentalTransmission_Vec_Encode import EnvironmentalTransmission_Vec_Encode
+from .HospRule_Vec_Encode import HospRule_Vec_Encode
 from .MultiStrainInfectiousProcess_Vec_Encode import MultiStrainInfectiousProcess_Vec_Encode
 from .SharedTraitInfection_Vec_Encode import SharedTraitInfection_Vec_Encode
 from .SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
