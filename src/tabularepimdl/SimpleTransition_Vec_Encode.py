@@ -1,9 +1,12 @@
+import logging
 import numpy as np
 from pydantic import BaseModel, Field, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
+
+logger = logging.getLogger(__name__)
 
 
 class SimpleTransition_Vec_Encode(Rule, BaseModel):
@@ -60,7 +63,6 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         else:
             pass
         
-        #print("rule encodes categorical states:", self._from_code, self._to_code, self._state_encoding_by_engine) #debug
 
     #set up a property to return all the required compartments used in infstate column
     @property
@@ -99,7 +101,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
 
         self._state_encoding_by_engine = True
 
-        print("engine encodes categorical states:", self._from_code, self._to_code, self._state_encoding_by_engine) #debug
+        logger.debug("engine encodes categorical states: %s %s %s", self._from_code, self._to_code, self._state_encoding_by_engine)
 
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
@@ -128,54 +130,40 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         
         infstate_idx = col_idx_map[self.column]
         n_idx = col_idx_map['N']
-        #print('current_state\n', current_state)
-        #print('infstate idx:', infstate_idx, 'n idx:', n_idx)
-        #print('_from_code:', self._from_code, '_to_code:', self._to_code)
 
         # Fast boolean mask for matching from-state
         mask_from_idxs = np.flatnonzero(current_state[:, infstate_idx] == self._from_code)
-        #print('mask_from_idxs:', mask_from_idxs)
         
         #---possible optimization
         #indices = grouped_indices.get(self._from_code)
         #-----------
 
         if (mask_from_idxs).size == 0:
-            #print('empty return')
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
             
             
         # Get indices where mask is true (faster than slicing twice)
         #from_row_idxs = np.flatnonzero(mask) #redundant code
         selected_from = current_state[mask_from_idxs, :]
-        #print('selected_from\n', selected_from)
         N = selected_from[:, n_idx] #equivalent: current_state[from_row_idxs, n_idx]
-        #print('from_code N:', N)
 
         # Compute transition amounts
         rate_const = 1 - np.exp(-dt * self.rate)
-        #print('rate_const:', rate_const)
 
         if stochastic:
             changed_N = -np.random.binomial(N.astype(np.int32), rate_const)
         else:
             changed_N = -N * rate_const
-        #print('change_N:', changed_N)
 
         count = selected_from.shape[0]#len(from_row_idxs)
-        #print('select_from count:', count)
         #ncols = current_state.shape[1] #move num of columns out of class for now
-        #print('before filling from, result buffer:\n', result_buffer) #debug
         # Fill 'from' rows
-        #print('result_buffer:\n', result_buffer)
         result_buffer[:count, :] = selected_from #equivalent: self._from_code
         result_buffer[:count, n_idx] = changed_N  #update column N with changed_N (negative value)
-        #print('after fill from, result buffer:\n', result_buffer[:count]) #debug
         # Fill 'to' rows
         result_buffer[count:2*count, :] = selected_from
         result_buffer[count:2*count, infstate_idx] = self._to_code #update col infstate
         result_buffer[count:2*count, n_idx] = -changed_N  #update column N with inversed changed_N
-        #print('after fill to, vec return\n', result_buffer[:2*count, :]) #debug
         return result_buffer[:2*count, :]
 
     def __str__(self) -> str:

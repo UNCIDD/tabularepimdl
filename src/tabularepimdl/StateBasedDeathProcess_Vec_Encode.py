@@ -142,13 +142,11 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         n_idx = col_idx_map['N']
 
         states_mask = np.isin(current_state[:, col_idx], self._states_code) #all rows match single column's states code
-        #print('state mask', states_mask)
         #need to add an empty array return condition if state_mask is empty
 
         #all satisfied records are wanted based on column and state values
         selected_from = current_state[states_mask]
         N = selected_from[:, n_idx]
-        #print('selected from', selected_from)
 
         rate_const = 1 - np.exp(-dt * self.rate)
 
@@ -158,7 +156,6 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
             changed_N = -N * rate_const
         
         count = len(selected_from)
-        #print('count:', count)
         
         #Fill selected rows with changed_N values
         result_buffer[:count, :] = selected_from 

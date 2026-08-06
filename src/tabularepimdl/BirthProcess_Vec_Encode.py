@@ -1,8 +1,11 @@
+import logging
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
+
+logger = logging.getLogger(__name__)
 
 class BirthProcess_Vec_Encode(Rule, BaseModel):
     """
@@ -96,12 +99,11 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             stochastic = self.stochastic
 
         if current_state.size == 0: #check if the input array is empty
-            print('input array data size is zero, return empty array.')
+            logger.debug("input array data size is zero, return empty array.")
             return np.empty((0, current_state.shape[1]))
         
         n_idx = col_idx_map["N"]
         N = np.sum(current_state[:, n_idx])
-        #print('input current state\n', current_state)
         # Compute transition rate
         rate_const = 1 - np.exp(-dt * self.rate)
 
@@ -111,16 +113,13 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             changed_N = np.random.poisson(birth_value)  #get a random single outcome value by poisson distribution
         else:
             changed_N = birth_value
-        #print('result buffer init\n', result_buffer)
         
         if not self._start_state_saved:
             sort_column_index = col_idx_map[self.column_to_sort] #obtain the designated column index (e.g. AgeCat)
 
             sort_indices = np.argsort(current_state[:, sort_column_index], axis=0) # sorts along first axis (row by row)
-            #print('sort_indices:', sort_indices)
 
             current_state = current_state[sort_indices] #sort the input array by designated column (e.g. AgeCat)
-            #print('sorted current state\n', current_state)
 
             self._start_state_sig = current_state[0:1] #obtain a 2D array with one row [0:1]
             self._start_state_saved = True #once start state data is assigned, flip the flag to True
@@ -129,10 +128,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
     
 
         count = len(self._start_state_sig)
-        #print('count:', count)
-        #print('start_state_sig\n', self._start_state_sig)
         result_buffer[count-1] = self._start_state_sig
-        #print('result buffer\n', result_buffer)
         result_buffer[:count, n_idx] = changed_N
 
         return result_buffer[:count, :]

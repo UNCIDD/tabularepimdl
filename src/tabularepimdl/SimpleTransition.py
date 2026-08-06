@@ -19,13 +19,11 @@ class SimpleTransition(Rule, BaseModel):
     @param rate: transition rate per unit time.
     @param stochastic: whether the process is stochastic or deterministic.
     """
-    #print('start init simpletransition')
     column: str
     from_st: str
     to_st: str
     rate: Annotated[int | float, Field(ge=0)]
     stochastic: bool = False
-    #print('end simple transition init')
 
     def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
         """
@@ -41,8 +39,6 @@ class SimpleTransition(Rule, BaseModel):
             stochastic = self.stochastic
             
         deltas = current_state.loc[current_state[self.column]==self.from_st].copy()
-        #print('st rule\n') #debug
-        #print('st\'s current_state is\n', current_state) #debug
         #subtractions
         if not stochastic:
             deltas["N"] = -deltas["N"] * (1 - np.exp(-dt*self.rate))
@@ -51,7 +47,6 @@ class SimpleTransition(Rule, BaseModel):
 
         #additions
         deltas_add = deltas.assign(**{self.column: self.to_st, "N": -deltas["N"]})
-        #print('st-rule delta is\n', deltas) #debug
         return pd.concat([deltas, deltas_add]).reset_index(drop=True)
     
     def __str__(self) -> str:

@@ -1,10 +1,13 @@
 from typing import Annotated
 
+import logging
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
 
 from tabularepimdl.Rule import Rule
+
+logger = logging.getLogger(__name__)
 
 
 class EnvironmentalTransmission(Rule, BaseModel):
@@ -43,7 +46,6 @@ class EnvironmentalTransmission(Rule, BaseModel):
 
         #first get folks who are susceptible. These are the states we will actually see deltas from.
         deltas = current_state.loc[current_state[self.inf_col]==self.s_st].copy() #extract S folks only
-        #print('ST rule input deltas\n', deltas) #debug
 
        
         # Vectorized calculation of prI
@@ -63,7 +65,7 @@ class EnvironmentalTransmission(Rule, BaseModel):
         deltas_add = deltas.assign(**{self.inf_col: self.inf_to, "N": -deltas["N"]})
         
         rc = pd.concat([deltas, deltas_add])
-        print('env combined deltas are\n', rc) #debug
+        logger.debug("env combined deltas are\n%s", rc)
         return rc.loc[rc["N"]!=0].reset_index(drop=True) #reset index for the new dataframe
     
     def to_yaml(self) -> dict:

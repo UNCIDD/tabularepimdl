@@ -1,12 +1,14 @@
-from typing import Any
-
+import logging
 import math
+from typing import Any, Iterable
+
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 from tabularepimdl.Rule import Rule
-from typing import Iterable
+
+logger = logging.getLogger(__name__)
 
 #Vec_Encode_1_5 is derived from Vec_Encode_1_3, 
 #it uses rule input state-based pre-allocated buffer which sits outside timestep()
@@ -185,17 +187,17 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         """
         #self.init_state.columns = self._init_state_column_names_upper_case(input_data=self.init_state) #convert all column names of init_state to lowercase, this will cause many string handling changes in rules, not implement it for now
         self.init_state = self._input_data_column_order_shuffle(input_data=self.init_state) #shuffle init_state column order
-        #print('shuffle init state\n', self.init_state) #debug
+        logger.debug('shuffle init state\n %s', self.init_state)
         self.init_state = self._input_data_column_values_grouping(input_data=self.init_state) #grouping init_state column values
-        #print('after grouping init state\n', self.init_state, '\n', self.init_state.dtypes) #debug
+        logger.debug('after grouping init state\n %s \n %s', self.init_state, self.init_state.dtypes)
         
         self._update_col_domain_values_from_rules(input_data=self.init_state) #update each rule's selected column's unique domain values
         self._setup_internal_attributes(input_data=self.init_state) #set up all internal attributes
         self._encode_rule_level_categorical_states() #encode each rule's column categorical states
 
         self.current_state_array = self._convert_input_data_to_arrays(input_data=self.init_state)#[-8:-4] #initalize current_state_array only
-        #print('init state\n', self.init_state)
-        #print('initial converted current state array\n', self.current_state_array, '\n', self.current_state_array.shape)
+        logger.debug('init state\n %s', self.init_state)
+        logger.debug('initial converted current state array\n %s \n %s', self.current_state_array, self.current_state_array.shape)
         self._save_initial_current_state_array()
         self._initalize_full_epi_array() #initalize full_epi_array only
 
@@ -204,28 +206,27 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     #def _init_state_column_names_upper_case(self, input_data: pd.DataFrame): #new addtion, 12/4, this requires all individual rules to convert their values to upper case, not efficient
     #    """Convert all column names of init_state to lowercase."""
     #    return input_data.columns.str.upper()
-    #    print(input_data.columns.str.upper())
 
     def _initialize_preallocated_buffer(self) -> np.ndarray:
-        #print('initial _delta buffer\n', self._delta_buffer)
+        logger.debug('initial _delta buffer\n %s', self._delta_buffer)
         
         buffer_cols = self.current_state_array.shape[1]
-        #print('buff cols num:', buffer_cols)
+        logger.debug('buff cols num: %s', buffer_cols)
 
         rule_flat_list = [item for sublist in self.rules for item in sublist]
-        #print('rule flat list:', rule_flat_list)
+        logger.debug('rule flat list: %s', rule_flat_list)
 
         #twice buffer increase within 10 iters
         #self._max_expansion_factor = sum(rule.expansion_factor for rule in rule_flat_list) #sum or multiply (make more sense) all rules' combination of input states, now we use max for test
         self._max_expansion_factor = math.prod(rule.expansion_factor for rule in rule_flat_list)
-        #print('max_expansion_factor:', self._max_expansion_factor)
+        logger.debug('max_expansion_factor: %s', self._max_expansion_factor)
 
         #buffer_initial_rows = self.current_state_array.shape[0] * self._max_expansion_factor #the initial number of rows needed in buffer
         buffer_initial_rows = self.current_state_array.shape[0] + (self.current_state_array.shape[0] * self._max_expansion_factor) #the initial number of rows needed in buffer
-        #print('buff rows num:', buffer_rows)
+        logger.debug('buff rows num: %s', buffer_initial_rows)
 
         self._delta_buffer = np.empty((buffer_initial_rows, buffer_cols), dtype=np.float64) #preallocate a result array
-        #print('1_5 created _delta buffer\n', self._delta_buffer, '\n', self._delta_buffer.shape)
+        logger.debug('1_5 created _delta buffer\n %s \n %s', self._delta_buffer, self._delta_buffer.shape)
 
     
     def _input_data_column_order_shuffle(self, input_data: pd.DataFrame):
@@ -266,8 +267,8 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         #collect column names for aggregating columns and rest grouping columns
         self._agg_cols = {'N', 'T'}
         self._grouping_cols = [c for c in input_data.columns if c not in self._agg_cols]
-        #print('grouping col:', self._grouping_cols)
-        #print('before grouping init state\n', self.init_state) #debug
+        logger.debug('grouping col: %s', self._grouping_cols)
+        logger.debug('before grouping init state\n %s', self.init_state)
         #grouping column values, only the categories that are actually present in the data will be included in the groups.
         return input_data.groupby(self._grouping_cols, observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
         
@@ -310,7 +311,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         #unique domain values per grouping column (excludes N and T) in init_state
         #self._domains = {col: set(input_data[col].astype(str).tolist()) for col in self._grouping_cols} #convert col values to strings but not mess up the numerics
         self._domains = {col: set(input_data[col].tolist()) for col in self._grouping_cols} #12/15 new: remove astype(str)
-        #print('initial domain value:', self._domains)
+        logger.debug('initial domain value: %s', self._domains)
         #collect domain values that exist in each rule's properties but not in init_state data columns
         for ruleset in self.rules:
             for rule in ruleset:
@@ -318,10 +319,10 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                 
                 #new addtion 12/4, special case: before going through all attributes, checking if input data has 'infstate' column and update its domain values
                 if 'infstate'.lower() in (k.lower() for k in self._domains.keys()): #if 'infstate' is a col name in init_state dataframe
-                    #print('infstate is in keys')
+                    logger.debug('infstate is in keys')
                     try:
                         infstate_all_compartments = getattr(rule, 'infstate_all')
-                        #print('infstate full:', infstate_all_compartments)
+                        logger.debug('infstate full: %s', infstate_all_compartments)
                     except Exception:
                         infstate_all_compartments = None
 
@@ -330,13 +331,13 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                             self._domains['InfState'].update(infstate_all_compartments) #to-do: case-sensitive InfState, may need to line up case-sensitivity across engine and rules
 
                 for attribute_name in rule_field_name_set: #iterate all attributes that have been explicitly set in the rule instance
-                    #print('attribute name:', attribute_name)
+                    logger.debug('attribute name: %s', attribute_name)
                     if 'col' not in attribute_name.lower(): #search keyword 'col' in rule's attribute names
                         continue
 
                     try:
                         attribute_value = getattr(rule, attribute_name) #if attribute_name has 'col', then obtain its value
-                        #print('attribute_name\'s value :', attribute_value)
+                        logger.debug("attribute_name's value : %s", attribute_value)
                     except Exception:
                         continue
                     
@@ -347,11 +348,11 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                         attribute_value_list = attribute_value
                     else:
                         raise ValueError(f"Expect attribute value to be a string or list, received {type(attribute_value)}.")
-                    #print('attribute value list:', attribute_value_list)    
+                    logger.debug('attribute value list: %s', attribute_value_list)
                     
                     for value in attribute_value_list:
                         data_col_name = self._match_domain_key(col_name = value) #check if attribute value exists in domain keys
-                        #print('found data col name in domain:', data_col_name)
+                        logger.debug('found data col name in domain: %s', data_col_name)
 
                         if data_col_name is None: #attribute name has 'col' but its value is not in domain keys
                             continue
@@ -359,30 +360,30 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                         if data_col_name.lower() == "infstate": #Special case: if column value equals 'infstate' (case-insensitive)
                             try: #this try-except block can be replaced with continue-operation since "infstate" is checked above
                                 infstate_all_compartments = getattr(rule, 'infstate_all')
-                                #print('infstate full:', infstate_all_compartments)
+                                logger.debug('infstate full: %s', infstate_all_compartments)
                             except Exception:
                                 infstate_all_compartments = None
 
                             if infstate_all_compartments: #a rule has infstate_all property
                                 if isinstance(infstate_all_compartments, (list, set, tuple, Iterable)):
                                     self._domains[data_col_name].update(infstate_all_compartments)
-                                    #print('infstate domain_values:', self._domains)
+                                    logger.debug('infstate domain_values: %s', self._domains)
                        
                         else: #Generic case: look for property named "<data_col_name>_all"
                             property_name = f"{attribute_name}_all"
                             if hasattr(rule, property_name):
                                 try:
                                     property_value = getattr(rule, property_name)
-                                    #print('property_value:', property_value)
+                                    logger.debug('property_value: %s', property_value)
                                 except Exception:
                                     property_value = None
             
                                 if property_value:
                                     if isinstance(property_value, (list, set, tuple, Iterable)):
                                         self._domains[data_col_name].update(property_value)
-                                        #print('update with property then domain_values:', self._domains)
+                                        logger.debug('update with property then domain_values: %s', self._domains)
        
-        print('final domains per column:', self._domains) #debug
+        logger.debug('final domains per column: %s', self._domains)
 
     
     def _setup_internal_attributes(self, input_data: pd.DataFrame):
@@ -399,29 +400,26 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         """
         #self._infstate_all_comps = sorted(self._domains[self.compartment_col]) #keep a variable to save column InfState's compartment values
         #self._num_comps = len(self._infstate_all_comps) #keep a variable to save the number of compartments in column InfState
-        #print('infstate_all_comps:', self._infstate_all_comps, 'num_comps:', self._num_comps)
 
          #create compartment and its associated index mapping, and reverse the mapping
          #used for converting column's string values to numbers
         #self._infstate_comp_map = {comp: i for i, comp in enumerate(infstate_all_comps)}
-        #print('infstate_comp_map:', self._infstate_comp_map)
         #self._inverse_infstate_comp_map = {i: comp for comp, i in self._infstate_comp_map.items()}
-        #print('inverse_infstate_comp_map:', self._inverse_infstate_comp_map)
-        
+
         #build encoding maps and inverse encoding maps for each grouping column's domain values including column infstate
         for col in self._grouping_cols:
-            #print('col:', col)
+            logger.debug('col: %s', col)
             vals = sorted(self._domains[col]) #sort each grouping column's unique domain values
-            #print('vals:', vals)
+            logger.debug('vals: %s', vals)
             self._grouping_col_map[col] = {v: i for i, v in enumerate(vals)} #encode each grouping column's values
             self._inverse_grouping_col_map[col] = {i: v for v, i in self._grouping_col_map[col].items()} #reverse the above encoding
-        print('grouping col map:', self._grouping_col_map) #debug
-        #print('inverse grouping col map:', self._inverse_grouping_col_map)
+        logger.debug('grouping col map: %s', self._grouping_col_map)
+        logger.debug('inverse grouping col map: %s', self._inverse_grouping_col_map)
 
         #fetch column order of init_state
         self._init_state_col_order = [col for col in input_data.columns] #get all column names into a list, e.g. ['InfState', 'N', 'T']
         self._col_idx_map = {col: i for i, col in enumerate(self._init_state_col_order)} #e.g. {'Location': 0, 'Age': 1, 'InfState': 2, 'N': 3, 'T': 4}
-        #print('col_idx_map:', self._col_idx_map) #debug
+        logger.debug('col_idx_map: %s', self._col_idx_map)
 
         #all columns indicies are included in _col_idx_map, extract invidual ones for separate use
         #Locate each column's index of init_state, used in array column operation.
@@ -429,7 +427,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         self._n_idx = self._col_idx_map['N'] #the code has to know/use a few fixed column names in order to get column indicies
         self._t_idx = self._col_idx_map['T']
         self._grouping_col_idx = [self._col_idx_map[c] for c in self._grouping_cols]
-        #print('_n_idx:', self._n_idx, '_t_idx:', self._t_idx, '_grouping_col_idx:', self._grouping_col_idx)
+        logger.debug('_n_idx: %s _t_idx: %s _grouping_col_idx: %s', self._n_idx, self._t_idx, self._grouping_col_idx)
         
 
     def _encode_rule_level_categorical_states(self) -> None:
@@ -459,7 +457,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
         #self.current_state_array = np.column_stack((infstate_values, n_values, t_values))
         #self.current_state_array = self.current_state_array.astype(np.float64)
-        #print('converted input array\n', self.current_state_array)
+        logger.debug('converted input array\n %s', self.current_state_array)
 
         #process each column individually (including N and T) and build a current_state array without modifying original init_state
         #by default, column N and T should already be numerical values and verified in model instantiation stage
@@ -480,7 +478,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         #n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
         #n_cols = self.current_state_array.shape[1]
         #self._current_result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
-        #print('initial preallocation buffer\n', self._current_result_preallocation)
+        logger.debug('initial preallocation buffer\n %s', self._current_result_preallocation)
         #return self.current_state_array #return current_state_array only
     
     def _save_initial_current_state_array(self) -> np.ndarray:
@@ -604,24 +602,24 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         #If no, then update the previous new data copy. If yes, flip the new_data_flag to False.
         if not self._previous_data_copy.equals(new_data):
             self._new_data_flag = True #yes, new data
-            #print('not same, it is new data.')
+            logger.debug('not same, it is new data.')
             self._previous_data_copy = new_data.copy() #save new_data
         else:
             self._new_data_flag = False #not new data or an empty new_data equals to the initial empty previous_data_copy
    
         if self._new_data_flag: #yes, new data comes
             new_data = self._input_data_column_values_grouping(input_data = new_data) #grouping new_data column values
-            #print('after grouping new data\n', new_data) #debug
+            logger.debug('after grouping new data\n %s', new_data)
             new_data = self._input_data_column_order_shuffle(input_data = new_data) #shuffle new_data column order
-            #print('new data frame\n', new_data) #debug
+            logger.debug('new data frame\n %s', new_data)
             #convert input new data to array and save it
             self._new_data_array = self._convert_input_data_to_arrays(input_data = new_data)
-            #print('new data array\n', self._new_data_array)
-            #print('current state array\n', self.current_state_array)
+            logger.debug('new data array\n %s', self._new_data_array)
+            logger.debug('current state array\n %s', self.current_state_array)
             #flip new_data_flag to False and add new data to current_state_array
             self._new_data_flag = False
             self.current_state_array = np.vstack([self.current_state_array, self._new_data_array])
-            #print('vec after adding new data, current array\n', self.current_state_array)
+            logger.debug('vec after adding new data, current array\n %s', self.current_state_array)
         
         else: #not new data, it is the same as previous data, can use the saved new_data_array if this array is not empty
             if self._new_data_array.size != 0:
@@ -643,12 +641,9 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         Returns:
             A list of Numpy arrays with each array representing an epidemic historical data in time T.
         """
-        #print('timestep level index map\n', self._build_index_map())#debug only
-
         for ruleset in self.rules:
-            #print('1. vec current ruleset:', ruleset)
-            #print('ruleset level index map\n', self._build_index_map())#debug only
-            #print('vec current state\n', self.current_state_array)
+            logger.debug('1. vec current ruleset: %s', ruleset)
+            logger.debug('vec current state\n %s', self.current_state_array)
             #write_cursor = 0 #reset cursor
             num_current = self.current_state_array.shape[0] #current_state_array_row_size
             if num_current == 0:
@@ -659,69 +654,65 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             # It equals the current rows PLUS the max expansion of all rules combined.
             sum_expansion = sum(rule.expansion_factor for rule in ruleset)
             buffer_required_rows = num_current + (num_current * sum_expansion)
-            #print('buffer required rows:', buffer_required_rows)
+            logger.debug('buffer required rows: %s', buffer_required_rows)
             # If buffer is too small, resize it. 
             # use max(required, current * 2) to ensure we double the size, 
             # keeping memory allocations mathematically rare and extremely fast.
             if self._delta_buffer.shape[0] < buffer_required_rows:
                 new_size = max(int(buffer_required_rows), self._delta_buffer.shape[0] * 2)
                 self._delta_buffer = np.empty((new_size, self.current_state_array.shape[1]), dtype=np.float64)
-                #print('new delta buffer triggered. Size:', self._delta_buffer.shape)
-            
-            #if num_current >= self._delta_buffer.shape[0] - num_current: #if current state array size is larger than the remaining buffer size
-            #    print('delta buffer size increase triggered')
+                logger.debug('new delta buffer triggered. Size: %s', self._delta_buffer.shape)
+
+            #if num_current >= self._delta_buffer.shape[0] - num_current: #if current state array size is larger than the remaining buffer size -- superseded by the dynamic buffer check above
             #    new_size = max(num_current + (num_current * max_expansion), self._delta_buffer.shape[0] * 2) #increase the delta buffer size
             #    self._delta_buffer = np.empty((new_size, self.current_state_array.shape[1]), dtype=np.float64)
-            #    print('delta buffer new size:', self._delta_buffer.shape)
 
             # 2. Put current state at the VERY START of the buffer
             # This avoids needing np.vstack later.
             self._delta_buffer[:num_current, :] = self.current_state_array
             write_cursor = num_current
-            #print('num current:', num_current)
-            #print('start new ruleset, write_curose:', write_cursor)
-            #print('remaining space in delta buffer:', self._delta_buffer.shape[0] - num_current)
+            logger.debug('num current: %s', num_current)
+            logger.debug('start new ruleset, write_curose: %s', write_cursor)
+            logger.debug('remaining space in delta buffer: %s', self._delta_buffer.shape[0] - num_current)
             for rule in ruleset:
-                #print('2. current rule:', rule)
-                #print('in rule Before loop preallocation buffer\n', self._current_result_preallocation)
+                logger.debug('2. current rule: %s', rule)
+                logger.debug('in rule Before loop preallocation buffer\n %s', self._current_result_preallocation)
                 # Allocate non-overlapping slice
-                #print('write_cursor now is:', write_cursor)
+                logger.debug('write_cursor now is: %s', write_cursor)
                 #rule_needed_buffer_length = current_state_array_row_size * rule.combination_of_input_states() #set upper limit for buff_slice
                 buff_slice = self._delta_buffer[write_cursor:, :] #from the current write_cusor to the end of the rows and select all columns
-                #print('buff slice\n', buff_slice)
-                #encoded_data_index_map = self._build_index_map() #build encoded data index for each data column of input data at rule level
-                #print('rule level index map\n', encoded_data_index_map)
+                logger.debug('buff slice\n %s', buff_slice)
+                #encoded_data_index_map = self._build_index_map() #build encoded data index for each data column of input data at rule level -- _build_index_map was never implemented
                 if self.stoch_policy == "rule_based":
                     rule_deltas = rule.get_deltas(current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=buff_slice, dt=dt)
                 else:
                     rule_deltas = rule.get_deltas(current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=buff_slice, dt=dt, stochastic = (self.stoch_policy=="stochastic"))
-                #print('rule detlas\n', rule_deltas)
-                #print('in rule After loop preallocation buffer\n', self._current_result_preallocation)
-                #print('before append, ruleset_deltas_list\n', ruleset_deltas_list)
+                logger.debug('rule detlas\n %s', rule_deltas)
+                logger.debug('in rule After loop preallocation buffer\n %s', self._current_result_preallocation)
                 if rule_deltas is not None and rule_deltas.shape[0] > 0: #add non-None rule_deltas to the list
                     rows_written = rule_deltas.shape[0] #get the number of rows from rule returned deltas
-                    #print('rows_written:', rows_written)
+                    logger.debug('rows_written: %s', rows_written)
                     write_cursor = write_cursor + rows_written #move write_cursor to next location
-                    #print('write_cursor will be:', write_cursor)
-                    #print('rule deltas\n', self._delta_buffer[write_cursor-rows_written : write_cursor])
+                    logger.debug('write_cursor will be: %s', write_cursor)
+                    logger.debug('rule deltas\n %s', self._delta_buffer[write_cursor - rows_written:write_cursor])
                 #if rule is not ruleset[-1]: #debug
-                #    print('---next rule---') #debug
-                #else: print('finished current ruleset, moving to next ruleset') #debug
+                logger.debug('---next rule---')
+                logger.debug('finished current ruleset, moving to next ruleset')
 
             # If no rules produced deltas, skip grouping and move to next ruleset
             if write_cursor == num_current:
-                #print('write_cursor and num_current is equal. go to next ruleset')
+                logger.debug('write_cursor and num_current is equal. go to next ruleset')
                 continue
 
             # 3. FAST GROUPING: Only process the populated part of the buffer
             active_buffer = self._delta_buffer[:write_cursor, :]
             #active_buffer = active_buffer[np.argsort(active_buffer[:, 2])] #debug
-            #print('before grouping, active_buffer\n', active_buffer)
+            logger.debug('before grouping, active_buffer\n %s', active_buffer)
 
             # Extract grouping columns and cast to int64 for hashing
             # (Assuming your encoded categories can be cleanly cast to integers)
             group_cols = active_buffer[:, self._grouping_col_idx].astype(np.int64)
-            #print('grouping col arrays\n', group_cols)
+            logger.debug('grouping col arrays\n %s', group_cols)
 
             # THE MAGIC TRICK: View the 2D integer array as a 1D array of raw bytes.
             # This allows np.unique to bypass lexsort and run incredibly fast on 1D data.
@@ -732,8 +723,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             _, unique_indices, inverse_indices = np.unique(
                 group_cols_1d, return_index=True, return_inverse=True
             )
-            #print('uniqe value\n', unique_value)
-            #print('unique value inverse idx', inverse_indices)
+            logger.debug('unique value inverse idx %s', inverse_indices)
 
             # 4. FAST AGGREGATION: Use bincount to sum 'N' based on inverse indices
             sum_N = np.bincount(inverse_indices, weights=active_buffer[:, self._n_idx])
@@ -753,21 +743,21 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             new_state[:, self._t_idx] = max_T_col
 
             #remove all rows where column N has a value of 0
-            #print('current array id:', id(self.current_state_array))
+            logger.debug('current array id: %s', id(self.current_state_array))
             self.current_state_array = new_state[new_state[:, self._n_idx] != 0] #new memory location
             #self.current_state_array = self.current_state_array[np.argsort(self.current_state_array[:, 3])] #debug
-            #print('after grouping & dropping 0s, before adding dt, current array\n', self.current_state_array, '\n',  id(self.current_state_array))
+            logger.debug('after grouping & dropping 0s, before adding dt, current array\n %s \n %s', self.current_state_array, id(self.current_state_array))
 
             #if ruleset is not self.rules[-1]: #debug
-            #    print('-------next ruleset--------') #debug
-            #else: print('all rulesets done, for loop ends') #debug
+            logger.debug('-------next ruleset--------')
+            logger.debug('all rulesets done, for loop ends')
 
         self.current_state_array[:, self._t_idx] = self.current_state_array[:, self._t_idx] + dt #memory location not change
-        #print('add dt, engine vec1_5 final current_state_array:\n', self.current_state_array) #debug
+        logger.debug('add dt, engine vec1_5 final current_state_array:\n %s', self.current_state_array)
             
         #append the updated current state to the epidemic history no matter if there is deltas generated, history should capture all timesteps
         self._full_epi_list.append(self.current_state_array) #this is a list of arrays
-        #print('full epi list\n', self._full_epi_list)
+        logger.debug('full epi list\n %s', self._full_epi_list)
         
         #return self.current_state_array
 

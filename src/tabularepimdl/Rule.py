@@ -2,8 +2,10 @@ import importlib
 import inspect
 from abc import ABC, abstractmethod
 
+import logging
 import numpy as np
-import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class Rule(ABC):
@@ -53,7 +55,8 @@ class Rule(ABC):
 
         if '.' in key:
             mod_nm, cls_nm = key.split('.')
-            #print(f"mod_nm is {mod_nm}, cls_nm is {cls_nm}".format(mod_nm, cls_nm)) #debug
+            logger.debug("mod_nm is %s, cls_nm is %s: ", mod_nm, cls_nm)
+ 
             if mod_nm != 'tabularepimdl': #Ensure the correct tabularepimdl module is imported
                 raise ImportError(f"Expected pacakge 'tabularepimdl' but received {mod_nm}.")
             mod = importlib.import_module(mod_nm)
@@ -93,20 +96,22 @@ class Rule(ABC):
             raise TypeError(f"Epidemic rule's parameters must be in dictionary type. Received {type(definition)}")
         
         rule_fields_mapping = tepi_rule.model_fields #get all field items from Pydantic-integrated model
-        #print('tepi rule fields mapping: ', rule_fields_mapping) #debug
+        logger.debug('tepi rule fields mapping: %s', rule_fields_mapping)
+
         rule_required_fields = {name for name, field in rule_fields_mapping.items() if field.is_required} #get required fields defined in an epidemic rule
-        #print('rule required fields: ', rule_required_fields) #debug, e.g. {'column', 'from_st', 'to_st', 'rate'}
+        logger.debug('rule required fields: %s', rule_required_fields) #debug, e.g. {'column', 'from_st', 'to_st', 'rate'}
+
         rule_all_fields = set(rule_fields_mapping.keys()) #get all field names defined in an epidemic rule
-        #print('rule all fields: ', rule_all_fields) #debug, e.g. {'to_st', 'column', 'from_st', 'rate', 'stochastic'}
+        logger.debug('rule all fields: %s', rule_all_fields) #debug, e.g. {'to_st', 'column', 'from_st', 'rate', 'stochastic'}
 
         #Check if the YAML definitions match the epidemic rule class's __init__ fields.
         yaml_provided_fields = set(definition.keys()) #get all the field names defined in yaml file
-        #print('yaml provided fields: ', yaml_provided_fields) #debug
+        logger.debug('yaml provided fields: %s', yaml_provided_fields)
 
         missing_fields = rule_required_fields - yaml_provided_fields #fields that are in epidemic rule but missed in yaml definition
-        #print(missing_fields) #debug
+        logger.debug('missing fields: %s', missing_fields)
         extra_fields = yaml_provided_fields - rule_all_fields #fields that are in yaml definition but not belonged to the epidemic rule
-        #print(extra_fields) #debug
+        logger.debug('extra fields: %s', extra_fields)
 
         if missing_fields:
             raise ValueError(f"YAML file missed required fields for {tepi_rule.__name__}: {missing_fields}")

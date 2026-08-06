@@ -174,12 +174,10 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         if not self._strain_columns_idx: #fill in the infection columns index 
             for col in self.strain_cols:
                 self._strain_columns_idx.append(col_idx_map[col])
-        #print('strain_cols idx:', self._strain_columns_idx) #debug
 
         if not self._hosp_columns_idx: #fill in the hosp columns index 
             for col in self.hosp_cols:
                 self._hosp_columns_idx.append(col_idx_map[col])
-        #print('hosp_cols idx:', self._hosp_columns_idx) #debug
 
         n_idx = col_idx_map["N"]
         
@@ -192,19 +190,16 @@ class HospRule_Vec_Encode(Rule, BaseModel):
 
         #strain index per row
         strain_index_with_infection = np.argmax(i_mask, axis=1)
-        #print('strain_index_with_infection, i.e. match index\n', strain_index_with_infection)
 
         #Determine hospitalization rate
         r_mask = (current_state[:, self._strain_columns_idx] == self._recover_status_code)
         has_recovered = np.any(r_mask, axis=1)
         #If people are recovered from a Strain, then hosp_rate=sec_hrate, otherwise hosp_rate=prim_hrate
         hosp_rate = np.where(has_recovered, self.sec_hrate, self.prim_hrate)
-        #print('hosp rate\n', hosp_rate)
 
         #Filter people that are infected and can be hospitalized
         infected_that_qualify_hospitalization = np.where(has_infection)[0]
         rows_with_infected = current_state[infected_that_qualify_hospitalization]
-        #print('rows with infect\n', rows_with_infected)
 
         rate_const = 1.0 - np.exp(-dt * hosp_rate[infected_that_qualify_hospitalization])
 
@@ -214,21 +209,17 @@ class HospRule_Vec_Encode(Rule, BaseModel):
             changed_N = -rows_with_infected[:, n_idx] * rate_const
 
         count = rows_with_infected.shape[0]
-        #print('count:', count)
 
         result_buffer[:count, :] = rows_with_infected
         result_buffer[:count, n_idx] = changed_N
-        #print('array decobs\n', result_buffer[:count, :])
 
         result_buffer[count:2*count, :] = rows_with_infected
         result_buffer[count:2*count, n_idx] = -changed_N
-        #print('array incobs before change\n', result_buffer[count:2*count, :])
 
         hosp_block = result_buffer[count:2*count, :]
         hosp_columns_idx_arr = np.array(self._hosp_columns_idx)
         hosp_map_strain = hosp_columns_idx_arr[strain_index_with_infection[infected_that_qualify_hospitalization]]
         hosp_block[np.arange(count), hosp_map_strain] = self._hosp_status_code
-        #print('array incobs after change\n', result_buffer[count:2*count, :])
 
         return result_buffer[:2*count, :]
 
