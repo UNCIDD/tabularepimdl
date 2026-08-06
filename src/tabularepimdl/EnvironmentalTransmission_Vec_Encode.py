@@ -130,7 +130,6 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
 
         selected_from = current_state[mask_s_idxs, :]
-        #print('selected_from\n', selected_from)
         N = selected_from[:, n_idx]
         
         rate_const = 1 - np.exp(-dt * self.beta)

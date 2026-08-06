@@ -199,7 +199,6 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         
         inf_array = np.bincount(infected_group_codes, infected_weights, num_of_categories)
 
-        #print('inf_array is\n', inf_array) #debug
 
         prI_per_group = np.power(np.exp(-dt*self.waifw_matrix), inf_array)
         prI_per_group = 1-prI_per_group.prod(axis=1)
@@ -208,27 +207,21 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         ##get folks in susceptible states which link to all unique groups
         is_susceptible = current_state[:, infstate_idx] == self._s_code
         deltas_susceptible = current_state[is_susceptible]
-        #print('is suscpet:', is_susceptible) #debug
-        #print('deltas suscept\n', deltas_susceptible, '\n') #debug
         
 
         N_susceptible = deltas_susceptible[:, n_idx]
-        #print('N_susceptible:', N_susceptible)
 
         #infectious process, getting the number of individuals who get infected from susceptible status
         susceptible_group_codes = present_category_codes[is_susceptible]
         prI_per_s_group = prI_per_group[susceptible_group_codes]
-        #print('prI per group:', prI_per_group)
 
         if stochastic:
             changed_N = -np.random.binomial(N_susceptible, prI_per_s_group)
         else:
             changed_N = -N_susceptible * prI_per_s_group
 
-        #print('changed N:', changed_N)
 
         count = len(N_susceptible)
-        #print('count:', count)
         # Fill 'from' rows
         result_buffer[:count, :] = deltas_susceptible #equivalent: self._from_code
         result_buffer[:count, n_idx] = changed_N  #update column N with changed_N (negative value)

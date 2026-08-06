@@ -1,3 +1,5 @@
+import logging
+
 from .Rule import Rule
 from .BirthProcess import BirthProcess
 from .EnvironmentalTransmission import EnvironmentalTransmission
@@ -36,3 +38,28 @@ from .EpiModel_Vec_Encode1_5 import EpiModel_Vec_Encode_1_5
 # from .EpiModel_Vec_Encode1 import EpiModel_Vec_Encode_1
 # from .EpiModel_Vec_Encode1_2 import EpiModel_Vec_Encode_1_2
 __version__ = "0.2.0"
+
+
+def configure_logging(level: int = logging.DEBUG) -> None:
+    """Turn on tabularepimdl's debug logging output.
+
+    By default this package emits no log output at all -- rules and the model engine log
+    intermediate-calculation details (state encodings, domain maps, etc.) at DEBUG level, but a
+    library only emits log records. It's up to the application to decide whether to display them.
+    Call this once (e.g. at the top of a script or notebook) to see that output while developing
+    or troubleshooting a model.
+
+    Args:
+        level: the logging level to enable for tabularepimdl's logger hierarchy. Defaults to DEBUG.
+    
+    Usage Example:
+        to use the package-level logging, add the import and function before other imports: 
+        import tabularepimdl
+        tabularepimdl.configure_logging()
+        from tabularepimdl.<rule_name> import <class_name>
+    """
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(name)s %(levelname)s: %(message)s"))
+    package_logger = logging.getLogger(__name__)
+    package_logger.addHandler(handler)
+    package_logger.setLevel(level)

@@ -164,22 +164,16 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         #into_prev: folks moved in previously-observed (+)
 
         #out_of_unobs supports deterministic and stochastic
-        #print('current_state\n', current_state)
         mask_source_state_unobs_idxs = np.flatnonzero((current_state[:, infstate_idx] == self._source_state_code) & (current_state[:, obs_col_idx] == self._unobs_code))
-        #print('mask_source_state_unobs_idxs:', mask_source_state_unobs_idxs)
 
         #No one is in source_state + unobs_state -> nothing to observe.
         if mask_source_state_unobs_idxs.size == 0:
-            #print('empty mask')
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
         
         out_of_unobs = current_state[mask_source_state_unobs_idxs]
-        #print('selected out of unobs\n', out_of_unobs) #debug
         N_out_of_unobs = out_of_unobs[:, n_idx]
-        #print('N out of unobs\n', N_out_of_unobs) #debug
 
         count_out_Unobs = len(N_out_of_unobs)
-        #print('count out unbos:', count_out_Unobs) #debug
         
         rate_const = 1 - np.exp(-dt * self.rate)
         
@@ -187,13 +181,10 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
             changed_N = -np.random.binomial(N_out_of_unobs.astype(np.int32), rate_const)
         else:
             changed_N = -N_out_of_unobs * rate_const
-        #print('changed_N:', changed_N) #debug
 
-        #print('0. result buffer\n', result_buffer)
         #out_of_unobs
         result_buffer[:count_out_Unobs, :] = out_of_unobs
         result_buffer[:count_out_Unobs, n_idx] = changed_N
-        #print('1. out_of_unobs:\n', result_buffer[:count_out_Unobs]) #debug
 
         #additions, changes in in_ and out_ incobs and prevobs only require deterministic process
         
@@ -201,25 +192,18 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         result_buffer[count_out_Unobs:2*count_out_Unobs, :] = out_of_unobs
         result_buffer[count_out_Unobs:2*count_out_Unobs, n_idx] = -changed_N
         result_buffer[count_out_Unobs:2*count_out_Unobs, obs_col_idx] = self._incobs_code
-        #print('2. into_incobs:\n', result_buffer[count_out_Unobs:2*count_out_Unobs]) #debug
 
         #move folks out of current_state incobs state, out_of_incobs
         mask_incobs = current_state[:, obs_col_idx] == self._incobs_code
-        #print('mask_incobs:', mask_incobs)
         out_of_incobs = current_state[mask_incobs]
-        #print('out_of_incobs\n', out_of_incobs)
         count_out_Incobs = len(out_of_incobs)
-        #print('count_out_Incobs:', count_out_Incobs)
         result_buffer[2*count_out_Unobs:2*count_out_Unobs+count_out_Incobs, :] = out_of_incobs
         result_buffer[2*count_out_Unobs:2*count_out_Unobs+count_out_Incobs, n_idx] *= -1
-        #print('3. out_of_incobs:\n', result_buffer[2*count_out_Unobs:2*count_out_Unobs+count_out_Incobs]) #debug
 
         #move folks out of the incident state and into the previous state, into_prev 
         result_buffer[2*count_out_Unobs+count_out_Incobs:2*count_out_Unobs+2*count_out_Incobs, :] = out_of_incobs
         result_buffer[2*count_out_Unobs+count_out_Incobs:2*count_out_Unobs+2*count_out_Incobs, obs_col_idx] = self._prevobs_code
-        #print('4. into_prev:\n', result_buffer[2*count_out_Unobs+count_out_Incobs:2*count_out_Unobs+2*count_out_Incobs]) #debug
 
-        #print('5. vec result buffer:\n', result_buffer[:2*count_out_Unobs+2*count_out_Incobs, :])
         return result_buffer[:2*count_out_Unobs+2*count_out_Incobs, :]
     
     def __str__(self) -> str:

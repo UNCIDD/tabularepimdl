@@ -134,10 +134,8 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         
         infstate_idx = col_idx_map[self.column]
         n_idx = col_idx_map['N']
-        #print('current_state\n', current_state) #debug
 
         total_population: float = np.sum(current_state[:, n_idx])
-        #print('total population:', total_population)
 
         if total_population != 0:
             if self.freq_dep:
@@ -146,7 +144,6 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
                 beta = self.beta
         else:
             beta = self.beta
-        #print('beta:', beta)
 
         # i_state
         mask_i_idxs = np.flatnonzero(current_state[:, infstate_idx] == self._i_code)
@@ -154,10 +151,8 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         #no infectious, returns_empty
         if (mask_i_idxs).size == 0:
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
-        #print('mask_i_idxs:', mask_i_idxs) 
         
         N_infectious_sum: float = np.sum(current_state[mask_i_idxs, n_idx]) #number of infected individuals
-        #print('N_infectious_sum:', N_infectious_sum)
 
         # s_state
         mask_s_idxs = np.flatnonzero(current_state[:, infstate_idx] == self._s_code)
@@ -165,34 +160,25 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         #no susceptible, returns empty
         if (mask_s_idxs).size == 0:
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
-        #print('mask_s_idxs:', mask_s_idxs)
         
         selected_s = current_state[mask_s_idxs, :]
-        #print('selected_s\n', selected_s)
         N_susceptible = selected_s[:, n_idx] #equivalent: current_state[s_row_idxs, n_idx]
-        #print('N_susceptible:', N_susceptible)
 
         # Compute transition amounts
         rate_const = 1 - np.power(np.exp(-dt*beta), N_infectious_sum)
-        #print('rate_const:', rate_const)
         if stochastic:
             changed_N = -np.random.binomial(N_susceptible.astype(np.int32), rate_const)
         else:
             changed_N = -N_susceptible * rate_const
-        #print('change_N:', changed_N)
 
         count = len(mask_s_idxs)
-        #print('mask_s count:', count)
-        #print('before filling from, result buffer:\n', result_buffer) #debug
         # Fill 'from' rows
         result_buffer[:count, :] = selected_s #equivalent: self._s_code
         result_buffer[:count, n_idx] = changed_N #update column N with changed_N (negative value)
-        #print('after fill from, result buffer:\n', result_buffer[:count]) #debug
         # Fill 'to' rows
         result_buffer[count:2*count, :] = selected_s 
         result_buffer[count:2*count, infstate_idx] = self._inf_to_code #update col infstate
         result_buffer[count:2*count, n_idx] = -changed_N  #update column N with inversed changed_N
-        #print('after fill to, vec return\n', result_buffer[:2*count, :]) #debug
         return result_buffer[:2*count, :]
     
     def __str__(self) -> str:

@@ -66,17 +66,13 @@ class EpiRunner (BaseModel):
     def add_new_data(self, added_time: int | float = 0) -> None:
         """Adds new data to the current state."""
         required_columns = {"T"} #added_data needs to have column T
-        #print("going into add_new_data method.")
         
         if not required_columns.issubset(self.model.cur_state.columns): #raise error when adding data at t=0
             raise ValueError ("The initial epi data missed column T.")
         
-        #if required_columns.issubset(self.model.cur_state.columns): print('there is T')
-        #else: print('no T')
         if self.added_data is not None:
             if required_columns.issubset(self.added_data.columns) and added_time in self.added_data["T"].values: #check if the event time is present in added_data column T
                 self.model.cur_state = pd.concat([ self.model.cur_state, self.added_data.loc[self.added_data["T"]==added_time] ], ignore_index=True)
-                #print('add new data, cur_state is\n', self.model.cur_state)
             else: raise ValueError (f"The added data does not include record for time {added_time}. Please check the added data.")
         else:
             raise ValueError (f"The added data is None. Please check the added data.")

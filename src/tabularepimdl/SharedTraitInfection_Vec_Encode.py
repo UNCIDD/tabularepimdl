@@ -143,7 +143,6 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         
         selected_s = current_state[mask_s_idxs, :]
         N_susceptible = selected_s[:, n_idx]
-        #print('N susceptible:', N_susceptible) #debug
 
         mask_i = current_state[:, infstate_idx] == self._i_code
         infect_only = current_state[mask_i, :]
@@ -166,7 +165,6 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
             changed_N = -N_susceptible * prI
 
         count = len(N_susceptible)
-        #print('count:', count)
         # Fill 'from' rows
         
         result_buffer[:count, :] = selected_s
