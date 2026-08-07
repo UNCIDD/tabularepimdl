@@ -1,3 +1,6 @@
+import sys
+from pathlib import Path
+
 import pytest
 import pandas as pd
 import numpy as np
@@ -5,6 +8,18 @@ import numpy as np
 """
 confest.py provides fixtures for the entire directory.
 """
+
+# test_engine_parity.py does `from legacy.pandas_reference.X import Y`, which needs the repo root
+# on sys.path. Walk up from this file's own location (not cwd -- pytest may be invoked from
+# anywhere) to find it.
+_root = Path(__file__).resolve().parent
+while not (_root / "pyproject.toml").exists():
+    if _root.parent == _root:
+        raise RuntimeError("Could not locate repo root (no pyproject.toml found in any parent)")
+    _root = _root.parent
+sys.path.insert(0, str(_root))
+
+
 #Define the custom CLI option
 def pytest_addoption(parser):
     #separate CLI options into a named group
