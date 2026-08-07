@@ -1,13 +1,12 @@
 from pydantic import BaseModel, Field, PrivateAttr
 from benchmark.SimpleInfectionDispatcher import SimpleInfectionDispatcher
 from benchmark.comparison_deltas_N import compare_structure_deltas
+from benchmark.timing import measure
 from typing import Annotated
+from functools import partial
 
 import numpy as np
 import pandas as pd
-import time
-import tracemalloc
-import gc
 
 class SimpleInfectionRunner(BaseModel):
     """
@@ -107,49 +106,38 @@ class SimpleInfectionRunner(BaseModel):
                         column_categories = self.column_categories   
                     )
                     
-                    if struct  == 'Pandas':
-                        gc.collect()
-                        tracemalloc.start() #track memory
-                        t0 = time.perf_counter() #track time
-                        for _ in range(iters):
-                            deltas = dispatcher.get_deltas(current_state=data, stochastic=self.stochastic)
-                        t1 = time.perf_counter()
-                        peak = tracemalloc.get_traced_memory()[1]
-                        tracemalloc.stop()
+                    if struct == 'Pandas':
+                        deltas, time_sec, peak_mb = measure(
+                            struct,
+                            partial(dispatcher.get_deltas, current_state=data, stochastic=self.stochastic),
+                            iters, self.col_idx_map,
+                        )
                     elif struct == 'Numpy':
                         pass
                     elif struct == 'Numpy_Encode':
-                        gc.collect()
-                        tracemalloc.start() #track memory
-                        t0 = time.perf_counter() #track time
-                        for _ in range(iters):
-                            deltas = dispatcher.get_deltas(current_state=arr_numba, col_idx_map=self.col_idx_map, result_buffer=result_preallocation, stochastic=self.stochastic)
-                        t1 = time.perf_counter()
-                        peak = tracemalloc.get_traced_memory()[1]
-                        tracemalloc.stop()
+                        deltas, time_sec, peak_mb = measure(
+                            struct,
+                            partial(dispatcher.get_deltas, current_state=arr_numba, col_idx_map=self.col_idx_map, result_buffer=result_preallocation, stochastic=self.stochastic),
+                            iters, self.col_idx_map,
+                        )
                     elif struct == 'Josh_Encode_Vec':
-                        gc.collect()
                         #converting compartments to code first
                         #comp_map = {label: i for i, label in enumerate (sorted(self.infstate_compartments))}
                         #print('comp_map:', comp_map)
                         dispatcher.compile(comp_map)
-                        tracemalloc.start() #track memory
-                        t0 = time.perf_counter() #track time
-                        for _ in range(iters):
-                            deltas = dispatcher.apply(state=arr_numba, col_idx=self.col_idx_map, dt=1.0)
-                        t1 = time.perf_counter()
-                        peak = tracemalloc.get_traced_memory()[1]
-                        tracemalloc.stop()
-
-                    print(f"Sample deltas for {struct}:\n{deltas}\n, data length: {len(deltas)}\n, non-zero counts: {np.count_nonzero(deltas[:, self.col_idx_map['N']] if isinstance(deltas, np.ndarray) else deltas.loc[:, 'N'])}") #debug
+                        deltas, time_sec, peak_mb = measure(
+                            struct,
+                            partial(dispatcher.apply, state=arr_numba, col_idx=self.col_idx_map, dt=1.0),
+                            iters, self.col_idx_map,
+                        )
 
                     #concatenate each iteration's result
                     self.time_mem_results.append({
                         'structure': struct,
                         'size': size,
                         'iterations': iters,
-                        'time_sec': round(t1 - t0, 3),
-                        'peak_memory_MB': round(peak / 1024**2, 2)
+                        'time_sec': time_sec,
+                        'peak_memory_MB': peak_mb
                     })
 
                     #print('time_mem_result\n', self.time_mem_results) #debug
