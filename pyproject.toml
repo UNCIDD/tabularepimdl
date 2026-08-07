@@ -20,6 +20,8 @@ dependencies = [
 test = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "matplotlib",
+    "seaborn",
 ]
 dev = [
     "mypy>=1.7",

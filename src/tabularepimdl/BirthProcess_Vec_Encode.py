@@ -66,6 +66,17 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         Maximum number of rows this rule can return per input rows.
         """
         return len(self.infstate_compartments)
+
+
+    def _encode_categorical_states(self, data_domains) -> None:
+        """
+        Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+
+        Notes:
+            BirthProcess_Vec_Encode rule does not have input states to be encoded.
+        """
+        pass
+
         
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """

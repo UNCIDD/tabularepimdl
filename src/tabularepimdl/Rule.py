@@ -18,7 +18,7 @@ class Rule(ABC):
     """@param stochastic: whether the process is stochastic or deterministic."""
         
     @abstractmethod
-    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int] | None = None, result_buffer: np.ndarray | None = None, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray: #updated method definition
+    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         Method takes in current state and return a series of deltas to that state.
         It computes the population deltas for the current state at a given time step.
@@ -29,7 +29,7 @@ class Rule(ABC):
             result_buffer (np.ndarray): A pre-allocated array that will be populated with the computed deltas. This array is modified in-place and returned.
             dt (float): The size of the time step. Defaults to 1.0.
             stochastic (bool, optional): Whether to apply stochastic modeling. If `None`, the class-level `self.stochastic` attribute is used.
-        
+
         Returns:
             np.ndarray: A NumPy structured array containing the population deltas.
 
