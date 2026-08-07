@@ -1,5 +1,4 @@
 import logging
-import math
 from typing import Any, Iterable
 
 import numpy as np
@@ -216,9 +215,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         rule_flat_list = [item for sublist in self.rules for item in sublist]
         logger.debug('rule flat list: %s', rule_flat_list)
 
-        #twice buffer increase within 10 iters
-        #self._max_expansion_factor = sum(rule.expansion_factor for rule in rule_flat_list) #sum or multiply (make more sense) all rules' combination of input states, now we use max for test
-        self._max_expansion_factor = math.prod(rule.expansion_factor for rule in rule_flat_list)
+        self._max_expansion_factor = sum(rule.expansion_factor for rule in rule_flat_list)
         logger.debug('max_expansion_factor: %s', self._max_expansion_factor)
 
         #buffer_initial_rows = self.current_state_array.shape[0] * self._max_expansion_factor #the initial number of rows needed in buffer
