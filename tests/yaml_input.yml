@@ -1,6 +1,12 @@
-tabularepimdl.BirthProcess:
+tabularepimdl.SimpleTransition_Vec_Encode:
+  column: InfState
+  from_st: S
+  to_st: I
   rate: 0.1
-  start_state_sig:
-    age: 10
-    health: good
   stochastic: false
+  column_categories:
+    - placeholder
+  infstate_compartments:
+    - S
+    - I
+    - R
