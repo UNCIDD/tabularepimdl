@@ -9,11 +9,11 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from tabularepimdl.BirthProcess import BirthProcess
-from tabularepimdl.SimpleInfection import SimpleInfection
-from tabularepimdl.SimpleTransition import SimpleTransition
-from tabularepimdl.WAIFWTransmission import WAIFWTransmission
-from tabularepimdl.EpiModel import EpiModel
+from legacy.pandas_reference.BirthProcess import BirthProcess
+from legacy.pandas_reference.SimpleInfection import SimpleInfection
+from legacy.pandas_reference.SimpleTransition import SimpleTransition
+from legacy.pandas_reference.WAIFWTransmission import WAIFWTransmission
+from legacy.pandas_reference.EpiModel import EpiModel
 
 @pytest.fixture
 def init_state():
@@ -218,6 +218,14 @@ def test_reset(epimodel, init_state):
     pd.testing.assert_frame_equal(epimodel.cur_state, init_state)
     pd.testing.assert_frame_equal(epimodel.full_epi, init_state)
 
+@pytest.mark.skip(
+    reason="Rule.from_yaml() can only resolve classes that live in the tabularepimdl package "
+    "(it hardcodes `if mod_nm != 'tabularepimdl': raise ImportError`). Now that the pandas rules "
+    "live in legacy.pandas_reference instead, YAML-based loading of pandas rules is structurally "
+    "no longer supported -- this isn't a stale fixture, the capability itself is gone. Not patching "
+    "Rule.from_yaml to special-case legacy.* since that would re-couple production code to the "
+    "legacy folder, which is exactly what moving pandas out of tabularepimdl was meant to avoid."
+)
 def test_from_yaml(epimodel, epi_yaml, init_state, b_p, s_i, s_t, w_t):
     """
     Test the from_yaml method.

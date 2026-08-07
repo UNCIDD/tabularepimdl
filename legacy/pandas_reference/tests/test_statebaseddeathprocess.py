@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-from tabularepimdl.StateBasedDeathProcess import StateBasedDeathProcess
+from legacy.pandas_reference.StateBasedDeathProcess import StateBasedDeathProcess
 
 @pytest.fixture
 def dummy_state():

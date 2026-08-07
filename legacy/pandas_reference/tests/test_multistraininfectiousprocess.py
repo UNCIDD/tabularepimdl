@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-from tabularepimdl.MultiStrainInfectiousProcess import MultiStrainInfectiousProcess
+from legacy.pandas_reference.MultiStrainInfectiousProcess import MultiStrainInfectiousProcess
 
 @pytest.fixture
 def dummy_state():

@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-from tabularepimdl.SimpleInfection import SimpleInfection
+from legacy.pandas_reference.SimpleInfection import SimpleInfection
 
 @pytest.fixture
 def dummy_state(): #Creat a dummy DataFrame
