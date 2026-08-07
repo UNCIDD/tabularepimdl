@@ -3,7 +3,7 @@ from typing import Literal, Union
 import pandas as pd
 import numpy as np
 
-from tabularepimdl.SimpleObservationProcess import SimpleObservationProcess as SimpleObservationProcess_Pandas
+from legacy.pandas_reference.SimpleObservationProcess import SimpleObservationProcess as SimpleObservationProcess_Pandas
 from tabularepimdl.SimpleObservationProcess_Vec_Encode import SimpleObservationProcess_Vec_Encode as SimpleObservationProcess_Vec_Encode
 #from tabularepimdl.SimpleObservationProcess_Vec_Encode_nobuffer import SimpleObservationProcess_Vec_Encode_nobuffer #SimpleObservationProcess_Vec_Encode_nobuffer has no performance benefit, removed
 

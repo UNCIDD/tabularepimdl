@@ -3,7 +3,7 @@ from typing import Literal, Union
 import pandas as pd
 import numpy as np
 
-from tabularepimdl.BirthProcess import BirthProcess
+from legacy.pandas_reference.BirthProcess import BirthProcess
 from tabularepimdl.BirthProcess_Vec_Encode import BirthProcess_Vec_Encode
 
 
