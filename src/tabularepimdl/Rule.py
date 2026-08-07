@@ -18,7 +18,7 @@ class Rule(ABC):
     """@param stochastic: whether the process is stochastic or deterministic."""
         
     @abstractmethod
-    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int] | None = None, result_buffer: np.ndarray | None = None, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray: #updated method definition
+    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None, rng: np.random.Generator | None = None) -> np.ndarray:
         """
         Method takes in current state and return a series of deltas to that state.
         It computes the population deltas for the current state at a given time step.
@@ -29,7 +29,12 @@ class Rule(ABC):
             result_buffer (np.ndarray): A pre-allocated array that will be populated with the computed deltas. This array is modified in-place and returned.
             dt (float): The size of the time step. Defaults to 1.0.
             stochastic (bool, optional): Whether to apply stochastic modeling. If `None`, the class-level `self.stochastic` attribute is used.
-        
+            rng (np.random.Generator, optional): Random number generator to draw stochastic outcomes from.
+                If `None`, falls back to the global `numpy.random` module (its legacy, process-wide RNG
+                state), matching this rule's behavior before `rng` injection was supported. Pass an
+                explicit `np.random.Generator` (e.g. `np.random.default_rng(seed)`) for reproducible,
+                isolated draws that don't depend on or mutate global RNG state.
+
         Returns:
             np.ndarray: A NumPy structured array containing the population deltas.
 
