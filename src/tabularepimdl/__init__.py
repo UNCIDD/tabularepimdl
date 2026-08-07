@@ -1,20 +1,13 @@
 import logging
 
 from .Rule import Rule
-from .BirthProcess import BirthProcess
-from .EnvironmentalTransmission import EnvironmentalTransmission
-from .EpiModel import EpiModel
-from .EpiRunner import EpiRunner
-from .MultiStrainInfectiousProcess import MultiStrainInfectiousProcess
-from .SharedTraitInfection import SharedTraitInfection
-from .SimpleInfection import SimpleInfection
-from .SimpleObservationProcess import SimpleObservationProcess
-from .SimpleTransition import SimpleTransition
-from .StateBasedDeathProcess import StateBasedDeathProcess
-from .WAIFWTransmission import WAIFWTransmission
 
+# The pandas-structured rules/engine (BirthProcess, EpiModel, etc.) that used to be exported here
+# have moved to legacy/pandas_reference/. They were kept only as an internal reference baseline 
+# to validate the NumPy-structured rules/engine
+# See legacy/README.md.
 
-####The following rules are in vectorized/numpy structure#########
+### The following rules are in vectorized/numpy structure ###
 from .BirthProcess_Vec_Encode import BirthProcess_Vec_Encode
 from .EnvironmentalTransmission_Vec_Encode import EnvironmentalTransmission_Vec_Encode
 from .HospRule_Vec_Encode import HospRule_Vec_Encode
@@ -26,17 +19,8 @@ from .SimpleObservationProcess_Vec_Encode import SimpleObservationProcess_Vec_En
 from .StateBasedDeathProcess_Vec_Encode import StateBasedDeathProcess_Vec_Encode
 from .WAIFWTransmission_Vec_Encode_Bincount import WAIFWTransmission_Vec_Encode_Bincount
 
-
-
-# Moved to legacy/experimental_rules/ (less efficient than Bincount; see issue #52):
-# from .WAIFWTransmission_Vec_Encode_Numba import WAIFWTransmission_Vec_Encode_Numba
-
 from .EpiModel_Vec_Encode1_5 import EpiModel_Vec_Encode_1_5
 
-# Earlier/experimental engine versions in legacy/experimental_engines/
-# from .EpiModel_Vec_Encode2 import EpiModel_Vec_Encode_2
-# from .EpiModel_Vec_Encode1 import EpiModel_Vec_Encode_1
-# from .EpiModel_Vec_Encode1_2 import EpiModel_Vec_Encode_1_2
 __version__ = "0.2.0"
 
 
