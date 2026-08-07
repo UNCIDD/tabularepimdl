@@ -3,7 +3,7 @@ from typing import Literal, Union
 import pandas as pd
 import numpy as np
 
-from tabularepimdl.MultiStrainInfectiousProcess import MultiStrainInfectiousProcess as MultiStrainInfectiousProcess_Pandas
+from legacy.pandas_reference.MultiStrainInfectiousProcess import MultiStrainInfectiousProcess as MultiStrainInfectiousProcess_Pandas
 from tabularepimdl.MultiStrainInfectiousProcess_Vec_Encode import MultiStrainInfectiousProcess_Vec_Encode as MultiStrainInfectiousProcess_Vec_Encode_1
 #from tabularepimdl.MultiStrainInfectiousProcess_Vec_Encode_2 import MultiStrainInfectiousProcess_Vec_Encode_2 as MultiStrainInfectiousProcess_Vec_Encode_2
 #MultiStrainInfectiousProcess_Vec_Encode_2 logic adds unnecessary complexity and the performance benefit is minimal.

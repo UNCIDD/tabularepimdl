@@ -3,7 +3,7 @@ from typing import Literal, Union, Annotated
 import pandas as pd
 import numpy as np
 
-from tabularepimdl.SimpleInfection import SimpleInfection
+from legacy.pandas_reference.SimpleInfection import SimpleInfection
 from tabularepimdl.SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
 #from tabularepimdl.SI_Josh_Encode_Vec import SimpleInfection as Josh_SimpleInfection #SI_Josh_Encode_Vec needs specific input data to work and it generates incorrect results.
 

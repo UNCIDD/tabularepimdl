@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-from tabularepimdl.SimpleObservationProcess import SimpleObservationProcess
+from legacy.pandas_reference.SimpleObservationProcess import SimpleObservationProcess
 
 @pytest.fixture
 def dummy_state():

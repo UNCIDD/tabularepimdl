@@ -10,7 +10,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from tabularepimdl.BirthProcess import BirthProcess
+from legacy.pandas_reference.BirthProcess import BirthProcess
 
 from unittest import mock #used for mocking poisson distribution
 

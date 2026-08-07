@@ -52,15 +52,23 @@ tabularepimdl/
 
 ## Usage
 Here's a minimal example to define and run a simple SIR model using `tabularepimdl`:
-```
+```python
 import tabularepimdl as tepi
+import pandas as pd
 
-# Define a population DataFrame (population_df) as per the model requirements
+population_df = pd.DataFrame({'InfState': ['S', 'I'], 'N': [990.0, 10.0], 'T': [0, 0]})
+infstate_compartments = ['S', 'I', 'R']
 
-infect_rule = tepi.SimpleInfection(beta=0.5, column='InfState')
-recover_rule = tepi.SimpleTransition(column='InfState', from_st='I', to_st='R', rate=0.25)
-epi_mdl = tepi.EpiModel(init_state=population_df, rules=[infect_rule, recover_rule])
+infect_rule = tepi.SimpleInfection_Vec_Encode(
+    beta=0.5, column='InfState',
+    infstate_compartments=infstate_compartments, column_categories=infstate_compartments,
+)
+recover_rule = tepi.SimpleTransition_Vec_Encode(
+    column='InfState', from_st='I', to_st='R', rate=0.25,
+    infstate_compartments=infstate_compartments, column_categories=infstate_compartments,
+)
+epi_mdl = tepi.EpiModel_Vec_Encode_1_5(init_state=population_df, rules=[infect_rule, recover_rule])
 
-epi_model.do_timestep(dt=0.25)
-
+epi_mdl.do_timestep(dt=0.25)
+print(epi_mdl.current_state())
 ```

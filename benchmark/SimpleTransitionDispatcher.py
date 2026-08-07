@@ -3,7 +3,7 @@ from typing import Literal, Union
 import pandas as pd
 import numpy as np
 
-from tabularepimdl.SimpleTransition import SimpleTransition
+from legacy.pandas_reference.SimpleTransition import SimpleTransition
 # from tabularepimdl.SimpleTransition_Vec import SimpleTransition_Vec #SimpleTransition_Vec has no performance benefit, removed
 from tabularepimdl.SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
 #from tabularepimdl.ST_Josh_Encode_Vec import SimpleTransition as Josh_SimpleTransition #ST_Josh_Encode_Vec was tested and failed comparison, removed

@@ -1,12 +1,10 @@
 """
 Unit test for Rule.py. Pytest package is used.
-The Rule class defines a class that represents a transition rule. 
+The Rule class defines a class that represents a transition rule.
 The unit tests ensure that the class behaves as expected.
 """
 
 import pytest
-import pandas as pd
-import numpy as np
 import yaml
 from pathlib import Path
 from my_module import MyRule
@@ -22,7 +20,7 @@ def rule_yaml_setUp():
         with open(yaml_path, "r") as file:
             rule_yaml = yaml.safe_load(file)
         return(rule_yaml)
-        
+
 @pytest.fixture
 def myrule(rule_yaml_setUp):
      """
@@ -39,19 +37,25 @@ def test_from_yaml(myrule):
     """
     assert myrule.stochastic == False
     assert myrule.rate == 0.1
-    pd.testing.assert_frame_equal(myrule.start_state_sig, pd.DataFrame([{'age': 10, 'health': 'good'}]))
+    assert myrule.column == 'InfState'
+    assert myrule.from_st == 'S'
+    assert myrule.to_st == 'I'
 
-def test_to_yaml(myrule):
+def test_to_dict(myrule):
     """
-    Test the to_yaml() defined in MyRule module.
+    Test the to_dict() defined in SimpleTransition_Vec_Encode, reached via Rule.from_yaml()'s dispatch.
     Args: myrule object.
     """
-    expected_yaml = {
-            "tabularepimdl.BirthProcess": {
-                "start_state_sig": {'age': 10, 'health': 'good'},
+    expected_dict = {
+            "tabularepimdl.SimpleTransition_Vec_Encode": {
+                "column": "InfState",
+                "from_st": "S",
+                "to_st": "I",
                 "rate": 0.1,
-                'stochastic': False
+                "stochastic": False,
+                "column_categories": ["placeholder"],
+                "infstate_compartments": ["S", "I", "R"],
             }
         }
-    returned_to_yaml = myrule.to_yaml()
-    assert returned_to_yaml == expected_yaml
+    returned_dict = myrule.to_dict()
+    assert returned_dict == expected_dict

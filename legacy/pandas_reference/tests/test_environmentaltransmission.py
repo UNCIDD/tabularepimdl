@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-from tabularepimdl.EnvironmentalTransmission import EnvironmentalTransmission
+from legacy.pandas_reference.EnvironmentalTransmission import EnvironmentalTransmission
 
 @pytest.fixture
 def dummy_state():

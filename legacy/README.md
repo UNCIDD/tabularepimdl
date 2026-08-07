@@ -8,7 +8,8 @@ and future development.
 
 | Directory | Contents |
 |-----------|----------|
-| `experimental_engines/` | Iterative engine prototypes (`EpiModel_Vec_Encode1` through `1_5`, `2`, and the pre-refactor `EpiModel_orig`). None are production-ready; the canonical engine remains `src/tabularepimdl/EpiModel.py`. |
+| `pandas_reference/` | The original pandas-structured rules and engine (`SimpleTransition`, `EpiModel`, etc.) that predate the NumPy rewrite. Not a prototype -- this is a deliberately-maintained reference baseline: `benchmark/` and `tests/test_engine_parity.py` run it alongside the NumPy engine to validate that the rewrite produces the same results. The canonical, shipped engine is in `src/tabularepimdl/`. |
+| `experimental_engines/` | Iterative NumPy engine prototypes (`EpiModel_Vec_Encode1` through `1_5`, `2`, and the pre-refactor `EpiModel_orig`). None are production-ready. |
 | `experimental_rules/` | Rule variants that are superseded, project-specific, or personal explorations (e.g., `WAIFWTransmission_Mpox`, `SI_Josh_Encode_Vec`, nobuffer variants). |
 | `experimental_ops/` | Auto-dispatching array/matrix operation modules (`arrayops`, `matrixops`, `operations`) with Numba JIT backends. Used only by experimental rules. |
 | `experimental_examples/` | Notebooks for benchmarking, Kronecker product exploration, and EpiRunner prototyping. Not user-facing examples. |

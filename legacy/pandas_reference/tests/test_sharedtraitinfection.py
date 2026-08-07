@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from unittest import mock #used for mocking binomial distribution
 
-from tabularepimdl.SharedTraitInfection import SharedTraitInfection
+from legacy.pandas_reference.SharedTraitInfection import SharedTraitInfection
 
 @pytest.fixture
 def dummy_state():

@@ -1,18 +1,23 @@
 """
-Parity tests between the pandas engine (EpiModel) and the NumPy engine (EpiModel_Vec_Encode_1_5).
+Parity tests between the pandas reference engine (EpiModel) and the production NumPy engine
+(EpiModel_Vec_Encode_1_5).
 
 These tests run an identical rule set through both engines for the same initial state and assert
 the resulting population counts match, deterministically, over several timesteps. Comparison is
 restricted to stochastic=False.
+
+The pandas engine/rules live in legacy/pandas_reference/ (not part of the installable package) 
+and are imported here only as a trusted baseline to validate the NumPy engine
+that actually ships.
 """
 import pandas as pd
 import pytest
 
-from tabularepimdl.EpiModel import EpiModel
+from legacy.pandas_reference.EpiModel import EpiModel
+from legacy.pandas_reference.SimpleInfection import SimpleInfection
+from legacy.pandas_reference.SimpleTransition import SimpleTransition
 from tabularepimdl.EpiModel_Vec_Encode1_5 import EpiModel_Vec_Encode_1_5
-from tabularepimdl.SimpleInfection import SimpleInfection
 from tabularepimdl.SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
-from tabularepimdl.SimpleTransition import SimpleTransition
 from tabularepimdl.SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
 
 infstate_compartments = ["S", "I", "R"]

@@ -3,7 +3,7 @@ from typing import Literal, Union
 import pandas as pd
 import numpy as np
 
-from tabularepimdl.SharedTraitInfection import SharedTraitInfection as SharedTraitInfection_Pandas
+from legacy.pandas_reference.SharedTraitInfection import SharedTraitInfection as SharedTraitInfection_Pandas
 from tabularepimdl.SharedTraitInfection_Vec_Encode import SharedTraitInfection_Vec_Encode as SharedTraitInfection_Vec_Encode
 
 class SharedTraitInfectionDispatcher(BaseModel):

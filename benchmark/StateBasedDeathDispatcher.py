@@ -3,7 +3,7 @@ from typing import Literal, Union
 import pandas as pd
 import numpy as np
 
-from tabularepimdl.StateBasedDeathProcess import StateBasedDeathProcess
+from legacy.pandas_reference.StateBasedDeathProcess import StateBasedDeathProcess
 from tabularepimdl.StateBasedDeathProcess_Vec_Encode import StateBasedDeathProcess_Vec_Encode
 
 

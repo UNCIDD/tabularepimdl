@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from tabularepimdl.EpiModel import EpiModel
+from legacy.pandas_reference.EpiModel import EpiModel
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Annotated, Optional
 
