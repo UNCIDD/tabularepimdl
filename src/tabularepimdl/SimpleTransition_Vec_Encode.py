@@ -1,10 +1,11 @@
 import logging
+
 import numpy as np
 from pydantic import BaseModel, Field, PrivateAttr
 
-from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
+from tabularepimdl.Rule import Rule
 
 logger = logging.getLogger(__name__)
 
