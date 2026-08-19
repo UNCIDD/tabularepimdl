@@ -1,8 +1,8 @@
 import numpy as np
 from pydantic import BaseModel, Field, PrivateAttr
+
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
-
 from tabularepimdl.Rule import Rule
 
 
@@ -33,7 +33,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
     infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
 
     #_columns_code: list[str] | None = PrivateAttr(default_factory=list) #not needed given it is single column
-    _states_code: list[str] | None = PrivateAttr(default_factory=list)
+    _states_code: list[int] | None = PrivateAttr(default_factory=list)
     _state_encoding_by_engine : bool = PrivateAttr(default=False)
 
     _check_domain_membership = domain_membership_validator(
