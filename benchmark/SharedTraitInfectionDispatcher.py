@@ -1,10 +1,16 @@
-from pydantic import BaseModel, Field, PrivateAttr
-from typing import Literal, Union
-import pandas as pd
-import numpy as np
+from typing import Literal, cast
 
-from legacy.pandas_reference.SharedTraitInfection import SharedTraitInfection as SharedTraitInfection_Pandas
-from tabularepimdl.SharedTraitInfection_Vec_Encode import SharedTraitInfection_Vec_Encode as SharedTraitInfection_Vec_Encode
+import numpy as np
+import pandas as pd
+from legacy.pandas_reference.SharedTraitInfection import (
+    SharedTraitInfection as SharedTraitInfection_Pandas,
+)
+from pydantic import BaseModel, Field, PrivateAttr
+
+from tabularepimdl.SharedTraitInfection_Vec_Encode import (
+    SharedTraitInfection_Vec_Encode as SharedTraitInfection_Vec_Encode,
+)
+
 
 class SharedTraitInfectionDispatcher(BaseModel):
     """
@@ -35,7 +41,7 @@ class SharedTraitInfectionDispatcher(BaseModel):
     infstate_compartments: list[str] = Field(default_factory=list)
 
     #Dispatcher
-    _dispatcher: Union[SharedTraitInfection_Pandas, SharedTraitInfection_Vec_Encode] = PrivateAttr(default=None)
+    _dispatcher: SharedTraitInfection_Pandas | SharedTraitInfection_Vec_Encode = PrivateAttr(default=None)
 
     def model_post_init(self, _): #initialize dispatcher based on data structures
         if self.structure == 'Pandas':
@@ -74,6 +80,8 @@ class SharedTraitInfectionDispatcher(BaseModel):
         @param dt: size of the timestep.
         """
         if self.structure == 'Pandas':
-            return self._dispatcher.get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
+            return cast(SharedTraitInfection_Pandas, self._dispatcher).get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
         elif self.structure == 'Numpy_Vec_Encode':
+            assert col_idx_map is not None
+            assert result_buffer is not None
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)

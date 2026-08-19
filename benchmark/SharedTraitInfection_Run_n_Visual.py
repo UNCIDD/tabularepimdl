@@ -1,8 +1,9 @@
-from benchmark.SharedTraitInfectionRunner import SharedTraitInfectionRunner
-from benchmark.Visualizer import Visualizer
+import random
+
 import numpy as np
 import pandas as pd
-import random
+from benchmark.SharedTraitInfectionRunner import SharedTraitInfectionRunner
+from benchmark.Visualizer import Visualizer
 
 compartments = ['S', 'I', 'R']
 size = 1000 #data size
