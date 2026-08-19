@@ -1,8 +1,7 @@
 import importlib
-import inspect
+import logging
 from abc import ABC, abstractmethod
 
-import logging
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -14,8 +13,9 @@ class Rule(ABC):
     epidemic rules that are used in epidemic model engine.
     """
 
-    stochastic: bool
     """@param stochastic: whether the process is stochastic or deterministic."""
+    stochastic: bool
+
         
     @abstractmethod
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
@@ -39,6 +39,32 @@ class Rule(ABC):
 
         pass
 
+    @property
+    def expansion_factor(self) -> int:
+        """Maximum number of rows this rule can return per input row.
+
+        Used by the model engine to size the shared delta buffer before running a timestep.
+        Implemented by every NumPy rule; not declared `@abstractmethod` because
+        the legacy pandas rules in `legacy/pandas_reference/` also subclass `Rule` and don't
+        implement it (pandas has no preallocated buffer to size).
+        """
+        raise NotImplementedError(f"{type(self).__name__} does not implement expansion_factor.")
+
+    def _encode_categorical_states(self, data_domains) -> None:
+        """
+        Use the fully updated data columns' domain mapping values to encode this rule's own
+        column state values. Called by the model engine once per column domain update; not
+        intended to be called directly by users (see `model_post_init` for the equivalent
+        self-encoding path used when a rule is tested standalone).
+
+        Implemented by every NumPy rule; not declared `@abstractmethod` for the
+        same reason as `expansion_factor` above.
+
+        Args:
+            data_domains: mapping of column name to that column's category-to-code mapping.
+        """
+        raise NotImplementedError(f"{type(self).__name__} does not implement _encode_categorical_states.")
+
     @classmethod
     def from_yaml(cls, rule_yaml):
         '''
@@ -61,16 +87,7 @@ class Rule(ABC):
                 raise ImportError(f"Expected pacakge 'tabularepimdl' but received {mod_nm}.")
             mod = importlib.import_module(mod_nm)
             rule_cls = getattr(mod, cls_nm) #rule_cls is expected to be a class defined in tabularepimdl
-        else:
-            #need to transverse all parent frames until we find the key.
-            rule_cls = inspect.currentframe().f_locals.get(key) #check current frame
-            if rule_cls is None:
-                frames = inspect.getouterframes(inspect.currentframe()) #check outer frame
-                for frameinf in frames:
-                    if frameinf.frame.f_locals.get(key) is not None:
-                        rule_cls = frameinf.frame.f_locals[key]
-                        break
-        
+                
         yaml_para_definition = rule_yaml[key] #obtain the parameter values from yaml's dictionary
         Rule._validate_definition(rule_cls, yaml_para_definition) #validate parameter types and names first
 
