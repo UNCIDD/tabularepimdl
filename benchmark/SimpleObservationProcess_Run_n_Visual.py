@@ -1,8 +1,8 @@
+import random
+
+import pandas as pd
 from benchmark.SimpleObservationProcessRunner import SimpleObservationProcessRunner
 from benchmark.Visualizer import Visualizer
-import numpy as np
-import pandas as pd
-import random
 
 compartments = ['S', 'I', 'R']
 observations = ['U', 'P', 'I']
