@@ -1,13 +1,23 @@
-from pydantic import BaseModel, Field, PrivateAttr, ConfigDict
-from typing import Literal, Union
-import pandas as pd
-from numpy.typing import NDArray
-import numpy as np
+from typing import Literal, cast
 
-from legacy.experimental_rules.WAIFWTransmissionOrig import WAIFWTransmissionOrig as WAIFWTransmission_Pandas
-from legacy.pandas_reference.WAIFWTransmission import WAIFWTransmission as WAIFWTransmission_Pandas_Numba
-from legacy.experimental_rules.WAIFWTransmission_Vec_Encode_Numba import WAIFWTransmission_Vec_Encode_Numba as WAIFWTransmission_Vec_Encode_Numba
-from tabularepimdl.WAIFWTransmission_Vec_Encode_Bincount import WAIFWTransmission_Vec_Encode_Bincount as WAIFWTransmission_Vec_Encode_Bincount
+import numpy as np
+import pandas as pd
+from legacy.experimental_rules.WAIFWTransmission_Vec_Encode_Numba import (
+    WAIFWTransmission_Vec_Encode_Numba as WAIFWTransmission_Vec_Encode_Numba,
+)
+from legacy.experimental_rules.WAIFWTransmissionOrig import (
+    WAIFWTransmissionOrig as WAIFWTransmission_Pandas,
+)
+from legacy.pandas_reference.WAIFWTransmission import (
+    WAIFWTransmission as WAIFWTransmission_Pandas_Numba,
+)
+from numpy.typing import NDArray
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+
+from tabularepimdl.WAIFWTransmission_Vec_Encode_Bincount import (
+    WAIFWTransmission_Vec_Encode_Bincount as WAIFWTransmission_Vec_Encode_Bincount,
+)
+
 
 class WAIFWTransmissionDispatcher(BaseModel):
     """
@@ -39,7 +49,7 @@ class WAIFWTransmissionDispatcher(BaseModel):
     infstate_compartments: list[str] = Field(default_factory=list)
 
     #Dispatcher
-    _dispatcher: Union[WAIFWTransmission_Pandas, WAIFWTransmission_Pandas_Numba, WAIFWTransmission_Vec_Encode_Numba, WAIFWTransmission_Vec_Encode_Bincount] = PrivateAttr(default=None)
+    _dispatcher: WAIFWTransmission_Pandas | WAIFWTransmission_Pandas_Numba | WAIFWTransmission_Vec_Encode_Numba | WAIFWTransmission_Vec_Encode_Bincount = PrivateAttr(default=None)
 
     def model_post_init(self, _): #initialize dispatcher based on data structures
         if self.structure == 'Pandas':
@@ -97,6 +107,8 @@ class WAIFWTransmissionDispatcher(BaseModel):
         @param dt: size of the timestep.
         """
         if self.structure == 'Pandas' or self.structure == 'Pandas_Numba':
-            return self._dispatcher.get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
+            return cast(WAIFWTransmission_Pandas | WAIFWTransmission_Pandas_Numba, self._dispatcher).get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
         elif self.structure == 'Numpy_Vec_Encode_Numba' or self.structure == 'Numpy_Vec_Encode_Bincount':
+            assert col_idx_map is not None
+            assert result_buffer is not None
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)

@@ -1,12 +1,13 @@
-from pydantic import BaseModel, Field, PrivateAttr, ConfigDict
-from benchmark.WAIFWTransmissionDispatcher import WAIFWTransmissionDispatcher
-from benchmark.comparison_deltas_N import compare_structure_deltas
-from benchmark.timing import measure
 from functools import partial
 
 import numpy as np
-from numpy.typing import NDArray
 import pandas as pd
+from benchmark.comparison_deltas_N import compare_structure_deltas
+from benchmark.timing import measure
+from benchmark.WAIFWTransmissionDispatcher import WAIFWTransmissionDispatcher
+from numpy.typing import NDArray
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+
 
 class WAIFWTransmissionRunner(BaseModel):
     """
@@ -67,7 +68,7 @@ class WAIFWTransmissionRunner(BaseModel):
         Creates input data with different sizes and runs deltas calculation with different data structures in different iterations.
         Tracks each combination's time and memory usage.
         """
-        for size in self.data_sizes:
+        for _size in self.data_sizes:
             
             #print('populaton\n', pop_catg)
 
