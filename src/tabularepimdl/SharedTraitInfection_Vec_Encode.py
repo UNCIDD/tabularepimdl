@@ -1,9 +1,12 @@
 import numpy as np
 from pydantic import BaseModel, Field, PrivateAttr
 
-from tabularepimdl.Rule import Rule
-from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList, UniqueNonEmptyStrIntUniformList
+from tabularepimdl._types.constrained_types import (
+    UniqueNonEmptyStrIntUniformList,
+    UniqueNonEmptyStrList,
+)
 from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
+from tabularepimdl.Rule import Rule
 
 
 class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
@@ -79,7 +82,7 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     
     #set up a property to return all the required categories used in trait_col
     @property
-    def trait_col_all(self) -> list[str]:
+    def trait_col_all(self) -> list[str | int]:
         """
         Used and checked by the model engine to update input data's domain values.
 
@@ -147,9 +150,9 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         mask_i = current_state[:, infstate_idx] == self._i_code
         infect_only = current_state[mask_i, :]
 
-        total_infect = np.sum(infect_only[:, n_idx])
+        total_infect: float = np.sum(infect_only[:, n_idx])
 
-        infect_N_lookup_dict = dict(zip(infect_only[:, trait_col_idx], infect_only[:, n_idx]))#combine trait and N as lookup dict
+        infect_N_lookup_dict = dict(zip(infect_only[:, trait_col_idx], infect_only[:, n_idx], strict=True))#combine trait and N as lookup dict
 
         in_I_mapped = np.array([infect_N_lookup_dict.get(val, 0) for val in selected_s[:, trait_col_idx]]) #shared traits' N values
         out_I_mapped = total_infect - in_I_mapped #non-shared traits' N values
