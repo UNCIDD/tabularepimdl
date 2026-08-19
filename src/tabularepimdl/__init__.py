@@ -1,25 +1,38 @@
 import logging
 
-from .Rule import Rule
-
 # The pandas-structured rules/engine (BirthProcess, EpiModel, etc.) that used to be exported here
 # have moved to legacy/pandas_reference/. They were kept only as an internal reference baseline 
 # to validate the NumPy-structured rules/engine
 # See legacy/README.md.
-
 ### The following rules are in vectorized/numpy structure ###
 from .BirthProcess_Vec_Encode import BirthProcess_Vec_Encode
 from .EnvironmentalTransmission_Vec_Encode import EnvironmentalTransmission_Vec_Encode
+from .EpiModel_Vec_Encode1_5 import EpiModel_Vec_Encode_1_5
 from .HospRule_Vec_Encode import HospRule_Vec_Encode
 from .MultiStrainInfectiousProcess_Vec_Encode import MultiStrainInfectiousProcess_Vec_Encode
+from .Rule import Rule
 from .SharedTraitInfection_Vec_Encode import SharedTraitInfection_Vec_Encode
 from .SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
-from .SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
 from .SimpleObservationProcess_Vec_Encode import SimpleObservationProcess_Vec_Encode
+from .SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
 from .StateBasedDeathProcess_Vec_Encode import StateBasedDeathProcess_Vec_Encode
 from .WAIFWTransmission_Vec_Encode_Bincount import WAIFWTransmission_Vec_Encode_Bincount
 
-from .EpiModel_Vec_Encode1_5 import EpiModel_Vec_Encode_1_5
+__all__ = [
+    "BirthProcess_Vec_Encode",
+    "EnvironmentalTransmission_Vec_Encode",
+    "EpiModel_Vec_Encode_1_5",
+    "HospRule_Vec_Encode",
+    "MultiStrainInfectiousProcess_Vec_Encode",
+    "Rule",
+    "SharedTraitInfection_Vec_Encode",
+    "SimpleInfection_Vec_Encode",
+    "SimpleObservationProcess_Vec_Encode",
+    "SimpleTransition_Vec_Encode",
+    "StateBasedDeathProcess_Vec_Encode",
+    "WAIFWTransmission_Vec_Encode_Bincount",
+    "configure_logging",
+]
 
 __version__ = "0.2.0"
 
