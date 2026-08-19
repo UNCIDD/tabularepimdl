@@ -122,6 +122,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         else:
             pass
 
+
     #set up a property to return all the required categories used in columns
     @property
     def columns_all(self) -> list[str]:
@@ -133,10 +134,24 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         """
         return self.columns_all_categories
 
+
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values. Given this rule has columns_all, this property may not be used by the engine.
+    
+        Returns:
+            A list of strings of all the required infection compartments if the `inf_col` takes 'infstate' value.
+        """
+        return self.infstate_compartments
+
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.columns_all_categories), len(self.infstate_compartments))
+
 
     def _encode_categorical_states(self, data_domains) -> None:
         """
