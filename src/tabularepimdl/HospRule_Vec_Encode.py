@@ -1,9 +1,10 @@
 import numpy as np
-from pydantic import BaseModel, Field, ConfigDict, model_validator, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
-from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
+from tabularepimdl.Rule import Rule
+
 
 class HospRule_Vec_Encode(Rule, BaseModel):
     '''
@@ -42,9 +43,9 @@ class HospRule_Vec_Encode(Rule, BaseModel):
     infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
 
     _strain_columns_idx: list[int] = PrivateAttr(default_factory=list) #the column index for each strain column
-    _strain_columns_all_categories_code: list[int] | None = PrivateAttr(default_factory=None) #the numerical codes for all categories used by all strain columns
+    _strain_columns_all_categories_code: dict[str, int] | None = PrivateAttr(default=None) #the numerical codes for all categories used by all strain columns
     _hosp_columns_idx: list[int] = PrivateAttr(default_factory=list) #the column index for each hosp column
-    _hosp_columns_all_categories_code: list[int] | None = PrivateAttr(default_factory=None) #the numerical codes for all categories used by all hosp columns
+    _hosp_columns_all_categories_code: dict[str, int] | None = PrivateAttr(default=None) #the numerical codes for all categories used by all hosp columns
 
     _infect_status_code: int | None = PrivateAttr(default=None)
     _recover_status_code: int | None = PrivateAttr(default=None)
@@ -74,12 +75,9 @@ class HospRule_Vec_Encode(Rule, BaseModel):
             Numerical values of encoded infection states, recover states and hosp states.
 
         Notes:
-            - infstate_to_int (dict): A placeholder (not being used in this rule). Mapping of infection states of infstate_compartments to their index positions.
             - Retain rule-level state encoding to support users who test rules individually.
         """
         if not self._state_encoding_by_engine:
-            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #placeholder
-        
             self._strain_columns_all_categories_code = {v: i for i, v in enumerate(sorted(self.strain_cols_all_categories))} #encode each category
             self._hosp_columns_all_categories_code = {v: i for i, v in enumerate(sorted(self.hosp_cols_all_categories))} #encode each category
 
