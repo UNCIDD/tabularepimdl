@@ -1,6 +1,7 @@
 from benchmark.BirthProcessRunner import BirthProcessRunner
 from benchmark.Visualizer import Visualizer
 
+
 def BirthProcess_Run_n_Visual():
     runner = BirthProcessRunner(
         data_sizes= [15],
