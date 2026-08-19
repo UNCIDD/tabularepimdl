@@ -1,5 +1,6 @@
 """Resuable data types built for certain attributes used in epidemic rules."""
 from typing import Annotated
+
 from pydantic import AfterValidator
 
 
