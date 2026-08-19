@@ -1,10 +1,16 @@
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
-from typing import Literal, Union
-import pandas as pd
-import numpy as np
+from typing import Literal, cast
 
-from legacy.pandas_reference.MultiStrainInfectiousProcess import MultiStrainInfectiousProcess as MultiStrainInfectiousProcess_Pandas
-from tabularepimdl.MultiStrainInfectiousProcess_Vec_Encode import MultiStrainInfectiousProcess_Vec_Encode as MultiStrainInfectiousProcess_Vec_Encode_1
+import numpy as np
+import pandas as pd
+from legacy.pandas_reference.MultiStrainInfectiousProcess import (
+    MultiStrainInfectiousProcess as MultiStrainInfectiousProcess_Pandas,
+)
+from pydantic import BaseModel, ConfigDict, PrivateAttr
+
+from tabularepimdl.MultiStrainInfectiousProcess_Vec_Encode import (
+    MultiStrainInfectiousProcess_Vec_Encode as MultiStrainInfectiousProcess_Vec_Encode_1,
+)
+
 #from tabularepimdl.MultiStrainInfectiousProcess_Vec_Encode_2 import MultiStrainInfectiousProcess_Vec_Encode_2 as MultiStrainInfectiousProcess_Vec_Encode_2
 #MultiStrainInfectiousProcess_Vec_Encode_2 logic adds unnecessary complexity and the performance benefit is minimal.
 
@@ -40,7 +46,7 @@ class MultiStrainInfectiousProcessDispatcher(BaseModel):
     infstate_compartments: list[str]
 
     #Dispatcher
-    _dispatcher: Union[MultiStrainInfectiousProcess_Pandas, MultiStrainInfectiousProcess_Vec_Encode_1, ] = PrivateAttr(default=None)
+    _dispatcher: MultiStrainInfectiousProcess_Pandas | MultiStrainInfectiousProcess_Vec_Encode_1 = PrivateAttr(default=None)
 
     def model_post_init(self, _): #initialize dispatcher based on data structures
         if self.structure == 'Pandas':
@@ -81,8 +87,12 @@ class MultiStrainInfectiousProcessDispatcher(BaseModel):
         @param dt: size of the timestep.
         """
         if self.structure == 'Pandas':
-            return self._dispatcher.get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
+            return cast(MultiStrainInfectiousProcess_Pandas, self._dispatcher).get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
         elif self.structure == 'Numpy_Vec_Encode_1':
+            assert col_idx_map is not None
+            assert result_buffer is not None
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)
         elif self.structure == 'Numpy_Vec_Encode_2':
+            assert col_idx_map is not None
+            assert result_buffer is not None
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)
