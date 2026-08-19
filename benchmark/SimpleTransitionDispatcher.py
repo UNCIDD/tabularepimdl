@@ -1,11 +1,13 @@
-from pydantic import BaseModel, Field, PrivateAttr
-from typing import Literal, Union
-import pandas as pd
-import numpy as np
+from typing import Literal, cast
 
+import numpy as np
+import pandas as pd
 from legacy.pandas_reference.SimpleTransition import SimpleTransition
+from pydantic import BaseModel, Field, PrivateAttr
+
 # from tabularepimdl.SimpleTransition_Vec import SimpleTransition_Vec #SimpleTransition_Vec has no performance benefit, removed
 from tabularepimdl.SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
+
 #from tabularepimdl.ST_Josh_Encode_Vec import SimpleTransition as Josh_SimpleTransition #ST_Josh_Encode_Vec was tested and failed comparison, removed
 
 class SimpleTransitionDispatcher(BaseModel):
@@ -29,7 +31,7 @@ class SimpleTransitionDispatcher(BaseModel):
     stochastic: bool = False
 
     #Dispatcher
-    _dispatcher: Union[SimpleTransition, SimpleTransition_Vec_Encode,] = PrivateAttr(default=None)
+    _dispatcher: SimpleTransition | SimpleTransition_Vec_Encode = PrivateAttr(default=None)
 
     def model_post_init(self, _): #initialize dispatcher based on data structures
         if self.structure == 'Pandas':
@@ -61,8 +63,10 @@ class SimpleTransitionDispatcher(BaseModel):
         @param dt: size of the timestep.
         """
         if self.structure == 'Pandas' or self.structure == 'Numpy':
-            return self._dispatcher.get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
+            return cast(SimpleTransition, self._dispatcher).get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
         elif self.structure == 'Numpy_Encode':
+            assert col_idx_map is not None
+            assert result_buffer is not None
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)
         
     def apply(self, state: np.ndarray, col_idx: dict[str, int], dt: float) -> np.ndarray: #run Josh's code
