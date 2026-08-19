@@ -4,10 +4,13 @@ The Rule class defines a class that represents a transition rule.
 The unit tests ensure that the class behaves as expected.
 """
 
+from pathlib import Path
+
 import pytest
 import yaml
-from pathlib import Path
+
 from my_module import MyRule
+
 
 @pytest.fixture
 def rule_yaml_setUp():
@@ -17,7 +20,7 @@ def rule_yaml_setUp():
         """
         # Load the YAML file
         yaml_path = Path(__file__).parent / "yaml_input.yml"
-        with open(yaml_path, "r") as file:
+        with open(yaml_path) as file:
             rule_yaml = yaml.safe_load(file)
         return(rule_yaml)
 
@@ -35,7 +38,7 @@ def test_from_yaml(myrule):
     Test the from_yaml() defined in Rule module.
     Args: myrule object.
     """
-    assert myrule.stochastic == False
+    assert not myrule.stochastic
     assert myrule.rate == 0.1
     assert myrule.column == 'InfState'
     assert myrule.from_st == 'S'
