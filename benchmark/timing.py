@@ -10,9 +10,10 @@ import tracemalloc
 from collections.abc import Callable
 
 import numpy as np
+import pandas as pd
 
 
-def measure(struct: str, get_deltas_fn: Callable[[], object], iters: int, col_idx_map: dict) -> tuple:
+def measure(struct: str, get_deltas_fn: Callable[[], pd.DataFrame | np.ndarray], iters: int, col_idx_map: dict) -> tuple:
     """Run get_deltas_fn iters times, tracking elapsed time and peak memory.
 
     Args:
