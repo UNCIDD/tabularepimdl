@@ -1,9 +1,9 @@
 import numpy as np
 from pydantic import BaseModel, Field, PrivateAttr
 
-from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
+from tabularepimdl.Rule import Rule
 
 
 class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
@@ -213,7 +213,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         Returns:
             A string output displays the rule name.
         """
-        return f"SimpleObservationProcess_Vec_Encode."
+        return "SimpleObservationProcess_Vec_Encode."
     
     def to_dict(self) -> dict:
         """
