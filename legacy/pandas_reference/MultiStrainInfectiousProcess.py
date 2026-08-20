@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator, model_validator
+from typing_extensions import Self
 
 from tabularepimdl.Rule import Rule
 
@@ -61,21 +62,17 @@ class MultiStrainInfectiousProcess(Rule, BaseModel):
 
     
     @model_validator(mode="after") #after all fields are validated, check cross fields relationship
-    def check_dimensions(cls, parameter_values):
+    def check_dimensions(self) -> Self:
         """Ensure betas and cross_protect have matching dimensions."""
-        betas = parameter_values.betas
-        columns = parameter_values.columns
-        cross_protect = parameter_values.cross_protect
+        if len(self.columns) != len(self.betas):
+            raise ValueError(f"The number of 'columns' ({len(self.columns)}) must match the number of 'betas' ({len(self.betas)}).")
 
-        if len(columns) != len(betas):
-            raise ValueError(f"The number of 'columns' ({len(columns)}) must match the number of 'betas' ({len(betas)}).")
-
-        if cross_protect.shape[0] != cross_protect.shape[1] or cross_protect.shape[0] != len(betas):
+        if self.cross_protect.shape[0] != self.cross_protect.shape[1] or self.cross_protect.shape[0] != len(self.betas):
             raise ValueError(
-                f"'cross_protect' must be a square matrix of size {len(betas)}x{len(betas)}, got {cross_protect.shape}."
+                f"'cross_protect' must be a square matrix of size {len(self.betas)}x{len(self.betas)}, received {self.cross_protect.shape}."
             )
         
-        return parameter_values
+        return self
    
     
     def get_deltas(self, current_state: pd.DataFrame, dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame:
