@@ -1,26 +1,30 @@
+import time
+import tracemalloc
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
-import tracemalloc
-import time
-import matplotlib.pyplot as plt
 import seaborn as sns
-
+from legacy.pandas_reference.BirthProcess import BirthProcess
 from legacy.pandas_reference.EpiModel import EpiModel as EpiModel_pd
+
 #from tabularepimdl.SimpleInfection import SimpleInfection as SimpleInfection_pd
 from legacy.pandas_reference.SimpleTransition import SimpleTransition as SimpleTransition_pd
-from legacy.pandas_reference.BirthProcess import BirthProcess
 from legacy.pandas_reference.StateBasedDeathProcess import StateBasedDeathProcess
 from legacy.pandas_reference.WAIFWTransmission import WAIFWTransmission
 
-#from tabularepimdl.SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
-from tabularepimdl.SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
 from tabularepimdl.BirthProcess_Vec_Encode import BirthProcess_Vec_Encode
-from tabularepimdl.StateBasedDeathProcess_Vec_Encode import StateBasedDeathProcess_Vec_Encode
-from tabularepimdl.WAIFWTransmission_Vec_Encode_Bincount import WAIFWTransmission_Vec_Encode_Bincount
 
 #from tabularepimdl.EpiModel_Vec_Encode1_2 import EpiModel_Vec_Encode_1_2 #model vec engine 1 with pre-allocated buffer moved to do_timestep
 from tabularepimdl.EpiModel_Vec_Encode1_5 import EpiModel_Vec_Encode_1_5
+
+#from tabularepimdl.SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
+from tabularepimdl.SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode
+from tabularepimdl.StateBasedDeathProcess_Vec_Encode import StateBasedDeathProcess_Vec_Encode
+from tabularepimdl.WAIFWTransmission_Vec_Encode_Bincount import (
+    WAIFWTransmission_Vec_Encode_Bincount,
+)
 
 #Global Setup
 start=0
@@ -47,7 +51,7 @@ waifw = np.array([[1,1,0.5,0.5,0.5,0.5,0.25,0.25],
 # data preparation
 nc_like_pop_pd = pd.DataFrame({
     'InfState' : pd.Categorical(["S"]*8, ["S","I","R"]),
-    'AgeCat': ["{} to {}".format(i, i+9) for i in range(start_age,end_age,age_step)]+["{}+".format(end_age)],
+    'AgeCat': [f"{i} to {i+9}" for i in range(start_age,end_age,age_step)]+[f"{end_age}+"],
     'N' :[1140000, 1320000,1320000,1290000,1280000, 1280000,1185000,1175000],
     'T' : 2023 #question: do we want to assign T as an integer or float at the beginning?
 })
@@ -61,16 +65,15 @@ add_infect = pd.concat([nc_like_pop_pd,infect_init]).reset_index(drop=True)
 add_infect = add_infect.sample(frac=1, random_state=37).reset_index(drop=True)
 waifw = waifw * 18 * 26 / nc_like_pop_pd['N'].sum()
 
-# Store expected output globally for reuse
-benchmark_results = []
+pandas_result: np.ndarray | None = None
 
 # Rule setup  - Pandas based
 nc_aging_rules=[]
 for i in range(start_age,end_age,age_step):
     if i < end_age-age_step:
-        tmp = SimpleTransition_pd(column=column_to_sort, from_st="{} to {}".format(i,i+9), to_st="{} to {}".format(i+10,i+19), rate=1/10)#from 0 to 10, takes 10 years, so rate is 1/10
+        tmp = SimpleTransition_pd(column=column_to_sort, from_st=f"{i} to {i+9}", to_st=f"{i+10} to {i+19}", rate=1/10)#from 0 to 10, takes 10 years, so rate is 1/10
     else:
-        tmp = SimpleTransition_pd(column=column_to_sort, from_st="{} to {}".format(i,i+9), to_st="{}+".format(end_age), rate=1/10)
+        tmp = SimpleTransition_pd(column=column_to_sort, from_st=f"{i} to {i+9}", to_st=f"{end_age}+", rate=1/10)
     nc_aging_rules.append(tmp)
 
 nc_birth = BirthProcess(rate=7/1000, start_state_sig=nc_like_pop_pd.iloc[[0]], stochastic=False)
@@ -94,10 +97,10 @@ recover_rule_pd = SimpleTransition_pd(column='InfState', from_st='I', to_st='R',
 nc_aging_rules_vec=[]
 for i in range(start_age,end_age,age_step):
     if i < end_age-age_step:
-        nc_aging_rule_vec = SimpleTransition_Vec_Encode(column="AgeCat", from_st="{} to {}".format(i,i+9), to_st="{} to {}".format(i+10,i+19), rate=1/10, infstate_compartments=infstate_compartments,
+        nc_aging_rule_vec = SimpleTransition_Vec_Encode(column="AgeCat", from_st=f"{i} to {i+9}", to_st=f"{i+10} to {i+19}", rate=1/10, infstate_compartments=infstate_compartments,
                                 column_categories=age_compartments_by_10)
     else:
-        nc_aging_rule_vec = SimpleTransition_Vec_Encode(column="AgeCat", from_st="{} to {}".format(i,i+9), to_st="{}+".format(end_age), rate=1/10, infstate_compartments=infstate_compartments,
+        nc_aging_rule_vec = SimpleTransition_Vec_Encode(column="AgeCat", from_st=f"{i} to {i+9}", to_st=f"{end_age}+", rate=1/10, infstate_compartments=infstate_compartments,
                                     column_categories=age_compartments_by_10)
     nc_aging_rules_vec.append(nc_aging_rule_vec)
 
@@ -228,7 +231,7 @@ def test_model_performance_and_output(request, model_label, model_fixture_name, 
 @pytest.fixture(scope="session", autouse=True)
 def benchmark_results():
     """Collect results across tests into a list."""
-    results = []
+    results: list[dict] = []
     yield results
     # After all tests, plot summary
 

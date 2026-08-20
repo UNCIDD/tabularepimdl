@@ -1,8 +1,9 @@
-from benchmark.MultiStrainInfectiousProcessRunner import MultiStrainInfectiousProcessRunner
-from benchmark.Visualizer import Visualizer
+import random
+
 import numpy as np
 import pandas as pd
-import random
+from benchmark.MultiStrainInfectiousProcessRunner import MultiStrainInfectiousProcessRunner
+from benchmark.Visualizer import Visualizer
 
 compartments = ['S', 'I', 'R']
 columns_all_categories = ['S', 'I', 'R']

@@ -1,9 +1,10 @@
 import logging
+
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
+from tabularepimdl.Rule import Rule
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +55,8 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             ValueError: If the `_start_state_sig` is empty.
         """
         if self._start_state_sig.size == 0:
-            raise ValueError(f"No start state data is available due to no input current state data is provided. "
-                             f"Please provide a non-empty current state data to the get_deltas() of the rule first."
+            raise ValueError("No start state data is available due to no input current state data is provided. "
+                             "Please provide a non-empty current state data to the get_deltas() of the rule first."
                              )
         else:
             return self._start_state_sig

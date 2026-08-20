@@ -12,10 +12,10 @@ that actually ships.
 """
 import pandas as pd
 import pytest
-
 from legacy.pandas_reference.EpiModel import EpiModel
 from legacy.pandas_reference.SimpleInfection import SimpleInfection
 from legacy.pandas_reference.SimpleTransition import SimpleTransition
+
 from tabularepimdl.EpiModel_Vec_Encode1_5 import EpiModel_Vec_Encode_1_5
 from tabularepimdl.SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
 from tabularepimdl.SimpleTransition_Vec_Encode import SimpleTransition_Vec_Encode

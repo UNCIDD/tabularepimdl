@@ -1,8 +1,10 @@
+from typing import Any
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
-from typing import List, Dict, Any
-from pydantic import BaseModel, field_validator, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
+
 
 class Visualizer(BaseModel):
     """
@@ -12,7 +14,7 @@ class Visualizer(BaseModel):
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    runner_results: List[Dict[str, Any]]
+    runner_results: list[dict[str, Any]]
     df: pd.DataFrame = None  #will be set after validation
 
     @field_validator("runner_results")

@@ -1,12 +1,13 @@
-from pydantic import BaseModel, Field, PrivateAttr
-from benchmark.SimpleInfectionDispatcher import SimpleInfectionDispatcher
-from benchmark.comparison_deltas_N import compare_structure_deltas
-from benchmark.timing import measure
-from typing import Annotated
 from functools import partial
+from typing import Annotated
 
 import numpy as np
 import pandas as pd
+from benchmark.comparison_deltas_N import compare_structure_deltas
+from benchmark.SimpleInfectionDispatcher import SimpleInfectionDispatcher
+from benchmark.timing import measure
+from pydantic import BaseModel, Field, PrivateAttr
+
 
 class SimpleInfectionRunner(BaseModel):
     """

@@ -1,8 +1,9 @@
-from benchmark.WAIFWTransmissionRunner import WAIFWTransmissionRunner
-from benchmark.Visualizer import Visualizer
+import random
+
 import numpy as np
 import pandas as pd
-import random
+from benchmark.Visualizer import Visualizer
+from benchmark.WAIFWTransmissionRunner import WAIFWTransmissionRunner
 
 compartments = ['S', 'I', 'R']
 size = 700 #data size

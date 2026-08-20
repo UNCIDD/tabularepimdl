@@ -1,9 +1,10 @@
-from pydantic import BaseModel, Field, PrivateAttr, ConfigDict
-from typing import Literal, Union
-import pandas as pd
-import numpy as np
+from typing import Literal, cast
 
+import numpy as np
+import pandas as pd
 from legacy.pandas_reference.StateBasedDeathProcess import StateBasedDeathProcess
+from pydantic import BaseModel, Field, PrivateAttr
+
 from tabularepimdl.StateBasedDeathProcess_Vec_Encode import StateBasedDeathProcess_Vec_Encode
 
 
@@ -30,7 +31,7 @@ class StateBasedDeathProcessDispatcher(BaseModel):
     infstate_compartments: list[str] = Field("the infection compartments used in epidemics.")
 
     #Dispatcher
-    _dispatcher: Union[StateBasedDeathProcess, StateBasedDeathProcess_Vec_Encode] = PrivateAttr(default=None)
+    _dispatcher: StateBasedDeathProcess | StateBasedDeathProcess_Vec_Encode = PrivateAttr(default=None)
 
     def model_post_init(self, _): #initialize dispatcher based on data structures
         if self.structure == 'Pandas':
@@ -60,6 +61,8 @@ class StateBasedDeathProcessDispatcher(BaseModel):
         @param dt: size of the timestep.
         """
         if self.structure == 'Pandas':
-            return self._dispatcher.get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
+            return cast(StateBasedDeathProcess, self._dispatcher).get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
         elif self.structure == 'Numpy_Encode':
+            assert col_idx_map is not None
+            assert result_buffer is not None
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)

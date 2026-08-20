@@ -1,9 +1,17 @@
 import numpy as np
-from pydantic import BaseModel, Field, ConfigDict, ValidationInfo, field_validator, model_validator, PrivateAttr
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
-from tabularepimdl.Rule import Rule
 from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
+from tabularepimdl.Rule import Rule
 
 
 class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
@@ -44,7 +52,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
     _r_code: int | None = PrivateAttr(default=None)
     _inf_to_code: int | None = PrivateAttr(default=None)
     _columns_idx: list[int] = PrivateAttr(default_factory=list)
-    _columns_all_categories_code: list[int] | None = PrivateAttr(default_factory=None)
+    _columns_all_categories_code: dict[str, int] | None = PrivateAttr(default=None)
     _state_encoding_by_engine : bool = PrivateAttr(default=False)
 
     _check_domain_membership = domain_membership_validator(
@@ -99,13 +107,10 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
             Numerical values of encoded infection states, recover states and hosp states.
         
         Notes:
-            - infstate_to_int (dict): A placeholder (not being used in this rule). Mapping of infection states of infstate_compartments to their index positions.
             - Retain rule-level state encoding to support users who test rules individually.
 
         """
         if not self._state_encoding_by_engine:
-            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))} #placeholder
-        
             self.columns_all_categories = sorted(self.columns_all_categories) #sort the columns' all categories
             self._columns_all_categories_code = {v: i for i, v in enumerate(self.columns_all_categories)} #encode each category
 
@@ -116,6 +121,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
             self._inf_to_code = self._columns_all_categories_code.get(self.inf_to)
         else:
             pass
+
 
     #set up a property to return all the required categories used in columns
     @property
@@ -128,10 +134,24 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         """
         return self.columns_all_categories
 
+
+    #set up a property to return all the required compartments used in infstate column
+    @property
+    def infstate_all(self) -> list[str]:
+        """
+        Used and checked by the model engine to update input data's domain values. Given this rule has columns_all, this property may not be used by the engine.
+    
+        Returns:
+            A list of strings of all the required infection compartments if the `inf_col` takes 'infstate' value.
+        """
+        return self.infstate_compartments
+
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.columns_all_categories), len(self.infstate_compartments))
+
 
     def _encode_categorical_states(self, data_domains) -> None:
         """
@@ -243,9 +263,9 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
             result_buffer[count_start:count_end, :] = deltas
             result_buffer[count_start:count_end, n_idx] = changed_N
 
-            for i, col in enumerate(self._columns_idx):
+            for i, col_idx in enumerate(self._columns_idx):
                 tmp_arr = deltas.copy()
-                tmp_arr[:, col] = self._inf_to_code
+                tmp_arr[:, col_idx] = self._inf_to_code
                 comp = -changed_N * (prI_filter[:, i]/prI_filter_sum)
                 tmp_arr[:, n_idx] = comp
                 count_start = count_start + count

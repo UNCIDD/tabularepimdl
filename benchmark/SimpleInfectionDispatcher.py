@@ -1,10 +1,12 @@
-from pydantic import BaseModel, Field, PrivateAttr
-from typing import Literal, Union, Annotated
-import pandas as pd
-import numpy as np
+from typing import Annotated, Literal, cast
 
+import numpy as np
+import pandas as pd
 from legacy.pandas_reference.SimpleInfection import SimpleInfection
+from pydantic import BaseModel, Field, PrivateAttr
+
 from tabularepimdl.SimpleInfection_Vec_Encode import SimpleInfection_Vec_Encode
+
 #from tabularepimdl.SI_Josh_Encode_Vec import SimpleInfection as Josh_SimpleInfection #SI_Josh_Encode_Vec needs specific input data to work and it generates incorrect results.
 
 class SimpleInfectionDispatcher(BaseModel):
@@ -31,7 +33,7 @@ class SimpleInfectionDispatcher(BaseModel):
     stochastic: bool = False
 
     #Dispatcher
-    _dispatcher: Union[SimpleInfection, SimpleInfection_Vec_Encode,] = PrivateAttr(default=None)
+    _dispatcher: SimpleInfection | SimpleInfection_Vec_Encode = PrivateAttr(default=None)
 
     def model_post_init(self, _): #initialize dispatcher based on data structures
         if self.structure == 'Pandas':
@@ -67,11 +69,14 @@ class SimpleInfectionDispatcher(BaseModel):
         @param dt: size of the timestep.
         """
         if self.structure == 'Pandas':
-            return self._dispatcher.get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
+            return cast(SimpleInfection, self._dispatcher).get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
         elif self.structure == 'Numpy': #no Numpy option in the runner
             pass
         elif self.structure == 'Numpy_Encode':
+            assert col_idx_map is not None
+            assert result_buffer is not None
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)
+        return None
 
     def apply(self, state: np.ndarray, col_idx: dict[str, int], dt: float) -> np.ndarray: #run Josh's code
             return self._dispatcher.apply(state=state, col_idx=col_idx, dt=dt)

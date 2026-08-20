@@ -1,11 +1,12 @@
-from pydantic import BaseModel, Field, PrivateAttr, ConfigDict
-from benchmark.StateBasedDeathDispatcher import StateBasedDeathProcessDispatcher
-from benchmark.comparison_deltas_N import compare_structure_deltas
-from benchmark.timing import measure
 from functools import partial
 
 import numpy as np
 import pandas as pd
+from benchmark.comparison_deltas_N import compare_structure_deltas
+from benchmark.StateBasedDeathDispatcher import StateBasedDeathProcessDispatcher
+from benchmark.timing import measure
+from pydantic import BaseModel, Field, PrivateAttr
+
 
 class StateBasedDeathProcessRunner(BaseModel):
     """
@@ -55,7 +56,7 @@ class StateBasedDeathProcessRunner(BaseModel):
 
             age_struct_pop = pd.DataFrame({
                 'InfState' : pd.Categorical(["S"]*size, categories=["I","R","S"]),
-                'AgeCat': ["{} to {}".format(i, i+ (age_step-1)) for i in np.arange(start_age, end_age, age_step)]+["{}+".format(end_age)],
+                'AgeCat': [f"{i} to {i+ (age_step-1)}" for i in np.arange(start_age, end_age, age_step)]+[f"{end_age}+"],
                 'N' : [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150],
                 'T': 0
             })
@@ -69,7 +70,7 @@ class StateBasedDeathProcessRunner(BaseModel):
                     if struct == 'Pandas': #provide dataframe to Pandas
                         data = age_struct_pop
                     elif struct == 'Numpy_Encode': #provide true Numpy array to Numpy_Encode
-                        agecat_map = {label: idx for idx, label in enumerate((age_struct_pop['AgeCat'].unique()))}
+                        agecat_map = {label: idx for idx, label in enumerate(age_struct_pop['AgeCat'].unique())}
 
                         age_struct_pop['InfState'] = age_struct_pop['InfState'].map(self._infstate_comp_map)
                         age_struct_pop['AgeCat'] = age_struct_pop['AgeCat'].map(agecat_map)

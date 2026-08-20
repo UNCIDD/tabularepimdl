@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -206,7 +207,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     #    """Convert all column names of init_state to lowercase."""
     #    return input_data.columns.str.upper()
 
-    def _initialize_preallocated_buffer(self) -> np.ndarray:
+    def _initialize_preallocated_buffer(self) -> None:
         logger.debug('initial _delta buffer\n %s', self._delta_buffer)
         
         buffer_cols = self.current_state_array.shape[1]
@@ -312,13 +313,13 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         #collect domain values that exist in each rule's properties but not in init_state data columns
         for ruleset in self.rules:
             for rule in ruleset:
-                rule_field_name_set = list(rule.model_fields_set) #return the set of fields that have been explicitly set on the rule instance
+                rule_field_name_set = list(rule.model_fields_set)  # type: ignore[attr-defined]  # every concrete Rule is also a pydantic BaseModel (`class X(Rule, BaseModel)`), which Rule itself doesn't declare
                 
                 #new addtion 12/4, special case: before going through all attributes, checking if input data has 'infstate' column and update its domain values
                 if 'infstate'.lower() in (k.lower() for k in self._domains.keys()): #if 'infstate' is a col name in init_state dataframe
                     logger.debug('infstate is in keys')
                     try:
-                        infstate_all_compartments = getattr(rule, 'infstate_all')
+                        infstate_all_compartments = rule.infstate_all # type: ignore[attr-defined]
                         logger.debug('infstate full: %s', infstate_all_compartments)
                     except Exception:
                         infstate_all_compartments = None
@@ -356,7 +357,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
                         if data_col_name.lower() == "infstate": #Special case: if column value equals 'infstate' (case-insensitive)
                             try: #this try-except block can be replaced with continue-operation since "infstate" is checked above
-                                infstate_all_compartments = getattr(rule, 'infstate_all')
+                                infstate_all_compartments = rule.infstate_all # type: ignore[attr-defined]
                                 logger.debug('infstate full: %s', infstate_all_compartments)
                             except Exception:
                                 infstate_all_compartments = None
@@ -478,12 +479,9 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         logger.debug('initial preallocation buffer\n %s', self._current_result_preallocation)
         #return self.current_state_array #return current_state_array only
     
-    def _save_initial_current_state_array(self) -> np.ndarray:
+    def _save_initial_current_state_array(self) -> None:
             """
             After init_state DataFrame is converted to current_state_array, save the array's initial values.
-
-            Returns:
-                A Numpy array of initial state of the input data.
             """
             self._initial_current_state_array = self.current_state_array.copy()
             
@@ -627,16 +625,17 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         return self.current_state_array
         
     
-    def do_timestep(self, dt: int | float =1.0) -> np.ndarray:
+    def do_timestep(self, dt: int | float =1.0) -> None:
         """
         Do a timestep process, updating the epidemic current state by applying each epidemic rule to the current state data.
         Append each iteration's current state to the full epidemic history.
-        
+
         Args:
             dt: A floating number of the time step.
 
-        Returns:
-            A list of Numpy arrays with each array representing an epidemic historical data in time T.
+        Notes:
+            Does not return a value. The updated state is available afterward via
+            `current_state_array` / `current_state()`, and the appended history via `full_epi()`.
         """
         for ruleset in self.rules:
             logger.debug('1. vec current ruleset: %s', ruleset)
@@ -708,7 +707,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
             # Extract grouping columns and cast to int64 for hashing
             # (Assuming your encoded categories can be cleanly cast to integers)
-            group_cols = active_buffer[:, self._grouping_col_idx].astype(np.int64)
+            group_cols: np.ndarray = active_buffer[:, self._grouping_col_idx].astype(np.int64)
             logger.debug('grouping col arrays\n %s', group_cols)
 
             # THE MAGIC TRICK: View the 2D integer array as a 1D array of raw bytes.
@@ -729,7 +728,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             unique_groups = active_buffer[unique_indices][:, self._grouping_col_idx]
 
             # Max 'T' handling (Assuming you just want the global max T so far)
-            global_max_t = np.max(active_buffer[:, self._t_idx])
+            global_max_t: float = np.max(active_buffer[:, self._t_idx])
             max_T_col = np.full(len(sum_N), global_max_t)
 
             # 5. Reconstruct the new current_state
@@ -755,6 +754,4 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         #append the updated current state to the epidemic history no matter if there is deltas generated, history should capture all timesteps
         self._full_epi_list.append(self.current_state_array) #this is a list of arrays
         logger.debug('full epi list\n %s', self._full_epi_list)
-        
-        #return self.current_state_array
 

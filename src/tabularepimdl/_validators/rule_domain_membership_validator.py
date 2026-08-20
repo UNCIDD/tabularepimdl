@@ -1,5 +1,7 @@
 """Resuable validators built for attributes and domain constraint."""
 from collections.abc import Iterable
+from typing import Any
+
 from pydantic import model_validator
 
 
@@ -64,6 +66,7 @@ def domain_membership_validator(
                 continue
 
             # Normalize to iterable
+            values_to_check: Iterable[Any]
             if isinstance(attribute_value, str) or not isinstance(attribute_value, Iterable):
                 values_to_check = [attribute_value]
             elif isinstance(attribute_value, Iterable):

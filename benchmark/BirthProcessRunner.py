@@ -1,11 +1,12 @@
-from pydantic import BaseModel, Field, PrivateAttr, ConfigDict
-from benchmark.BirthProcessDispatcher import BirthProcessDispatcher
-from benchmark.comparison_deltas_N import compare_structure_deltas
-from benchmark.timing import measure
 from functools import partial
 
 import numpy as np
 import pandas as pd
+from benchmark.BirthProcessDispatcher import BirthProcessDispatcher
+from benchmark.comparison_deltas_N import compare_structure_deltas
+from benchmark.timing import measure
+from pydantic import BaseModel, Field
+
 
 class BirthProcessRunner(BaseModel):
     """
@@ -59,7 +60,7 @@ class BirthProcessRunner(BaseModel):
 
             age_struct_pop = pd.DataFrame({
                 'InfState' : pd.Categorical(["S"]*size, categories=["I","R","S"]),
-                'AgeCat': ["{} to {}".format(int(i), int(i+ (age_step-1))) for i in np.arange(start_age, end_age, age_step)]+["{}+".format(end_age)],
+                'AgeCat': [f"{int(i)} to {int(i+ (age_step-1))}" for i in np.arange(start_age, end_age, age_step)]+[f"{end_age}+"],
                 'N' : [10, 20, 30, 40, 50, 60,  70, 80, 90, 100, 101, 102, 103, 104, 105],
                 'T': 0
             })

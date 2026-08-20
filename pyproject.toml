@@ -39,7 +39,7 @@ testpaths = ["tests"]
 
 [tool.mypy]
 python_version = "3.11"
-files = ["src/tabularepimdl", "tests"]
+files = ["src/tabularepimdl", "tests", "benchmark"]
 ignore_missing_imports = true
 follow_imports = "skip"
 disallow_untyped_defs = false
@@ -51,8 +51,10 @@ pretty = true
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-exclude = ["__pycache__", ".venv"]
-src = ["src", "tests"]
+# legacy/ and examples/ are non-shipped reference/experimental code (see legacy/README.md) --
+# not held to the same lint bar as the maintained package.
+exclude = ["__pycache__", ".venv", "legacy", "examples"]
+src = ["src", "tests", "benchmark"]
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I", "UP"]

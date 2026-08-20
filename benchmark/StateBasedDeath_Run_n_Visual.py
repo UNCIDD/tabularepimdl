@@ -1,13 +1,14 @@
+import numpy as np
 from benchmark.StateBasedDeathRunner import StateBasedDeathProcessRunner
 from benchmark.Visualizer import Visualizer
-import numpy as np
+
 
 def All_States_List():
     start_age=0
     end_age=70
     size=15
     age_step= (end_age-start_age)/(size-1)
-    all_states = ["{} to {}".format(i, i+ (age_step-1)) for i in np.arange(start_age, end_age, age_step)]+["{}+".format(end_age)]
+    all_states = [f"{i} to {i+ (age_step-1)}" for i in np.arange(start_age, end_age, age_step)]+[f"{end_age}+"]
     return all_states
 
 def StateBasedDeath_Run_n_Visual():

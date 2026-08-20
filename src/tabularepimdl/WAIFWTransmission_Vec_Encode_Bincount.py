@@ -1,10 +1,13 @@
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationInfo, PrivateAttr
 from numpy.typing import NDArray
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, ValidationInfo, field_validator
 
-from tabularepimdl.Rule import Rule
-from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList, UniqueNonEmptyStrIntUniformList
+from tabularepimdl._types.constrained_types import (
+    UniqueNonEmptyStrIntUniformList,
+    UniqueNonEmptyStrList,
+)
 from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
+from tabularepimdl.Rule import Rule
 
 
 class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
@@ -120,7 +123,7 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
 
     #set up a property to return all the required categories used in group_col
     @property
-    def group_col_all(self) -> list[str]:
+    def group_col_all(self) -> list[str | int]:
         """
         Used and checked by the model engine to update input data's domain values.
 
@@ -175,7 +178,7 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         n_idx = col_idx_map['N']
 
         if len(set(self.group_col_all_categories)) < len(set(current_state[:, group_col_idx])):
-            raise ValueError(f"Number of elements in group_col_all_categories is less than the number of categories of input data, please check group_col_all_categories and input data.")
+            raise ValueError("Number of elements in group_col_all_categories is less than the number of categories of input data, please check group_col_all_categories and input data.")
         
         #convert group_col to categorical type first, so groupby observed=False generate full list of array values
         #if not isinstance(current_state[self.group_col].dtype, pd.CategoricalDtype):
@@ -192,7 +195,7 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         #inf_array = current_state.loc[current_state[self.inf_col]==self.i_st].groupby(self.group_col, observed=False)['N'].sum(numeric_only=True).values #moved ['N'] position #groupby approach
         
         num_of_categories = len(self.group_col_all_categories)
-        present_category_codes = current_state[:, group_col_idx].astype(np.int64)
+        present_category_codes: np.ndarray = current_state[:, group_col_idx].astype(np.int64)
         infected_mask = current_state[:, infstate_idx] == self._i_code
         infected_group_codes = present_category_codes[infected_mask]
         infected_weights = current_state[infected_mask, n_idx]

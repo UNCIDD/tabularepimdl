@@ -1,11 +1,12 @@
-from pydantic import BaseModel, Field, PrivateAttr, ConfigDict
-from benchmark.SimpleObservationProcessDispatcher import SimpleObservationProcessDispatcher
-from benchmark.comparison_deltas_N import compare_structure_deltas
-from benchmark.timing import measure
 from functools import partial
 
 import numpy as np
 import pandas as pd
+from benchmark.comparison_deltas_N import compare_structure_deltas
+from benchmark.SimpleObservationProcessDispatcher import SimpleObservationProcessDispatcher
+from benchmark.timing import measure
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+
 
 class SimpleObservationProcessRunner(BaseModel):
     """
@@ -69,7 +70,7 @@ class SimpleObservationProcessRunner(BaseModel):
         Creates input data with different sizes and runs deltas calculation with different data structures in different iterations.
         Tracks each combination's time and memory usage.
         """
-        for size in self.data_sizes:
+        for _size in self.data_sizes:
             #print('populaton\n', pop_catg)
             struct_last_deltas = {} #each structure's last computed deltas for this size, for cross-structure comparison
 

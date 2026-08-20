@@ -1,11 +1,12 @@
-from pydantic import BaseModel, Field, PrivateAttr
-from benchmark.SimpleTransitionDispatcher import SimpleTransitionDispatcher
-from benchmark.comparison_deltas_N import compare_structure_deltas
-from benchmark.timing import measure
 from functools import partial
 
 import numpy as np
 import pandas as pd
+from benchmark.comparison_deltas_N import compare_structure_deltas
+from benchmark.SimpleTransitionDispatcher import SimpleTransitionDispatcher
+from benchmark.timing import measure
+from pydantic import BaseModel, Field, PrivateAttr
+
 
 class SimpleTransitionRunner(BaseModel):
     """
