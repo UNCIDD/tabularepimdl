@@ -319,7 +319,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                 if 'infstate'.lower() in (k.lower() for k in self._domains.keys()): #if 'infstate' is a col name in init_state dataframe
                     logger.debug('infstate is in keys')
                     try:
-                        infstate_all_compartments = rule.infstate_all
+                        infstate_all_compartments = rule.infstate_all # type: ignore[attr-defined]
                         logger.debug('infstate full: %s', infstate_all_compartments)
                     except Exception:
                         infstate_all_compartments = None
@@ -357,7 +357,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
                         if data_col_name.lower() == "infstate": #Special case: if column value equals 'infstate' (case-insensitive)
                             try: #this try-except block can be replaced with continue-operation since "infstate" is checked above
-                                infstate_all_compartments = rule.infstate_all
+                                infstate_all_compartments = rule.infstate_all # type: ignore[attr-defined]
                                 logger.debug('infstate full: %s', infstate_all_compartments)
                             except Exception:
                                 infstate_all_compartments = None
