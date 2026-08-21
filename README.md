@@ -6,7 +6,7 @@
 ```bash
 git clone https://github.com/UNCIDD/tabularepimdl.git
 cd tabularepimdl
-uv sync
+uv sync --all-extras
 ```
 
 ### Activate the virtual environment 
