@@ -1,4 +1,72 @@
-# Contributing to tabularepimdl
+# Contributing
+This document provides guidelines and instructions for contributing to `tabularepimdl`, including development conventions and tips for best practices.
+
+
+## Development Setup
+
+### Prerequisites
+- Python 3.11 or 3.12.
+- [`uv`](https://docs.astral.sh/uv/) - Python package manager.
+- [`just`](https://just.systems/) - Command runner (optional -- see below).
+
+### Initial setup
+
+1. Clone the repository:
+
+```shell
+git clone https://github.com/UNCIDD/tabularepimdl.git
+cd tabularepimdl
+```
+
+2. Install dependencies:
+
+```shell
+uv sync --all-extras
+```
+
+`uv sync` creates and manages `.venv` for users (no separate `python -m venv` step needed) and
+installs the package itself in editable mode, `--all-extras` pulls in both the `test` and `dev` dependency
+groups.
+
+To run a command inside the environment without activating it, prefix it with `uv run` (e.g.
+`uv run pytest`) -- this is what the `justfile` recipes below do. To activate the environment
+directly in users' shell instead:
+
+```shell
+# Windows
+.venv\Scripts\activate
+# macOS/Linux
+source .venv/bin/activate
+```
+
+### Using `just` to verify the setup
+
+This repo has a `justfile` with shortcuts for the commands below. Run `just --list` to see all of
+them, or `just` (no argument) for the same. A few examples:
+
+```shell
+just test       # pytest tests/
+just check      # ruff check .
+just typecheck  # mypy
+just ci         # check + typecheck + test, in CI's order
+```
+
+`just` is entirely optional -- every recipe is a thin wrapper around a `uv run ...` command users
+can run directly instead, and both are shown throughout this document.
+
+## Code Standards
+
+### Code Style
+
+[`ruff`](https://docs.astral.sh/ruff/) is used for both formatting and linting python:
+
+- **Formatting**: `ruff format` follows the Black code style.
+- **Linting**: `ruff check` enforces code quality rules.
+
+### Docstring Style
+
+[google style](https://google.github.io/styleguide/pyguide.html#s3.8-comments-and-docstrings)
+comments and docstrings are used to document code.
 
 ## Workflow overview
 
@@ -16,25 +84,20 @@ Every change to this repository follows the **issue → branch → PR → review
 
 ## Issues
 
-- **Open an issue before starting work.** Even small fixes benefit from a recorded rationale.
-- Use descriptive titles: prefer *"Refactor SimpleTransition: replace pandas with NumPy"* over *"update code"*.
-- Assign a milestone if one applies (this repo uses thematic milestones, not version-based).
-- Label with `bug`, `enhancement`, `feature`, `question`, or `documentation` as appropriate.
+- **Open an issue before starting work.**
+- Use descriptive titles.
+- Label with `bug`, `enhancement`, `feature`, `question`, `documentation`, etc. as appropriate.
 
 ## Branches
 
 - Branch from `main`, not from other feature branches.
-- Name branches descriptively:  
-  `issue-48-simpletransition-vectorize`  
-  `fix-42-yaml-key-check`
-- Never commit directly to `main`. The `main` branch is protected.
+- Name branches descriptively.
+- Please do not commit directly to `main`. The `main` branch is protected.
 - Delete branches after their PR is merged.
 
 ## Commits
 
 - **Keep commits thematic.** Each commit should represent one logical change.
-  - Good: *"add NumPy vectorized get_deltas() for SimpleTransition"*
-  - Bad: *"updates"*, *"debug code"*, *"fix"*
 - Do not mix unrelated changes (e.g., a new feature + docstring reformatting + a bugfix) in one commit.
 - Do not commit debug/print statements. Remove them before pushing.
 - Write commit messages in imperative mood: *"add X"* not *"added X"*.
@@ -92,20 +155,53 @@ Include:
 - **`src/tabularepimdl/`**: Code that is part of the public API, imported via `__init__.py`, tested, and documented.
 - **`legacy/`**: Prototypes, superseded versions, project-specific variants, personal experiments, and benchmarking explorations. These are kept for reference but are not importable from the package.
 
-To promote experimental code to production, see `legacy/README.md`.
-
 ## Testing
 
 - Add or update tests in `tests/` for any code change to `src/tabularepimdl/`.
 - Run the test suite before opening a PR:
-  ```bash
-  pytest tests/
-  ```
+```shell
+  just test          # or: uv run pytest tests/
+```
+- `legacy/pandas_reference/tests/` is a separate suite validating the internal pandas reference
+  baseline against the shipped NumPy engine (see `legacy/README.md`). It isn't part of CI's default
+  scope, but run it too if your change touches `Rule.py`, the model engine, or anything the parity
+  test depends on:
+```shell
+  just test-legacy    # or: uv run pytest legacy/pandas_reference/tests
+```
 - CI must pass before merge.
+
+## Packaging
+
+Before a release, verify the package actually builds and installs correctly from a clean
+environment:
+
+```shell
+just build           # or: uv build
+```
+
+This produces an sdist and wheel under `dist/`. If you're changing `pyproject.toml`'s
+`[project]` metadata or `[build-system]` configuration, run this locally to confirm the build
+still succeeds.
 
 ## Style
 
 - Follow existing code conventions in the repo.
 - Use type hints for function signatures.
 - Use docstrings for public classes and methods.
-- Run `ruff check` and `mypy` before pushing (these are already in the dev dependencies).
+- Run lint and type checks before pushing -- both are blocking in CI:
+ ```shell
+  just check          # or: uv run ruff check .
+  just typecheck       # or: uv run mypy
+  just ci              # runs check + typecheck + test together
+```
+- `legacy/` and `examples/` are excluded from `ruff`/`mypy`'s default scope (see
+  `pyproject.toml`'s `[tool.ruff] exclude`) -- they're reference/experimental code, not held to
+  the same lint bar as `src/tabularepimdl/`, `tests/`, and `benchmark/`.
+
+## Changelog
+
+User-facing changes (new rules, engine behavior changes, bug fixes, breaking changes) should get
+an entry in `CHANGELOG.md` under `[Unreleased]`, in the appropriate `Added`/`Changed`/`Fixed`/
+`Removed` section. Internal-only changes (refactors with no behavior change, test-only changes,
+CI tweaks) don't need one.
