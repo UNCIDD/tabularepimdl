@@ -35,6 +35,7 @@ directly in users' shell instead:
 ```shell
 # Windows
 .venv\Scripts\activate
+
 # macOS/Linux
 source .venv/bin/activate
 ```
@@ -84,7 +85,7 @@ Every change to this repository follows the **issue → branch → PR → review
 
 ## Issues
 
-- **Open an issue before starting work.**
+- Open an issue before starting work.
 - Use descriptive titles.
 - Label with `bug`, `enhancement`, `feature`, `question`, `documentation`, etc. as appropriate.
 
@@ -92,15 +93,15 @@ Every change to this repository follows the **issue → branch → PR → review
 
 - Branch from `main`, not from other feature branches.
 - Name branches descriptively.
-- Please do not commit directly to `main`. The `main` branch is protected.
+- Please use a feature branch instead of committing directly to `main`, as `main` is protected.
 - Delete branches after their PR is merged.
 
 ## Commits
 
-- **Keep commits thematic.** Each commit should represent one logical change.
-- Do not mix unrelated changes (e.g., a new feature + docstring reformatting + a bugfix) in one commit.
-- Do not commit debug/print statements. Remove them before pushing.
-- Write commit messages in imperative mood: *"add X"* not *"added X"*.
+- Keep commits thematic. Each commit should represent one logical change.
+- Keep commits focused on a single, logical change. Avoid combining unrelated feature, formatting, or bug-fix work in the same commit.
+- Before pushing, take a quick pass to remove any leftover debug or print statements.
+- Write commit messages in imperative mood: *"add X"* instead of *"added X"*.
 
 ## Pull requests
 
@@ -139,7 +140,7 @@ Include:
 - Use **rebase merge** if the individual commits are meaningful and well-structured.
 - Never use merge commits.
 
-## Code organization
+## Codebase organization
 
 | Directory | Purpose |
 |-----------|---------|
@@ -150,7 +151,7 @@ Include:
 | `legacy/` | Experimental, superseded, and prototype code (see `legacy/README.md`) |
 | `docs/` | Specification documents |
 
-### What goes in `src/tabularepimdl/` vs `legacy/`
+### Directory `src/tabularepimdl/` vs `legacy/`
 
 - **`src/tabularepimdl/`**: Code that is part of the public API, imported via `__init__.py`, tested, and documented.
 - **`legacy/`**: Prototypes, superseded versions, project-specific variants, personal experiments, and benchmarking explorations. These are kept for reference but are not importable from the package.
