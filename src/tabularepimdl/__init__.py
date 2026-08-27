@@ -34,7 +34,7 @@ __all__ = [
     "configure_logging",
 ]
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 
 def configure_logging(level: int = logging.DEBUG) -> None:
