@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.0] - 2026-08-26
+## [0.3.0] - 2026-08-27
 
 A comprehensive engineering pass turning the NumPy rewrite into a tested, maintainable,
 release-track package.
@@ -98,6 +98,9 @@ release-track package.
   `SharedTraitInfection_Vec_Encode`, `WAIFWTransmission_Vec_Encode_Bincount`, and the supporting
   `_types`/`_validators` modules ([#70](https://github.com/UNCIDD/tabularepimdl/pull/70)).
 
+
+Release 0.2.0 Note: The 0.2.0 release was never formally implemented. During development, the codebase was reorganized across different directories, with some code moved or removed, making it impractical to reconstruct the codebase as it existed at the intended 0.2.0 release. This note serves as a record of the development work and changes associated with the 0.2.0 milestone.
+
 ## [0.1.0] - 2025-09-04
 
 ### Added
@@ -112,3 +115,5 @@ release-track package.
 - Trait-sharing and value-filtering rule variants (`WithFilters`, `FilteredSimpleInfection`,
   `FilteredSimpleTransition`, `SharedTraitInfection_MultiBeta`)
   ([#39](https://github.com/UNCIDD/tabularepimdl/pull/39)).
+
+Release 0.1.0 Note: The 0.1.0 release was never formally implemented. During development, the codebase was reorganized across different directories, with some code moved or removed, making it impractical to reconstruct the codebase as it existed at the intended 0.1.0 release. This note serves as a record of the development work and changes associated with the 0.1.0 milestone.
