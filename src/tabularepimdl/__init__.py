@@ -1,7 +1,7 @@
 import logging
 
 # The pandas-structured rules/engine (BirthProcess, EpiModel, etc.) that used to be exported here
-# have moved to legacy/pandas_reference/. They were kept only as an internal reference baseline 
+# have moved to legacy/pandas_reference/. They were kept only as an internal reference baseline
 # to validate the NumPy-structured rules/engine
 # See legacy/README.md.
 ### The following rules are in vectorized/numpy structure ###
@@ -48,9 +48,9 @@ def configure_logging(level: int = logging.DEBUG) -> None:
 
     Args:
         level: the logging level to enable for tabularepimdl's logger hierarchy. Defaults to DEBUG.
-    
+
     Usage Example:
-        to use the package-level logging, add the import and function before other imports: 
+        to use the package-level logging, add the import and function before other imports:
         import tabularepimdl
         tabularepimdl.configure_logging()
         from tabularepimdl.<rule_name> import <class_name>
