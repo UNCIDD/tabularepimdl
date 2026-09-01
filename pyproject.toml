@@ -11,6 +11,7 @@ authors = [
     { name = "Yue Liu", email = "lyue@unc.edu" },
 ]
 license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 keywords = [
     "epidemiology",
@@ -34,12 +35,6 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
-[project.urls]
-Homepage = "https://github.com/UNCIDD/tabularepimdl"
-Repository = "https://github.com/UNCIDD/tabularepimdl"
-Issues = "https://github.com/UNCIDD/tabularepimdl/issues"
-Changelog = "https://github.com/UNCIDD/tabularepimdl/blob/main/CHANGELOG.md"
-
 [project.optional-dependencies]
 test = [
     "pytest>=7.0",
@@ -54,6 +49,11 @@ dev = [
     "matplotlib>=3.10.3",
 ]
 
+[project.urls]
+Homepage = "https://github.com/UNCIDD/tabularepimdl"
+Repository = "https://github.com/UNCIDD/tabularepimdl"
+Issues = "https://github.com/UNCIDD/tabularepimdl/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -66,7 +66,6 @@ python_version = "3.11"
 files = ["src/tabularepimdl", "tests", "benchmark"]
 ignore_missing_imports = true
 follow_imports = "skip"
-disallow_untyped_defs = false
 check_untyped_defs = true
 no_implicit_optional = true
 show_error_codes = true
@@ -74,31 +73,26 @@ pretty = true
 
 [tool.ruff]
 target-version = "py311"
-line-length = 100
+# This codebase deliberately tolerates long lines (see ignore = ["E501"] below).
+line-length = 200
 # legacy/ and examples/ are non-shipped reference/experimental code (see legacy/README.md) --
 # not held to the same lint bar as the maintained package.
 exclude = ["__pycache__", ".venv", "legacy", "examples"]
 src = ["src", "tests", "benchmark"]
 
 [tool.ruff.lint]
+# E/F: pycodestyle errors + pyflakes (undefined names, unused imports, etc.)
+# B: flake8-bugbear (common bug patterns -- late-binding closures, mutable defaults, etc.)
+# I: isort (import sorting)
+# UP: pyupgrade (modern Python syntax)
 select = ["E", "F", "B", "I", "UP"]
-ignore = ["E501"]
+ignore = ["E501"]  # line length -- not enforced, see line-length comment above
 
-[tool.ruff.lint.pydocstyle]
-convention = "google"
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
 
 [tool.ruff.format]
-docstring-code-format = true
-docstring-code-line-length = 72
-
-[tool.ruff.lint.per-file-ignores]
-"docs/**/*" = [
-    "INP001", # Implicit namespace package
-]
-"tests/**/*" = [
-    "INP001", # Implicit namespace package
-    "S101",   # Use of `assert` detected
-]
+skip-magic-trailing-comma = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tabularepimdl"]
