@@ -1,10 +1,7 @@
 import numpy as np
 from pydantic import BaseModel, Field, PrivateAttr
 
-from tabularepimdl._types.constrained_types import (
-    UniqueNonEmptyStrIntUniformList,
-    UniqueNonEmptyStrList,
-)
+from tabularepimdl._types.constrained_types import UniqueNonEmptyStrIntUniformList, UniqueNonEmptyStrList
 from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
 from tabularepimdl.Rule import Rule
 
@@ -12,7 +9,7 @@ from tabularepimdl.Rule import Rule
 class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     """
     Rule that does transmission based on if a trait is shared across different populations.
-    
+
     Attributes:
         inf_col: the infection state column for this infectious process.
         in_beta: transmission rate if trait shared.
@@ -25,33 +22,30 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         stochastic: whether the process is stochastic or deterministic.
         infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
     """
-    
-    inf_col: str = Field(description = "the infection state column for this infectious process.")
-    in_beta: float = Field(ge=0, description = "transmission rate if trait shared.")
-    out_beta: float = Field(ge=0, description = "transmission rate if trait not shared.")
-    trait_col: str = Field(description = "the trait column shared by different populations.")
-    trait_col_all_categories: UniqueNonEmptyStrIntUniformList = Field(description = "all the categories the trait column should have.")
-    s_st: str = Field(default="S", description = "the state for susceptibles.")
-    i_st: str = Field(default="I", description = "the state for infectious.")
-    inf_to: str = Field(default="I", description = "the state susceptible population go to.")
-    stochastic: bool = Field(default=False, description = "whether the process is stochastic or deterministic.")
-    infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
+
+    inf_col: str = Field(description="the infection state column for this infectious process.")
+    in_beta: float = Field(ge=0, description="transmission rate if trait shared.")
+    out_beta: float = Field(ge=0, description="transmission rate if trait not shared.")
+    trait_col: str = Field(description="the trait column shared by different populations.")
+    trait_col_all_categories: UniqueNonEmptyStrIntUniformList = Field(description="all the categories the trait column should have.")
+    s_st: str = Field(default="S", description="the state for susceptibles.")
+    i_st: str = Field(default="I", description="the state for infectious.")
+    inf_to: str = Field(default="I", description="the state susceptible population go to.")
+    stochastic: bool = Field(default=False, description="whether the process is stochastic or deterministic.")
+    infstate_compartments: UniqueNonEmptyStrList = Field(description="the infection compartments used in epidemics.")
 
     _s_code: int | None = PrivateAttr(default=None)
     _i_code: int | None = PrivateAttr(default=None)
     _inf_to_code: int | None = PrivateAttr(default=None)
     _trait_col_all_categories_code: list[int] = PrivateAttr(default_factory=list)
-    _state_encoding_by_engine : bool = PrivateAttr(default=False)
+    _state_encoding_by_engine: bool = PrivateAttr(default=False)
 
-    _check_domain_membership = domain_membership_validator(
-            attribute_fields = ("s_st", "i_st", "inf_to"),
-            domain_fields = ("trait_col_all_categories", "infstate_compartments")
-        )
+    _check_domain_membership = domain_membership_validator(attribute_fields=("s_st", "i_st", "inf_to"), domain_fields=("trait_col_all_categories", "infstate_compartments"))
 
     def model_post_init(self, _):
         """
         Encode the input states based on each column's attribute values.
-        
+
         Returns:
             Numerical values of encoded infection states, recover states and hosp states.
 
@@ -59,17 +53,17 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
             Retain rule-level state encoding to support users who test rules individually.
         """
         if not self._state_encoding_by_engine:
-            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  #encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
+            infstate_to_int = {s: i for i, s in enumerate(sorted(self.infstate_compartments))}  # encode infstate strings to integers {'I': 0, 'R': 1, 'S': 2}
             self._s_code = infstate_to_int.get(self.s_st)
             self._i_code = infstate_to_int.get(self.i_st)
             self._inf_to_code = infstate_to_int.get(self.inf_to)
 
-            self.trait_col_all_categories = sorted(self.trait_col_all_categories) #sort the trait_col's all categories
-            self._trait_col_all_categories_code = [i for i, v in enumerate(self.trait_col_all_categories)] #encode each category, keeping numbers only
+            self.trait_col_all_categories = sorted(self.trait_col_all_categories)  # sort the trait_col's all categories
+            self._trait_col_all_categories_code = [i for i, v in enumerate(self.trait_col_all_categories)]  # encode each category, keeping numbers only
         else:
             pass
 
-    #set up a property to return all the required compartments used in infstate column
+    # set up a property to return all the required compartments used in infstate column
     @property
     def infstate_all(self) -> list[str]:
         """
@@ -79,8 +73,8 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
             A list of strings of all the required infection compartments if the `inf_col` takes 'infstate' value.
         """
         return self.infstate_compartments
-    
-    #set up a property to return all the required categories used in trait_col
+
+    # set up a property to return all the required categories used in trait_col
     @property
     def trait_col_all(self) -> list[str | int]:
         """
@@ -111,8 +105,7 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
 
         self._state_encoding_by_engine = True
 
-
-    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float =1.0, stochastic: bool | None = None) -> np.ndarray:
+    def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         Compute the population deltas for the current state at a given time step.
 
@@ -122,28 +115,28 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
             result_buffer (np.ndarray): A pre-allocated array that will be populated with the computed deltas. This array is modified in-place and returned.
             dt (float): The size of the time step. Defaults to 1.0.
             stochastic (bool, optional): Whether to apply stochastic modeling. If `None`, the class-level `self.stochastic` attribute is used.
-        
+
         Returns:
             np.ndarray: A NumPy structured array containing the population deltas.
 
         Raises:
             ValueError: If the column `'N'` is missing in `current_state`.
         """
-        required_columns = "N" #check if column N presents in current_state
+        required_columns = "N"  # check if column N presents in current_state
         if required_columns not in col_idx_map:
             raise ValueError(f"Missing required columns in current_state: {required_columns}.")
-        
+
         if stochastic is None:
             stochastic = self.stochastic
 
         infstate_idx = col_idx_map[self.inf_col]
         trait_col_idx = col_idx_map[self.trait_col]
-        n_idx = col_idx_map['N']
+        n_idx = col_idx_map["N"]
 
         mask_s_idxs = current_state[:, infstate_idx] == self._s_code
         if mask_s_idxs.size == 0:
             return np.empty((0, current_state.shape[1]), dtype=current_state.dtype)
-        
+
         selected_s = current_state[mask_s_idxs, :]
         N_susceptible = selected_s[:, n_idx]
 
@@ -152,10 +145,10 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
 
         total_infect: float = np.sum(infect_only[:, n_idx])
 
-        infect_N_lookup_dict = dict(zip(infect_only[:, trait_col_idx], infect_only[:, n_idx], strict=True))#combine trait and N as lookup dict
+        infect_N_lookup_dict = dict(zip(infect_only[:, trait_col_idx], infect_only[:, n_idx], strict=True))  # combine trait and N as lookup dict
 
-        in_I_mapped = np.array([infect_N_lookup_dict.get(val, 0) for val in selected_s[:, trait_col_idx]]) #shared traits' N values
-        out_I_mapped = total_infect - in_I_mapped #non-shared traits' N values
+        in_I_mapped = np.array([infect_N_lookup_dict.get(val, 0) for val in selected_s[:, trait_col_idx]])  # shared traits' N values
+        out_I_mapped = total_infect - in_I_mapped  # non-shared traits' N values
 
         exp_in_beta = np.exp(-dt * self.in_beta)
         exp_out_beta = np.exp(-dt * self.out_beta)
@@ -169,29 +162,26 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
 
         count = len(N_susceptible)
         # Fill 'from' rows
-        
+
         result_buffer[:count, :] = selected_s
-        result_buffer[:count, n_idx] = changed_N  #update column N with changed_N (negative value)
+        result_buffer[:count, n_idx] = changed_N  # update column N with changed_N (negative value)
 
         # Fill 'to' rows
-        result_buffer[count:2*count, :] = selected_s
-        result_buffer[count:2*count, infstate_idx] = self._inf_to_code #update col infstate
-        result_buffer[count:2*count, n_idx] = -changed_N  #update column N with inversed changed_N
+        result_buffer[count : 2 * count, :] = selected_s
+        result_buffer[count : 2 * count, infstate_idx] = self._inf_to_code  # update col infstate
+        result_buffer[count : 2 * count, n_idx] = -changed_N  # update column N with inversed changed_N
 
-        filtered_result_buffer = result_buffer[:2*count, :]
-        result = filtered_result_buffer[filtered_result_buffer[:, n_idx] != 0] #remove rows with N=0
-        
+        filtered_result_buffer = result_buffer[: 2 * count, :]
+        result = filtered_result_buffer[filtered_result_buffer[:, n_idx] != 0]  # remove rows with N=0
+
         return result
-
 
     def to_dict(self) -> dict:
         """
         Save the rule's attributes and their associated values to a dictionary.
-        
+
         Returns:
             Rule attributes in a dictionary.
         """
-        rc = {
-            'tabularepimdl.SharedTraitInfection_Vec_Encode': self.model_dump()
-        }
+        rc = {"tabularepimdl.SharedTraitInfection_Vec_Encode": self.model_dump()}
         return rc

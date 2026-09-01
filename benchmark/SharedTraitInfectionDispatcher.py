@@ -2,14 +2,10 @@ from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
-from legacy.pandas_reference.SharedTraitInfection import (
-    SharedTraitInfection as SharedTraitInfection_Pandas,
-)
+from legacy.pandas_reference.SharedTraitInfection import SharedTraitInfection as SharedTraitInfection_Pandas
 from pydantic import BaseModel, Field, PrivateAttr
 
-from tabularepimdl.SharedTraitInfection_Vec_Encode import (
-    SharedTraitInfection_Vec_Encode as SharedTraitInfection_Vec_Encode,
-)
+from tabularepimdl.SharedTraitInfection_Vec_Encode import SharedTraitInfection_Vec_Encode as SharedTraitInfection_Vec_Encode
 
 
 class SharedTraitInfectionDispatcher(BaseModel):
@@ -25,7 +21,7 @@ class SharedTraitInfectionDispatcher(BaseModel):
     @param i_st: the state for infectious, assumed to be I.
     @param inf_to: the state susceptible populations go to, assumed to be I.
     @param stochastic: whether the process is stochastic or deterministic.
-    @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R']. 
+    @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R'].
     """
 
     structure: Literal["Pandas", "Numpy_Vec_Encode"]
@@ -40,22 +36,15 @@ class SharedTraitInfectionDispatcher(BaseModel):
     stochastic: bool = False
     infstate_compartments: list[str] = Field(default_factory=list)
 
-    #Dispatcher
+    # Dispatcher
     _dispatcher: SharedTraitInfection_Pandas | SharedTraitInfection_Vec_Encode = PrivateAttr(default=None)
 
-    def model_post_init(self, _): #initialize dispatcher based on data structures
-        if self.structure == 'Pandas':
+    def model_post_init(self, _):  # initialize dispatcher based on data structures
+        if self.structure == "Pandas":
             self._dispatcher = SharedTraitInfection_Pandas(
-                in_beta=self.in_beta,
-                out_beta=self.out_beta,
-                inf_col=self.inf_col,
-                trait_col=self.trait_col,
-                s_st=self.s_st,
-                i_st=self.i_st,
-                inf_to=self.inf_to,
-                stochastic=self.stochastic
+                in_beta=self.in_beta, out_beta=self.out_beta, inf_col=self.inf_col, trait_col=self.trait_col, s_st=self.s_st, i_st=self.i_st, inf_to=self.inf_to, stochastic=self.stochastic
             )
-        elif self.structure == 'Numpy_Vec_Encode':
+        elif self.structure == "Numpy_Vec_Encode":
             self._dispatcher = SharedTraitInfection_Vec_Encode(
                 in_beta=self.in_beta,
                 out_beta=self.out_beta,
@@ -66,22 +55,23 @@ class SharedTraitInfectionDispatcher(BaseModel):
                 i_st=self.i_st,
                 inf_to=self.inf_to,
                 stochastic=self.stochastic,
-                infstate_compartments=self.infstate_compartments
+                infstate_compartments=self.infstate_compartments,
             )
         else:
             raise ValueError(f"Unknown structure: {self.structure}")
-        
-    
-    def get_deltas(self, current_state: pd.DataFrame | np.ndarray, col_idx_map: dict[str, int] | None = None, result_buffer: np.ndarray | None = None,  dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame | np.ndarray:
+
+    def get_deltas(
+        self, current_state: pd.DataFrame | np.ndarray, col_idx_map: dict[str, int] | None = None, result_buffer: np.ndarray | None = None, dt: float = 1.0, stochastic: bool | None = None
+    ) -> pd.DataFrame | np.ndarray:
         """
         @param current_state: a dataframe or numpy array (at the moment) representing the current epidemic state.
         @param col_idx_map: mapping of input data columns and their column index. Default is None so Pandas version's get_deltas() can invoke dispather's get_deltas().
         @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. Default is None so Pandas version's get_deltas() can invoke dispather's get_deltas().
         @param dt: size of the timestep.
         """
-        if self.structure == 'Pandas':
-            return cast(SharedTraitInfection_Pandas, self._dispatcher).get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
-        elif self.structure == 'Numpy_Vec_Encode':
+        if self.structure == "Pandas":
+            return cast("SharedTraitInfection_Pandas", self._dispatcher).get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
+        if self.structure == "Numpy_Vec_Encode":
             assert col_idx_map is not None
             assert result_buffer is not None
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)

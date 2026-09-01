@@ -4,6 +4,7 @@ Every Runner's run() loop repeated the same gc.collect() / tracemalloc / perf_co
 block once per structure branch. This factors that out so each Runner only supplies
 the structure-specific call to make.
 """
+
 import gc
 import time
 import tracemalloc
@@ -35,11 +36,6 @@ def measure(struct: str, get_deltas_fn: Callable[[], pd.DataFrame | np.ndarray],
     peak = tracemalloc.get_traced_memory()[1]
     tracemalloc.stop()
 
-    non_zero = np.count_nonzero(
-        deltas[:, col_idx_map["N"]] if isinstance(deltas, np.ndarray) else deltas.loc[:, "N"]
-    )
-    print(
-        f"Sample deltas for {struct}:\n{deltas}\n, data length: {len(deltas)}\n, "
-        f"non-zero counts: {non_zero}"
-    )
+    non_zero = np.count_nonzero(deltas[:, col_idx_map["N"]] if isinstance(deltas, np.ndarray) else deltas.loc[:, "N"])
+    print(f"Sample deltas for {struct}:\n{deltas}\n, data length: {len(deltas)}\n, non-zero counts: {non_zero}")
     return deltas, round(t1 - t0, 3), round(peak / 1024**2, 2)

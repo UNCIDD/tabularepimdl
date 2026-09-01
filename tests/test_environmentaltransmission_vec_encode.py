@@ -1,6 +1,7 @@
 """
 Unit test for EnvironmentalTransmission_Vec_Encode.py.
 """
+
 from unittest import mock
 
 import numpy as np
@@ -13,14 +14,10 @@ COL_IDX_MAP = {"InfState": 0, "N": 1}
 S, I_ = 2, 0
 infstate_compartments = ["S", "I", "R"]
 
+
 @pytest.fixture
 def dummy_state():
-    return np.array([
-        [S,  10.0],
-        [I_, 20.0],
-        [S,  30.0],
-        [I_, 40.0],
-    ])
+    return np.array([[S, 10.0], [I_, 20.0], [S, 30.0], [I_, 40.0]])
 
 
 @pytest.fixture
@@ -47,24 +44,14 @@ def test_get_deltas_deterministic(environmental_transmission, dummy_state, resul
     deltas = environmental_transmission.get_deltas(current_state=dummy_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0)
 
     rate_const = 1 - np.exp(-1.0 * 0.3)
-    expected = np.array([
-        [S, -10 * rate_const],
-        [S, -30 * rate_const],
-        [I_, 10 * rate_const],
-        [I_, 30 * rate_const],
-    ])
+    expected = np.array([[S, -10 * rate_const], [S, -30 * rate_const], [I_, 10 * rate_const], [I_, 30 * rate_const]])
     np.testing.assert_allclose(deltas, expected)
 
 
 def test_get_deltas_stochastic(environmental_transmission, dummy_state, result_buffer):
     with mock.patch("numpy.random.binomial", return_value=10):
         deltas = environmental_transmission.get_deltas(current_state=dummy_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0, stochastic=True)
-        expected = np.array([
-            [S, -10.0],
-            [S, -10.0],
-            [I_, 10.0],
-            [I_, 10.0],
-        ])
+        expected = np.array([[S, -10.0], [S, -10.0], [I_, 10.0], [I_, 10.0]])
         np.testing.assert_allclose(deltas, expected)
 
 

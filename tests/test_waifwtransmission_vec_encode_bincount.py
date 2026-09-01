@@ -3,14 +3,13 @@ Unit test for WAIFWTransmission_Vec_Encode_Bincount.py.
 
 Uses the same 2-group scenario (N counts, infection states, waifw matrix) as tests/test_waifwtransmission.py
 """
+
 from unittest import mock
 
 import numpy as np
 import pytest
 
-from tabularepimdl.WAIFWTransmission_Vec_Encode_Bincount import (
-    WAIFWTransmission_Vec_Encode_Bincount,
-)
+from tabularepimdl.WAIFWTransmission_Vec_Encode_Bincount import WAIFWTransmission_Vec_Encode_Bincount
 
 # columns: InfState, Group, N
 COL_IDX_MAP = {"InfState": 0, "Group": 1, "N": 2}
@@ -28,12 +27,7 @@ def dummy_waifw_matrix():
 @pytest.fixture
 def dummy_state():
     """Mirrors test_waifwtransmission.py's dummy_state: N=[50,5,40,10], S/I/S/I, GroupA/GroupA/GroupB/GroupB."""
-    return np.array([
-        [S,  GROUP_A, 50.0],
-        [I_, GROUP_A, 5.0],
-        [S,  GROUP_B, 40.0],
-        [I_, GROUP_B, 10.0],
-    ])
+    return np.array([[S, GROUP_A, 50.0], [I_, GROUP_A, 5.0], [S, GROUP_B, 40.0], [I_, GROUP_B, 10.0]])
 
 
 @pytest.fixture
@@ -44,8 +38,7 @@ def result_buffer():
 @pytest.fixture
 def waifw_transmission(dummy_waifw_matrix):
     return WAIFWTransmission_Vec_Encode_Bincount(
-        waifw_matrix=dummy_waifw_matrix, inf_col="InfState", group_col="Group",
-        group_col_all_categories=["GroupA", "GroupB"], infstate_compartments=infstate_compartments,
+        waifw_matrix=dummy_waifw_matrix, inf_col="InfState", group_col="Group", group_col_all_categories=["GroupA", "GroupB"], infstate_compartments=infstate_compartments
     )
 
 
@@ -72,40 +65,34 @@ def test_get_deltas_deterministic(waifw_transmission, dummy_state, dummy_waifw_m
     # cross-check against the exact values asserted in test_waifwtransmission.py's equivalent test
     assert prI_per_group == pytest.approx([0.9698026165776815, 0.9932620530009145])
 
-    expected = np.array([
-        [S, GROUP_A, -50 * prI_per_group[0]],
-        [S, GROUP_B, -40 * prI_per_group[1]],
-        [I_, GROUP_A, 50 * prI_per_group[0]],
-        [I_, GROUP_B, 40 * prI_per_group[1]],
-    ])
+    expected = np.array([[S, GROUP_A, -50 * prI_per_group[0]], [S, GROUP_B, -40 * prI_per_group[1]], [I_, GROUP_A, 50 * prI_per_group[0]], [I_, GROUP_B, 40 * prI_per_group[1]]])
     np.testing.assert_allclose(deltas, expected)
 
 
 def test_get_deltas_stochastic(waifw_transmission, dummy_state, result_buffer):
     with mock.patch("numpy.random.binomial", return_value=20):
         deltas = waifw_transmission.get_deltas(current_state=dummy_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0, stochastic=True)
-        expected = np.array([
-            [S,  GROUP_A, -20.0],
-            [S,  GROUP_B, -20.0],
-            [I_, GROUP_A, 20.0],
-            [I_, GROUP_B, 20.0],
-        ])
+        expected = np.array([[S, GROUP_A, -20.0], [S, GROUP_B, -20.0], [I_, GROUP_A, 20.0], [I_, GROUP_B, 20.0]])
         np.testing.assert_allclose(deltas, expected)
 
 
 def test_get_deltas_raises_when_data_has_more_groups_than_declared(waifw_transmission, result_buffer):
-    state_with_more_groups = np.array([
-        [S,  0, 50.0],
-        [I_, 1, 5.0],
-        [S,  2, 40.0],  # a third group code, but only 2 categories were declared
-    ])
+    state_with_more_groups = np.array(
+        [
+            [S, 0, 50.0],
+            [I_, 1, 5.0],
+            [S, 2, 40.0],  # a third group code, but only 2 categories were declared
+        ]
+    )
     with pytest.raises(ValueError):
         waifw_transmission.get_deltas(current_state=state_with_more_groups, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0)
 
 
 def test_get_deltas_raises_when_categories_mismatch_matrix_size(dummy_waifw_matrix, dummy_state, result_buffer):
     rule = WAIFWTransmission_Vec_Encode_Bincount(
-        waifw_matrix=dummy_waifw_matrix, inf_col="InfState", group_col="Group",
+        waifw_matrix=dummy_waifw_matrix,
+        inf_col="InfState",
+        group_col="Group",
         group_col_all_categories=["GroupA", "GroupB", "GroupC"],  # 3 categories, but a 2x2 matrix
         infstate_compartments=infstate_compartments,
     )
