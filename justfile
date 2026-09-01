@@ -2,6 +2,8 @@
 # `just` is optional -- every recipe here is a thin wrapper around a `uv run ...` command
 # users can always run directly instead. See CONTRIBUTING.md.
 
+set windows-shell := ["cmd.exe", "/c"]
+
 default:
     just --list
 
