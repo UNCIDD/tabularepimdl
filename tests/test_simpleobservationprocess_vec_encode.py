@@ -4,6 +4,7 @@ Unit test for SimpleObservationProcess_Vec_Encode.py.
 Mirrors tests/test_simpleobservationprocess.py's scenario (same rate, same population counts,
 same source/obs states) on an encoded NumPy array.
 """
+
 from unittest import mock
 
 import numpy as np
@@ -20,17 +21,13 @@ S, I_ = 1, 0
 OBS_I, OBS_P, OBS_U = 0, 1, 2
 infstate_compartments = ["S", "I", "R"]
 
+
 @pytest.fixture
 def dummy_state():
     """Mirrors test_simpleobservationprocess.py's dummy_state: N=[10,20,30,40,50],
-    Infection_State=['S','I','S','I','S'], Hosp=['U','U','P','U','I']."""
-    return np.array([
-        [S,  OBS_U, 10.0],
-        [I_, OBS_U, 20.0],
-        [S,  OBS_P, 30.0],
-        [I_, OBS_U, 40.0],
-        [S,  OBS_I, 50.0],
-    ])
+    Infection_State=['S','I','S','I','S'], Hosp=['U','U','P','U','I'].
+    """
+    return np.array([[S, OBS_U, 10.0], [I_, OBS_U, 20.0], [S, OBS_P, 30.0], [I_, OBS_U, 40.0], [S, OBS_I, 50.0]])
 
 
 @pytest.fixture
@@ -41,9 +38,7 @@ def result_buffer():
 @pytest.fixture
 def simple_observation():
     return SimpleObservationProcess_Vec_Encode(
-        source_col="InfState", source_state="I", obs_col="Hosp", rate=0.05,
-        source_col_all_categories=["S", "I"], infstate_compartments=infstate_compartments,
-        obs_col_all_categories=["U", "I", "P"],
+        source_col="InfState", source_state="I", obs_col="Hosp", rate=0.05, source_col_all_categories=["S", "I"], infstate_compartments=infstate_compartments, obs_col_all_categories=["U", "I", "P"]
     )
 
 
@@ -64,14 +59,16 @@ def test_get_deltas_deterministic(simple_observation, dummy_state, result_buffer
     deltas = simple_observation.get_deltas(current_state=dummy_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0, stochastic=False)
 
     rate_const = 1 - np.exp(-1.0 * 0.05)
-    expected = np.array([
-        [I_, OBS_U, -20 * rate_const],  # out_of_unobs (subtraction)
-        [I_, OBS_U, -40 * rate_const],
-        [I_, OBS_I,  20 * rate_const],   # into_incobs (addition)
-        [I_, OBS_I,  40 * rate_const],
-        [S,  OBS_I, -50.0],             # out_of_incobs (the pre-existing Hosp='I' row, N negated)
-        [S,  OBS_P,  50.0],              # into_prev
-    ])
+    expected = np.array(
+        [
+            [I_, OBS_U, -20 * rate_const],  # out_of_unobs (subtraction)
+            [I_, OBS_U, -40 * rate_const],
+            [I_, OBS_I, 20 * rate_const],  # into_incobs (addition)
+            [I_, OBS_I, 40 * rate_const],
+            [S, OBS_I, -50.0],  # out_of_incobs (the pre-existing Hosp='I' row, N negated)
+            [S, OBS_P, 50.0],  # into_prev
+        ]
+    )
 
     np.testing.assert_allclose(deltas, expected)
 
@@ -80,23 +77,13 @@ def test_get_deltas_stochastic(simple_observation, dummy_state, result_buffer):
     with mock.patch("numpy.random.binomial", return_value=10):
         deltas = simple_observation.get_deltas(current_state=dummy_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0, stochastic=True)
 
-        expected = np.array([
-            [I_, OBS_U, -10.0],
-            [I_, OBS_U, -10.0],
-            [I_, OBS_I, 10.0],
-            [I_, OBS_I, 10.0],
-            [S, OBS_I, -50.0],
-            [S, OBS_P, 50.0],
-        ])
+        expected = np.array([[I_, OBS_U, -10.0], [I_, OBS_U, -10.0], [I_, OBS_I, 10.0], [I_, OBS_I, 10.0], [S, OBS_I, -50.0], [S, OBS_P, 50.0]])
         np.testing.assert_allclose(deltas, expected)
 
 
 def test_get_deltas_no_matching_rows_returns_empty(simple_observation, result_buffer):
     """No one is in source_state + unobs_state -> nothing to observe."""
-    state_without_unobserved_source = np.array([
-        [S, OBS_U, 10.0],
-        [S, OBS_P, 30.0],
-    ])
+    state_without_unobserved_source = np.array([[S, OBS_U, 10.0], [S, OBS_P, 30.0]])
     deltas = simple_observation.get_deltas(current_state=state_without_unobserved_source, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0)
     assert deltas.shape == (0, 3)
 

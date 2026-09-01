@@ -14,24 +14,26 @@ from my_module import MyRule
 
 @pytest.fixture
 def rule_yaml_setUp():
-        """
-        Load a yaml file from the tests directory (independent of the current working directory).
-        Returns: content from the loaded yaml file.
-        """
-        # Load the YAML file
-        yaml_path = Path(__file__).parent / "yaml_input.yml"
-        with open(yaml_path) as file:
-            rule_yaml = yaml.safe_load(file)
-        return(rule_yaml)
+    """
+    Load a yaml file from the tests directory (independent of the current working directory).
+    Returns: content from the loaded yaml file.
+    """
+    # Load the YAML file
+    yaml_path = Path(__file__).parent / "yaml_input.yml"
+    with open(yaml_path) as file:
+        rule_yaml = yaml.safe_load(file)
+    return rule_yaml
+
 
 @pytest.fixture
 def myrule(rule_yaml_setUp):
-     """
-     Initialize the Rule object by using from_yaml classmethod with loaded yaml content.
-     Returns: Initialized Rule object/instance.
-     """
-     rule = MyRule.from_yaml(rule_yaml_setUp)
-     return(rule)
+    """
+    Initialize the Rule object by using from_yaml classmethod with loaded yaml content.
+    Returns: Initialized Rule object/instance.
+    """
+    rule = MyRule.from_yaml(rule_yaml_setUp)
+    return rule
+
 
 def test_from_yaml(myrule):
     """
@@ -40,9 +42,10 @@ def test_from_yaml(myrule):
     """
     assert not myrule.stochastic
     assert myrule.rate == 0.1
-    assert myrule.column == 'InfState'
-    assert myrule.from_st == 'S'
-    assert myrule.to_st == 'I'
+    assert myrule.column == "InfState"
+    assert myrule.from_st == "S"
+    assert myrule.to_st == "I"
+
 
 def test_to_dict(myrule):
     """
@@ -50,15 +53,15 @@ def test_to_dict(myrule):
     Args: myrule object.
     """
     expected_dict = {
-            "tabularepimdl.SimpleTransition_Vec_Encode": {
-                "column": "InfState",
-                "from_st": "S",
-                "to_st": "I",
-                "rate": 0.1,
-                "stochastic": False,
-                "column_categories": ["placeholder"],
-                "infstate_compartments": ["S", "I", "R"],
-            }
+        "tabularepimdl.SimpleTransition_Vec_Encode": {
+            "column": "InfState",
+            "from_st": "S",
+            "to_st": "I",
+            "rate": 0.1,
+            "stochastic": False,
+            "column_categories": ["placeholder"],
+            "infstate_compartments": ["S", "I", "R"],
         }
+    }
     returned_dict = myrule.to_dict()
     assert returned_dict == expected_dict

@@ -1,10 +1,11 @@
 """
 Unit tests for EpiModel_Vec_Encode1_5.py (EpiModel_Vec_Encode_1_5) -- focuses on the the NumPy engine's own mechanics.
 
-The following tests exercise init_state validation, the encode/decode round-trip, Reset(), add_new_data_to_current_state(), 
+The following tests exercise init_state validation, the encode/decode round-trip, Reset(), add_new_data_to_current_state(),
 and the dynamic delta-buffer growth logic. Cross-engine numerical parity for do_timestep() itself is covered separately in
 tests/test_engine_parity.py.
 """
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -16,23 +17,17 @@ infstate_compartments = ["S", "I", "R"]
 
 
 def _init_state() -> pd.DataFrame:
-    return pd.DataFrame({
-        "InfState": ["S", "I"],
-        "N": [990.0, 10.0],
-        "T": [0, 0],
-    })
+    return pd.DataFrame({"InfState": ["S", "I"], "N": [990.0, 10.0], "T": [0, 0]})
 
 
 def _transition_rule() -> SimpleTransition_Vec_Encode:
-    return SimpleTransition_Vec_Encode(
-        column="InfState", from_st="I", to_st="R", rate=0.2, stochastic=False,
-        infstate_compartments=infstate_compartments, column_categories=infstate_compartments,
-    )
+    return SimpleTransition_Vec_Encode(column="InfState", from_st="I", to_st="R", rate=0.2, stochastic=False, infstate_compartments=infstate_compartments, column_categories=infstate_compartments)
 
 
 # ---------------------------------------------------------------------------
 # init_state validation
 # ---------------------------------------------------------------------------
+
 
 def test_init_state_must_be_dataframe():
     with pytest.raises(TypeError):
@@ -60,6 +55,7 @@ def test_init_state_column_names_must_be_strings():
 # rules-list normalization (mirrors EpiModel's own validate_rules_list
 # ---------------------------------------------------------------------------
 
+
 def test_single_rule_is_wrapped_in_nested_list():
     rule = _transition_rule()
     model = EpiModel_Vec_Encode_1_5(init_state=_init_state(), rules=rule)
@@ -81,6 +77,7 @@ def test_invalid_rules_type_raises():
 # encode/decode round trip and column shuffling
 # ---------------------------------------------------------------------------
 
+
 def test_current_state_round_trips_to_original_values():
     model = EpiModel_Vec_Encode_1_5(init_state=_init_state(), rules=[[_transition_rule()]])
     state = model.current_state()
@@ -97,6 +94,7 @@ def test_model_post_init_moves_n_and_t_to_end_of_column_order():
 # ---------------------------------------------------------------------------
 # do_timestep: manually-computed single-rule result
 # ---------------------------------------------------------------------------
+
 
 def test_do_timestep_matches_manually_computed_transition():
     model = EpiModel_Vec_Encode_1_5(init_state=_init_state(), rules=[[_transition_rule()]])
@@ -123,6 +121,7 @@ def test_reset_to_restore_initial_state():
 # add_new_data_to_current_state
 # ---------------------------------------------------------------------------
 
+
 def test_add_new_data_appends_a_row():
     model = EpiModel_Vec_Encode_1_5(init_state=_init_state(), rules=[[_transition_rule()]])
     new_data = pd.DataFrame({"InfState": ["R"], "N": [5.0], "T": [0]})
@@ -147,6 +146,7 @@ def test_add_new_data_wrong_column_names_raises():
 # ---------------------------------------------------------------------------
 # dynamic delta-buffer growth
 # ---------------------------------------------------------------------------
+
 
 def test_delta_buffer_grows_when_current_state_exceeds_initial_buffer_capacity():
     model = EpiModel_Vec_Encode_1_5(init_state=_init_state(), rules=[[_transition_rule()]])
