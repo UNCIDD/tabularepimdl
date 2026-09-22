@@ -4,6 +4,7 @@ Unit test for SimpleInfection_Vec_Encode.py.
 Mirrors tests/test_simpleinfection.py's scenario (N counts, beta, freq_dep) on an encoded NumPy
 array.
 """
+
 from unittest import mock
 
 import numpy as np
@@ -16,15 +17,11 @@ COL_IDX_MAP = {"InfState": 0, "N": 1}
 S, I_ = 2, 0
 infstate_compartments = ["S", "I", "R"]
 
+
 @pytest.fixture
 def dummy_state():
     """Mirrors test_simpleinfection.py's dummy_state: N=[10,20,30,40], InfState=['S','I','S','I']."""
-    return np.array([
-        [S,  10.0],
-        [I_, 20.0],
-        [S,  30.0],
-        [I_, 40.0],
-    ])
+    return np.array([[S, 10.0], [I_, 20.0], [S, 30.0], [I_, 40.0]])
 
 
 @pytest.fixture
@@ -56,12 +53,7 @@ def test_get_deltas_deterministic_freq_dep(simple_infection, dummy_state, result
     infectious_sum = 60  # N where InfState==I
     rate_const = 1 - np.power(np.exp(-1.0 * beta_effective), infectious_sum)
 
-    expected = np.array([
-        [S, -10 * rate_const],
-        [S, -30 * rate_const],
-        [I_, 10 * rate_const],
-        [I_, 30 * rate_const],
-    ])
+    expected = np.array([[S, -10 * rate_const], [S, -30 * rate_const], [I_, 10 * rate_const], [I_, 30 * rate_const]])
     np.testing.assert_allclose(deltas, expected)
 
 
@@ -71,24 +63,14 @@ def test_get_deltas_deterministic_not_freq_dep(dummy_state, result_buffer):
 
     infectious_sum = 60
     rate_const = 1 - np.power(np.exp(-1.0 * 0.3), infectious_sum)  # beta used directly, not divided by total N
-    expected = np.array([
-        [S, -10 * rate_const],
-        [S, -30 * rate_const],
-        [I_, 10 * rate_const],
-        [I_, 30 * rate_const],
-    ])
+    expected = np.array([[S, -10 * rate_const], [S, -30 * rate_const], [I_, 10 * rate_const], [I_, 30 * rate_const]])
     np.testing.assert_allclose(deltas, expected)
 
 
 def test_get_deltas_stochastic(simple_infection, dummy_state, result_buffer):
     with mock.patch("numpy.random.binomial", return_value=10):
         deltas = simple_infection.get_deltas(current_state=dummy_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0, stochastic=True)
-        expected = np.array([
-            [S, -10.0],
-            [S, -10.0],
-            [I_, 10.0],
-            [I_, 10.0],
-        ])
+        expected = np.array([[S, -10.0], [S, -10.0], [I_, 10.0], [I_, 10.0]])
         np.testing.assert_allclose(deltas, expected)
 
 

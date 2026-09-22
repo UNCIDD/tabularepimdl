@@ -43,42 +43,42 @@ class StateBasedDeathProcessRunner(BaseModel):
     def model_post_init(self, _):
         self._infstate_comp_map = {comp: i for i, comp in enumerate(sorted(self.infstate_compartments))}
 
-    
     def run(self) -> list[dict]:
         """
         Creates input data with different sizes and runs deltas calculation with different data structures in different iterations.
         Tracks each combination's time and memory usage.
         """
         for size in self.data_sizes:
-            start_age=0
-            end_age=70
-            age_step= (end_age-start_age)/(size-1)
+            start_age = 0
+            end_age = 70
+            age_step = (end_age - start_age) / (size - 1)
 
-            age_struct_pop = pd.DataFrame({
-                'InfState' : pd.Categorical(["S"]*size, categories=["I","R","S"]),
-                'AgeCat': [f"{i} to {i+ (age_step-1)}" for i in np.arange(start_age, end_age, age_step)]+[f"{end_age}+"],
-                'N' : [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150],
-                'T': 0
-            })
+            age_struct_pop = pd.DataFrame(
+                {
+                    "InfState": pd.Categorical(["S"] * size, categories=["I", "R", "S"]),
+                    "AgeCat": [f"{i} to {i + (age_step - 1)}" for i in np.arange(start_age, end_age, age_step)] + [f"{end_age}+"],
+                    "N": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150],
+                    "T": 0,
+                }
+            )
 
-            
-            #print('age structure\n', age_struct_pop)
-            struct_last_deltas = {} #each structure's last computed deltas for this size, for cross-structure comparison
+            # print('age structure\n', age_struct_pop)
+            struct_last_deltas = {}  # each structure's last computed deltas for this size, for cross-structure comparison
             for struct in self.structures:
                 for iters in self.iterations:
                     print(f"\nRunning {struct} | size={size} | iterations={iters}")
-                    if struct == 'Pandas': #provide dataframe to Pandas
+                    if struct == "Pandas":  # provide dataframe to Pandas
                         data = age_struct_pop
-                    elif struct == 'Numpy_Encode': #provide true Numpy array to Numpy_Encode
-                        agecat_map = {label: idx for idx, label in enumerate(age_struct_pop['AgeCat'].unique())}
+                    elif struct == "Numpy_Encode":  # provide true Numpy array to Numpy_Encode
+                        agecat_map = {label: idx for idx, label in enumerate(age_struct_pop["AgeCat"].unique())}
 
-                        age_struct_pop['InfState'] = age_struct_pop['InfState'].map(self._infstate_comp_map)
-                        age_struct_pop['AgeCat'] = age_struct_pop['AgeCat'].map(agecat_map)
+                        age_struct_pop["InfState"] = age_struct_pop["InfState"].map(self._infstate_comp_map)
+                        age_struct_pop["AgeCat"] = age_struct_pop["AgeCat"].map(agecat_map)
                         age_array = age_struct_pop.to_numpy(dtype=np.float64)
-                        #print('age array\n', age_array) #debug
-                        n_rows = age_array.shape[0] #detect the number of rows and columns in input array
+                        # print('age array\n', age_array) #debug
+                        n_rows = age_array.shape[0]  # detect the number of rows and columns in input array
                         n_cols = age_array.shape[1]
-                        result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
+                        result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64)  # preallocate a result array
                     dispatcher = StateBasedDeathProcessDispatcher(
                         structure=struct,
                         column=self.column,
@@ -87,34 +87,25 @@ class StateBasedDeathProcessRunner(BaseModel):
                         target_states=self.target_states,
                         rate=self.rate,
                         stochastic=self.stochastic,
-                        infstate_compartments = self.infstate_compartments
+                        infstate_compartments=self.infstate_compartments,
                     )
-                    #print('dispatcher created ok\n') #debug
-                    if struct == 'Pandas':
-                        deltas, time_sec, peak_mb = measure(
-                            struct,
-                            partial(dispatcher.get_deltas, current_state=data, stochastic=self.stochastic),
-                            iters, self.col_idx_map,
-                        )
-                    elif struct == 'Numpy_Encode':
+                    # print('dispatcher created ok\n') #debug
+                    if struct == "Pandas":
+                        deltas, time_sec, peak_mb = measure(struct, partial(dispatcher.get_deltas, current_state=data, stochastic=self.stochastic), iters, self.col_idx_map)
+                    elif struct == "Numpy_Encode":
                         deltas, time_sec, peak_mb = measure(
                             struct,
                             partial(dispatcher.get_deltas, current_state=age_array, col_idx_map=self.col_idx_map, result_buffer=result_preallocation, stochastic=self.stochastic),
-                            iters, self.col_idx_map,
+                            iters,
+                            self.col_idx_map,
                         )
 
-                    #concatenate each iteration's result
-                    self.time_mem_results.append({
-                        'structure': struct,
-                        'size': size,
-                        'iterations': iters,
-                        'time_sec': time_sec,
-                        'peak_memory_MB': peak_mb
-                    })
+                    # concatenate each iteration's result
+                    self.time_mem_results.append({"structure": struct, "size": size, "iterations": iters, "time_sec": time_sec, "peak_memory_MB": peak_mb})
 
-                    #print('time_mem_result\n', self.time_mem_results) #debug
+                    # print('time_mem_result\n', self.time_mem_results) #debug
 
-                struct_last_deltas[struct] = deltas #keep this structure's last deltas from this size's runs
+                struct_last_deltas[struct] = deltas  # keep this structure's last deltas from this size's runs
 
             compare_structure_deltas(struct_last_deltas, self.col_idx_map, rule_name="StateBasedDeathProcess", stochastic=self.stochastic)
         return self.time_mem_results

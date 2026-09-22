@@ -8,6 +8,7 @@ Notes:
     - Structures whose last deltas were None or empty are skipped (nothing to compare).
     - Values are compared *sorted*, not by row position.
 """
+
 import numpy as np
 import pandas as pd
 
@@ -31,32 +32,24 @@ def _extract_n_values(deltas, col_idx_map: dict, n_col: str = "N") -> np.ndarray
     raise TypeError(f"Unsupported deltas type for comparison: {type(deltas)}")
 
 
-def compare_structure_deltas(
-    last_deltas_by_struct: dict,
-    col_idx_map: dict,
-    rule_name: str,
-    stochastic: bool = False,
-    n_col: str = "N",
-    rtol: float = 1e-6,
-    atol: float = 1e-9,
-) -> None:
+def compare_structure_deltas(last_deltas_by_struct: dict, col_idx_map: dict, rule_name: str, stochastic: bool = False, n_col: str = "N", rtol: float = 1e-6, atol: float = 1e-9) -> None:
     """
     Compare each data structure's last-iteration deltas' column N values for a deterministic run.
 
     Args:
         last_deltas_by_struct: mapping of structure name (e.g. 'Pandas', 'Numpy_Encode') to its
         last get_deltas() result for the data size just benchmarked.
-        
+
         col_idx_map: mapping of column name to column index, used to read N out of numpy-array
         deltas. Ignored for DataFrame deltas, which are indexed by column name directly.
 
         rule_name: name of the rule being benchmarked, used in the printed/raised message.
-        
+
         stochastic: whether this benchmark run used stochastic=True. When True, comparison is
         skipped.
-        
+
         n_col: name of the population-count column to compare. Defaults to 'N'.
-        
+
         rtol, atol: tolerance passed to np.allclose, to absorb floating-point noise between
         independently-implemented structures rather than requiring bit-exact equality.
 
@@ -86,12 +79,6 @@ def compare_structure_deltas(
             mismatches.append(struct)
 
     if mismatches:
-        raise ValueError(
-            f"{rule_name}: deltas' column '{n_col}' values do not match between data structures. "
-            f"Baseline structure '{baseline_struct}' disagrees with: {mismatches}."
-        )
+        raise ValueError(f"{rule_name}: deltas' column '{n_col}' values do not match between data structures. Baseline structure '{baseline_struct}' disagrees with: {mismatches}.")
 
-    print(
-        f"{rule_name}: results of {list(extracted.keys())} match -- deltas column '{n_col}' values "
-        f"are consistent across data structures."
-    )
+    print(f"{rule_name}: results of {list(extracted.keys())} match -- deltas column '{n_col}' values are consistent across data structures.")

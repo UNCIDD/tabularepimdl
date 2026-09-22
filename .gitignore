@@ -1,4 +1,28 @@
+# tabularepimdl specific ignores
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
 *.pyc
 __pycache__
-tabularepimdl.egg-info/
-.venv/
+
+# Distribution / packaging
+.Python
+dist/
+sdist/
+wheels/
+*.egg-info/
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+
+# Environments
+.env
+env/
+.venv
+venv/
+
+# mypy
+.mypy_cache/

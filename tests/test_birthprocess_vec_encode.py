@@ -4,6 +4,7 @@ These tests cover both
 the birth-rate math (mirroring the pandas BirthProcess tests) and that derive-then-cache behavior,
 which has no equivalent in the pandas version.
 """
+
 from unittest import mock
 
 import numpy as np
@@ -17,10 +18,7 @@ COL_IDX_MAP = {"AgeCat": 0, "InfState": 1, "N": 2, "T": 3}
 @pytest.fixture
 def current_state():
     """Two age groups with susceptible status and different population size at time 0. AgeCat=0 is the youngest group."""
-    return np.array([
-        [1.0, 2.0, 500.0, 0.0],
-        [0.0, 2.0, 300.0, 0.0],
-    ])
+    return np.array([[1.0, 2.0, 500.0, 0.0], [0.0, 2.0, 300.0, 0.0]])
 
 
 @pytest.fixture
@@ -73,19 +71,22 @@ def test_get_deltas_stochastic_uses_poisson_draw(birthprocess_stochastic, curren
 
 def test_start_state_signature_is_cached_across_calls(birthprocess_non_stochastic, current_state, result_buffer):
     """Once derived, the signature (all non-N/T values) must be reused even if later current_state differs,
-    only N is recomputed each call."""
+    only N is recomputed each call.
+    """
     # first call of get_deltas()
     birthprocess_non_stochastic.get_deltas(current_state=current_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0)
     saved_signature = birthprocess_non_stochastic.start_state_sig.copy()
 
     # a state with the same AgeCat and differernt InfState and population N
-    different_state = np.array([
-        [1.0, 0.0, 50.0, 0.0],  
-        [0.0, 0.0, 20.0, 0.0], # a different youngest-row InfState/N than the first call
-    ])
+    different_state = np.array(
+        [
+            [1.0, 0.0, 50.0, 0.0],
+            [0.0, 0.0, 20.0, 0.0],  # a different youngest-row InfState/N than the first call
+        ]
+    )
     # second call of get_deltas()
     deltas_2 = birthprocess_non_stochastic.get_deltas(current_state=different_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0)
-    
+
     # AgeCat/InfState columns of the signature must be unchanged from the first call
     assert deltas_2[0, COL_IDX_MAP["AgeCat"]] == saved_signature[0, COL_IDX_MAP["AgeCat"]]
     assert deltas_2[0, COL_IDX_MAP["InfState"]] == saved_signature[0, COL_IDX_MAP["InfState"]]
@@ -109,11 +110,4 @@ def test_get_deltas_missing_n_column_raises(birthprocess_non_stochastic, current
 
 def test_to_dict(birthprocess_non_stochastic):
     result = birthprocess_non_stochastic.to_dict()
-    assert result == {
-        "tabularepimdl.BirthProcess_Vec_Encode": {
-            "rate": 0.1,
-            "column_to_sort": "AgeCat",
-            "stochastic": False,
-            "infstate_compartments": ["S", "I", "R"],
-        }
-    }
+    assert result == {"tabularepimdl.BirthProcess_Vec_Encode": {"rate": 0.1, "column_to_sort": "AgeCat", "stochastic": False, "infstate_compartments": ["S", "I", "R"]}}

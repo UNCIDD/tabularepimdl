@@ -12,10 +12,11 @@ class Visualizer(BaseModel):
     @param runner_results: a list of dictionaries containing time, memory, structure, data size, iteration information.
     @param df: dataframe converted from the above dictionaries.
     """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     runner_results: list[dict[str, Any]]
-    df: pd.DataFrame = None  #will be set after validation
+    df: pd.DataFrame = None  # will be set after validation
 
     @field_validator("runner_results")
     @classmethod
@@ -27,41 +28,27 @@ class Visualizer(BaseModel):
         return result
 
     def model_post_init(self, _):
-        #converts dict to a DataFrame once the model is created
+        # converts dict to a DataFrame once the model is created
         self.df = pd.DataFrame(self.runner_results)
-        self.df['label'] = self.df.apply(
-            lambda row: f"{int(row['size']):,} rows \n{row['iterations']} iters", axis=1
-        )
+        self.df["label"] = self.df.apply(lambda row: f"{int(row['size']):,} rows \n{row['iterations']} iters", axis=1)
 
     def plot(self):
         sns.set_theme(style="whitegrid")
         fig, axes = plt.subplots(1, 2, figsize=(16, 7))
 
         # ---- Time plot ----
-        sns.barplot(
-            data=self.df,
-            x="label",
-            y="time_sec",
-            hue="structure",
-            ax=axes[0]
-        )
+        sns.barplot(data=self.df, x="label", y="time_sec", hue="structure", ax=axes[0])
         axes[0].set_title("Runtime (seconds) by Structure & Condition")
         axes[0].set_xlabel("Data Size & Iterations")
         axes[0].set_ylabel("Time (seconds)")
-        axes[0].tick_params(axis='x', rotation=30)
+        axes[0].tick_params(axis="x", rotation=30)
 
         # ---- Memory plot ----
-        sns.barplot(
-            data=self.df,
-            x="label",
-            y="peak_memory_MB",
-            hue="structure",
-            ax=axes[1]
-        )
+        sns.barplot(data=self.df, x="label", y="peak_memory_MB", hue="structure", ax=axes[1])
         axes[1].set_title("Peak Memory (MB) by Structure & Condition")
         axes[1].set_xlabel("Data Size & Iterations")
         axes[1].set_ylabel("Memory (MB)")
-        axes[1].tick_params(axis='x', rotation=30)
+        axes[1].tick_params(axis="x", rotation=30)
 
         # Add legends
         axes[0].legend(title="Backend")

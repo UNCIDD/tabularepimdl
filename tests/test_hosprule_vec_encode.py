@@ -5,6 +5,7 @@ Uses a 2-strain scenario so both of those behaviors -- "recovered in any column 
 and "hospitalized in the strain-matching hosp column" -- are actually exercised, not just the
 degenerate single-strain case.
 """
+
 from unittest import mock
 
 import numpy as np
@@ -19,16 +20,14 @@ I_, R, S = 0, 1, 2
 H, U = 0, 1
 infstate_compartments = ["S", "I", "R"]
 
+
 @pytest.fixture
 def dummy_state():
     """Row0: infected via Strain1 only (no recovery anywhere) -> prim_hrate applies.
     Row1: infected via Strain2, but recovered via Strain1 -> sec_hrate applies.
-    Row2: fully susceptible -> not eligible for hospitalization at all."""
-    return np.array([
-        [I_, S,  U, U, 100.0],
-        [R,  I_, U, U, 50.0],
-        [S,  S,  U, U, 30.0],
-    ])
+    Row2: fully susceptible -> not eligible for hospitalization at all.
+    """
+    return np.array([[I_, S, U, U, 100.0], [R, I_, U, U, 50.0], [S, S, U, U, 30.0]])
 
 
 @pytest.fixture
@@ -39,9 +38,13 @@ def result_buffer():
 @pytest.fixture
 def hosp_rule():
     return HospRule_Vec_Encode(
-        strain_cols=["Strain1", "Strain2"], hosp_cols=["Hosp1", "Hosp2"],
-        strain_cols_all_categories=["S", "I", "R"], hosp_cols_all_categories=["U", "H"],
-        prim_hrate=0.2, sec_hrate=0.05, infstate_compartments=infstate_compartments,
+        strain_cols=["Strain1", "Strain2"],
+        hosp_cols=["Hosp1", "Hosp2"],
+        strain_cols_all_categories=["S", "I", "R"],
+        hosp_cols_all_categories=["U", "H"],
+        prim_hrate=0.2,
+        sec_hrate=0.05,
+        infstate_compartments=infstate_compartments,
     )
 
 
@@ -63,27 +66,28 @@ def test_initialization(hosp_rule):
 def test_mismatched_strain_and_hosp_cols_length_raises():
     with pytest.raises(ValueError):
         HospRule_Vec_Encode(
-            strain_cols=["Strain1", "Strain2"], hosp_cols=["Hosp1"],
-            strain_cols_all_categories=["S", "I", "R"], hosp_cols_all_categories=["U", "H"],
-            prim_hrate=0.2, sec_hrate=0.05, infstate_compartments=infstate_compartments,
+            strain_cols=["Strain1", "Strain2"],
+            hosp_cols=["Hosp1"],
+            strain_cols_all_categories=["S", "I", "R"],
+            hosp_cols_all_categories=["U", "H"],
+            prim_hrate=0.2,
+            sec_hrate=0.05,
+            infstate_compartments=infstate_compartments,
         )
 
 
 def test_expansion_factor(hosp_rule):
     """get_deltas always emits exactly 2 rows (one subtraction, one addition) per matching input
-    row -- previously this raised TypeError (compared an int to a list)."""
-    assert hosp_rule.expansion_factor == 3*3
+    row -- previously this raised TypeError (compared an int to a list).
+    """
+    assert hosp_rule.expansion_factor == 3 * 3
 
 
 def test_encode_categorical_states_by_engine(hosp_rule):
     """Exercises the engine-driven encoding path (previously indexed a dict with a list, and used
-    the wrong attribute for the hospitalization status lookup)."""
-    data_domains = {
-        "Strain1": {"S": 2, "I": 0, "R": 1},
-        "Strain2": {"S": 2, "I": 0, "R": 1},
-        "Hosp1": {"U": 1, "H": 0},
-        "Hosp2": {"U": 1, "H": 0},
-    }
+    the wrong attribute for the hospitalization status lookup).
+    """
+    data_domains = {"Strain1": {"S": 2, "I": 0, "R": 1}, "Strain2": {"S": 2, "I": 0, "R": 1}, "Hosp1": {"U": 1, "H": 0}, "Hosp2": {"U": 1, "H": 0}}
     hosp_rule._encode_categorical_states(data_domains)
     assert hosp_rule._infect_status_code == 0
     assert hosp_rule._recover_status_code == 1
@@ -96,24 +100,21 @@ def test_get_deltas_deterministic(hosp_rule, dummy_state, result_buffer):
 
     rate_prim = 1 - np.exp(-1.0 * 0.2)
     rate_sec = 1 - np.exp(-1.0 * 0.05)
-    expected = np.array([
-        [I_, S, U, U, -100 * rate_prim],   # row0 leaves general pool at prim_hrate
-        [R, I_, U, U, -50 * rate_sec],     # row1 leaves general pool at sec_hrate (recovered elsewhere)
-        [I_, S, H, U, 100 * rate_prim],    # row0 -> hospitalized via Hosp1 (matches Strain1, the infected column)
-        [R, I_, U, H, 50 * rate_sec],      # row1 -> hospitalized via Hosp2 (matches Strain2, the infected column)
-    ])
+    expected = np.array(
+        [
+            [I_, S, U, U, -100 * rate_prim],  # row0 leaves general pool at prim_hrate
+            [R, I_, U, U, -50 * rate_sec],  # row1 leaves general pool at sec_hrate (recovered elsewhere)
+            [I_, S, H, U, 100 * rate_prim],  # row0 -> hospitalized via Hosp1 (matches Strain1, the infected column)
+            [R, I_, U, H, 50 * rate_sec],  # row1 -> hospitalized via Hosp2 (matches Strain2, the infected column)
+        ]
+    )
     np.testing.assert_allclose(deltas, expected)
 
 
 def test_get_deltas_stochastic(hosp_rule, dummy_state, result_buffer):
     with mock.patch("numpy.random.binomial", return_value=15):
         deltas = hosp_rule.get_deltas(current_state=dummy_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0, stochastic=True)
-        expected = np.array([
-            [I_, S, U, U, -15.0],
-            [R, I_, U, U, -15.0],
-            [I_, S, H, U, 15.0],
-            [R, I_, U, H, 15.0],
-        ])
+        expected = np.array([[I_, S, U, U, -15.0], [R, I_, U, U, -15.0], [I_, S, H, U, 15.0], [R, I_, U, H, 15.0]])
         np.testing.assert_allclose(deltas, expected)
 
 

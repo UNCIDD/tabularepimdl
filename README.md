@@ -1,43 +1,37 @@
-# `tabularepimdl` - a flexible, rule-based framework for constructing tabular epidemic models in Python. 
-The model facilitates the simulation of complex outbreak dynamics across multiple populations and species, supporting modular processes such as infection, recovery, death, birth, and movement.
+# `tabularepimdl` - a flexible, rule-based framework for constructing tabular epidemic models 
+`tabularepimdl` is a modular, rule-based framework facilitates the simulation of complex outbreak dynamics across multiple populations and species, supporting multi-strain infection with cross-protective immunity, environmental/reservoir-mediated transmission, and structured contact-matrix transmission between arbitrary population groupings (age, location, or any other category).
 
-## Getting Started
-
-### Installation
-To install `tabularepimdl`, users can clone the repository and install it in editable mode:
+## Quick Start for Installation
 
 ```bash
-# 1. Clone the repo
 git clone https://github.com/UNCIDD/tabularepimdl.git
 cd tabularepimdl
-# 2. Create and activate a virtual environment
-python -m venv .venv
-.venv\Scripts\activate # Windows
-source .venv/bin/activate # macOS/Linux
-# 3. Install the package in "editable" mode, with test and dev dependencies
-pip install -e ".[test,dev]"
+uv sync --all-extras
 ```
 
-or from github:
+### Activate the virtual environment 
+### Windows
 ```bash
-# 1. Create a virtual environment
-python -m venv .venv
-.venv\Scripts\activate # Windows
-source .venv/bin/activate # macOS/Linux
-# 2. Install the package
-pip install "git+https://github.com/UNCIDD/tabularepimdl.git"
+.venv\Scripts\activate
 ```
 
-### Project Structure
+### macOS/Linux
+```bash
+source .venv/bin/activate
+```
+
+## Project Structure
 ```
 tabularepimdl/
-├── docs/                # High-level documents for each epidemic rule
-├── tests/               # Unit tests
-├── examples/            # Example simulations
+├── docs/                # High-level documents for each epidemic rule, more to be edited
+├── tests/               # Unit tests and Integration tests
+├── examples/            # Example simulations built from rules and the model engine
+├── legacy/              # initial pandas-based rules, model engine, and experimental stuff
 ├── src/
-│   └── tabularepimdl/   # Individual process rules (infection, birth, death, etc.)
+│   └── tabularepimdl/   # Individual process rules and the model engine
 ├── pyproject.toml       # Package configuration and dependencies
 ├── LICENSE              # MIT license
+├── CONTRIBUTING.md      # guidelines and instructions for contributing
 └── README.md            # Project description
 ```
 
@@ -49,26 +43,3 @@ tabularepimdl/
 **Configurable Rules**: Define custom processes using Pydantic-based configurations.
 
 **Performance Optimized**: Leverage efficient data structures for large-scale simulations.
-
-## Usage
-Here's a minimal example to define and run a simple SIR model using `tabularepimdl`:
-```python
-import tabularepimdl as tepi
-import pandas as pd
-
-population_df = pd.DataFrame({'InfState': ['S', 'I'], 'N': [990.0, 10.0], 'T': [0, 0]})
-infstate_compartments = ['S', 'I', 'R']
-
-infect_rule = tepi.SimpleInfection_Vec_Encode(
-    beta=0.5, column='InfState',
-    infstate_compartments=infstate_compartments, column_categories=infstate_compartments,
-)
-recover_rule = tepi.SimpleTransition_Vec_Encode(
-    column='InfState', from_st='I', to_st='R', rate=0.25,
-    infstate_compartments=infstate_compartments, column_categories=infstate_compartments,
-)
-epi_mdl = tepi.EpiModel_Vec_Encode_1_5(init_state=population_df, rules=[infect_rule, recover_rule])
-
-epi_mdl.do_timestep(dt=0.25)
-print(epi_mdl.current_state())
-```

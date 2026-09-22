@@ -7,6 +7,7 @@ N values (0.009576996819805172, 0.028730990459415517, 0.004788498409902586, 0.24
 0.36711697319890346) as ground truth here -- a strong cross-check that the two implementations
 agree.
 """
+
 from unittest import mock
 
 import numpy as np
@@ -24,17 +25,9 @@ infstate_compartments = ["S", "I", "R"]
 def dummy_state():
     """The exact grouped state from test_sharedtraitinfection.py's dummy_state fixture (seed=3,
     np.random.poisson(2, 5)), re-encoded: HH0-S=2, HH1-S=6, HH2-S=1, HH3-S=1, HH3-I=7, HH3-R=1,
-    HH4-S=2, HH4-I=5."""
-    return np.array([
-        [0, S,  2.0],
-        [1, S,  6.0],
-        [2, S,  1.0],
-        [3, S,  1.0],
-        [3, I_, 7.0],
-        [3, R,  1.0],
-        [4, S,  2.0],
-        [4, I_, 5.0],
-    ])
+    HH4-S=2, HH4-I=5.
+    """
+    return np.array([[0, S, 2.0], [1, S, 6.0], [2, S, 1.0], [3, S, 1.0], [3, I_, 7.0], [3, R, 1.0], [4, S, 2.0], [4, I_, 5.0]])
 
 
 @pytest.fixture
@@ -45,8 +38,7 @@ def result_buffer():
 @pytest.fixture
 def sharedtrait_infection():
     return SharedTraitInfection_Vec_Encode(
-        in_beta=0.2 / 5, out_beta=0.002 / 5, inf_col="InfState", trait_col="HH_Number",
-        trait_col_all_categories=[0, 1, 2, 3, 4], infstate_compartments=infstate_compartments,
+        in_beta=0.2 / 5, out_beta=0.002 / 5, inf_col="InfState", trait_col="HH_Number", trait_col_all_categories=[0, 1, 2, 3, 4], infstate_compartments=infstate_compartments
     )
 
 
@@ -67,24 +59,15 @@ def test_get_deltas_deterministic_matches_pandas_known_values(sharedtrait_infect
     deltas = sharedtrait_infection.get_deltas(current_state=dummy_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0)
 
     # cross-checked against tests/test_sharedtraitinfection.py::test_get_deltas_deterministic's exact values
-    subtraction_n = np.array([
-        0.009576996819805172, 0.028730990459415517, 0.004788498409902586,
-        0.24572631546691115, 0.36711697319890346,
-    ])
-    expected = np.vstack([
-        np.column_stack([[0, 1, 2, 3, 4], [S] * 5, -subtraction_n]),
-        np.column_stack([[0, 1, 2, 3, 4], [I_] * 5, subtraction_n]),
-    ])
+    subtraction_n = np.array([0.009576996819805172, 0.028730990459415517, 0.004788498409902586, 0.24572631546691115, 0.36711697319890346])
+    expected = np.vstack([np.column_stack([[0, 1, 2, 3, 4], [S] * 5, -subtraction_n]), np.column_stack([[0, 1, 2, 3, 4], [I_] * 5, subtraction_n])])
     np.testing.assert_allclose(deltas, expected)
 
 
 def test_get_deltas_stochastic(sharedtrait_infection, dummy_state, result_buffer):
     with mock.patch("numpy.random.binomial", return_value=20):
         deltas = sharedtrait_infection.get_deltas(current_state=dummy_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0, stochastic=True)
-        expected = np.vstack([
-            np.column_stack([[0, 1, 2, 3, 4], [S] * 5, [-20.0] * 5]),
-            np.column_stack([[0, 1, 2, 3, 4], [I_] * 5, [20.0] * 5]),
-        ])
+        expected = np.vstack([np.column_stack([[0, 1, 2, 3, 4], [S] * 5, [-20.0] * 5]), np.column_stack([[0, 1, 2, 3, 4], [I_] * 5, [20.0] * 5])])
         np.testing.assert_allclose(deltas, expected)
 
 

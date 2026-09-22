@@ -5,8 +5,8 @@ import pandas as pd
 from benchmark.SharedTraitInfectionRunner import SharedTraitInfectionRunner
 from benchmark.Visualizer import Visualizer
 
-compartments = ['S', 'I', 'R']
-size = 1000 #data size
+compartments = ["S", "I", "R"]
+size = 1000  # data size
 
 ###===fixed data===###
 """
@@ -31,47 +31,42 @@ current_state = pd.DataFrame({
 
 n_samples = size
 random_indices = np.random.choice(size, size=n_samples, replace=False)
-random_cats = [f'catg_{i}' for i in random_indices]
-#print('random cats:', random_cats) #debug
+random_cats = [f"catg_{i}" for i in random_indices]
+# print('random cats:', random_cats) #debug
 
-inf_state = [random.choice(compartments) for _ in range(size)] #inf states
+inf_state = [random.choice(compartments) for _ in range(size)]  # inf states
 n_values = [random.randint(10, 1_000_000) for _ in range(size)]
-t_values = [2023]*size
+t_values = [2023] * size
 
-current_state = pd.DataFrame({
-                'InfState' : inf_state,
-                'HH_Number': random_cats,
-                'N' : n_values,
-                'T' : t_values
-                })
+current_state = pd.DataFrame({"InfState": inf_state, "HH_Number": random_cats, "N": n_values, "T": t_values})
 
-current_state = current_state.groupby(['InfState', 'HH_Number'], observed=True).agg({'N': 'sum', 'T': 'max'}).reset_index()
+current_state = current_state.groupby(["InfState", "HH_Number"], observed=True).agg({"N": "sum", "T": "max"}).reset_index()
+
 
 def SharedTrait_Run_n_Visual():
     runner = SharedTraitInfectionRunner(
-        data_sizes= [size],
-        data_input = current_state,
-        structures= ["Pandas", "Numpy_Vec_Encode"],
-        iterations= [500],#[100, 300, 500, 700],
-        
-        inf_col = "InfState",
-        in_beta = 0.2/5,
-        out_beta = 0.002/5,
-        trait_col = "HH_Number",
+        data_sizes=[size],
+        data_input=current_state,
+        structures=["Pandas", "Numpy_Vec_Encode"],
+        iterations=[500],  # [100, 300, 500, 700],
+        inf_col="InfState",
+        in_beta=0.2 / 5,
+        out_beta=0.002 / 5,
+        trait_col="HH_Number",
         trait_col_all_categories=random_cats,
-        
         s_st="S",
         i_st="I",
         inf_to="I",
         stochastic=False,
-        col_idx_map = {'InfState': 0, 'HH_Number': 1, 'N': 2, 'T': 3},
-        infstate_compartments = compartments
+        col_idx_map={"InfState": 0, "HH_Number": 1, "N": 2, "T": 3},
+        infstate_compartments=compartments,
     )
     results = runner.run()
 
-    viz = Visualizer(runner_results = results)
+    viz = Visualizer(runner_results=results)
     viz.plot()
+
 
 if __name__ == "__main__":
     SharedTrait_Run_n_Visual()
-#python -m benchmark.SharedTraitInfection_Run_n_Visual
+# python -m benchmark.SharedTraitInfection_Run_n_Visual

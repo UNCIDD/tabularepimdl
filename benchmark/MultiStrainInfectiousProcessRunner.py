@@ -27,6 +27,7 @@ class MultiStrainInfectiousProcessRunner(BaseModel):
     @param freq_dep: whether this model is a frequency dependent model.
     @param infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
     """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     data_sizes: list[int]
@@ -53,40 +54,41 @@ class MultiStrainInfectiousProcessRunner(BaseModel):
     def model_post_init(self, _):
         self._infstate_comp_map = {comp: i for i, comp in enumerate(sorted(self.infstate_compartments))}
 
-
     def encode_column_sorted(self, compartment_list, df_col):
-        #print('comp list:', compartment_list)
-        unique_vals = list(sorted(set(compartment_list)))  # Sorted to ensure consistent index, set needs to be inside sorted because the order in a set is not guranteed
-        #print('unique values:', unique_vals)
+        # print('comp list:', compartment_list)
+        unique_vals = sorted(set(compartment_list))  # Sorted to ensure consistent index, set needs to be inside sorted because the order in a set is not guranteed
+        # print('unique values:', unique_vals)
         mapping = {val: idx for idx, val in enumerate(unique_vals)}
-        #print('mapping\n', mapping) #debug
+        # print('mapping\n', mapping) #debug
         return df_col.map(mapping)
-    
+
     def run(self) -> list[dict]:
         """
         Creates input data with different sizes and runs deltas calculation with different data structures in different iterations.
         Tracks each combination's time and memory usage.
         """
         for _size in self.data_sizes:
-            struct_last_deltas = {} #each structure's last computed deltas for this size, for cross-structure comparison
+            struct_last_deltas = {}  # each structure's last computed deltas for this size, for cross-structure comparison
 
             for struct in self.structures:
                 for iters in self.iterations:
-                    print(f"\nRunning {struct} | size={len(self.data_input)} | iterations={iters}") #replace size with pop_catg
+                    print(f"\nRunning {struct} | size={len(self.data_input)} | iterations={iters}")  # replace size with pop_catg
 
-                    if struct == 'Pandas': #provide dataframe to Pandas
+                    if struct == "Pandas":  # provide dataframe to Pandas
                         data = self.data_input
-                    elif struct == 'Numpy_Vec_Encode_1' or struct == 'Numpy_Vec_Encode_2': #provide true Numpy array to Numpy_Encode
-                        #print('input data\n', self.data_input)
-                        encoded_cols = [self.encode_column_sorted(self.columns_all_categories, self.data_input[col]).to_numpy() for col in self.columns] #put each encoded col in a list
-                        #print('encoded\n', encoded_cols)
-                        arr_numba = np.column_stack((*encoded_cols, self.data_input['N'], self.data_input['T']))
-                        arr_numba = arr_numba.astype(np.float64) #this makes all columns a float number, it will later cause float indexing error for Numba, but WAIFW rule will convert group_col category back to integers.
-                        #print('arr_numba\n', arr_numba)
-                        n_rows = arr_numba.shape[0] #detect the number of rows and columns in input array
+                    elif struct == "Numpy_Vec_Encode_1" or struct == "Numpy_Vec_Encode_2":  # provide true Numpy array to Numpy_Encode
+                        # print('input data\n', self.data_input)
+                        encoded_cols = [self.encode_column_sorted(self.columns_all_categories, self.data_input[col]).to_numpy() for col in self.columns]  # put each encoded col in a list
+                        # print('encoded\n', encoded_cols)
+                        arr_numba = np.column_stack((*encoded_cols, self.data_input["N"], self.data_input["T"]))
+                        arr_numba = arr_numba.astype(
+                            np.float64
+                        )  # this makes all columns a float number, it will later cause float indexing error for Numba, but WAIFW rule will convert group_col category back to integers.
+                        # print('arr_numba\n', arr_numba)
+                        n_rows = arr_numba.shape[0]  # detect the number of rows and columns in input array
                         n_cols = arr_numba.shape[1]
-                        result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
-                    
+                        result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64)  # preallocate a result array
+
                     dispatcher = MultiStrainInfectiousProcessDispatcher(
                         structure=struct,
                         betas=self.betas,
@@ -99,34 +101,33 @@ class MultiStrainInfectiousProcessRunner(BaseModel):
                         inf_to=self.inf_to,
                         stochastic=self.stochastic,
                         freq_dep=self.freq_dep,
-                        infstate_compartments=self.infstate_compartments
+                        infstate_compartments=self.infstate_compartments,
                     )
-                    
-                    if struct == 'Pandas':
-                        deltas, time_sec, peak_mb = measure(
-                            struct,
-                            partial(dispatcher.get_deltas, current_state=data, stochastic=self.stochastic),
-                            iters, self.col_idx_map,
-                        )
-                    elif struct == 'Numpy_Vec_Encode_1' or struct == 'Numpy_Vec_Encode_2':
+
+                    if struct == "Pandas":
+                        deltas, time_sec, peak_mb = measure(struct, partial(dispatcher.get_deltas, current_state=data, stochastic=self.stochastic), iters, self.col_idx_map)
+                    elif struct == "Numpy_Vec_Encode_1" or struct == "Numpy_Vec_Encode_2":
                         deltas, time_sec, peak_mb = measure(
                             struct,
                             partial(dispatcher.get_deltas, current_state=arr_numba, col_idx_map=self.col_idx_map, result_buffer=result_preallocation, stochastic=self.stochastic),
-                            iters, self.col_idx_map,
+                            iters,
+                            self.col_idx_map,
                         )
 
-                    #concatenate each iteration's result
-                    self.time_mem_results.append({
-                        'structure': struct,
-                        'size': len(self.data_input), #replace size with pop_catg for WAIFW benchmark
-                        'iterations': iters,
-                        'time_sec': time_sec,
-                        'peak_memory_MB': peak_mb
-                    })
+                    # concatenate each iteration's result
+                    self.time_mem_results.append(
+                        {
+                            "structure": struct,
+                            "size": len(self.data_input),  # replace size with pop_catg for WAIFW benchmark
+                            "iterations": iters,
+                            "time_sec": time_sec,
+                            "peak_memory_MB": peak_mb,
+                        }
+                    )
 
-                    #print('time_mem_result\n', self.time_mem_results) #debug
+                    # print('time_mem_result\n', self.time_mem_results) #debug
 
-                struct_last_deltas[struct] = deltas #keep this structure's last deltas from this size's runs
+                struct_last_deltas[struct] = deltas  # keep this structure's last deltas from this size's runs
 
             compare_structure_deltas(struct_last_deltas, self.col_idx_map, rule_name="MultiStrainInfectiousProcess", stochastic=self.stochastic)
         return self.time_mem_results

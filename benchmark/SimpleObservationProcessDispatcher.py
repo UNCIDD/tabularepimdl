@@ -2,16 +2,13 @@ from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
-from legacy.pandas_reference.SimpleObservationProcess import (
-    SimpleObservationProcess as SimpleObservationProcess_Pandas,
-)
+from legacy.pandas_reference.SimpleObservationProcess import SimpleObservationProcess as SimpleObservationProcess_Pandas
 from pydantic import BaseModel, PrivateAttr
 
-from tabularepimdl.SimpleObservationProcess_Vec_Encode import (
-    SimpleObservationProcess_Vec_Encode as SimpleObservationProcess_Vec_Encode,
-)
+from tabularepimdl.SimpleObservationProcess_Vec_Encode import SimpleObservationProcess_Vec_Encode as SimpleObservationProcess_Vec_Encode
 
-#from tabularepimdl.SimpleObservationProcess_Vec_Encode_nobuffer import SimpleObservationProcess_Vec_Encode_nobuffer #SimpleObservationProcess_Vec_Encode_nobuffer has no performance benefit, removed
+# from tabularepimdl.SimpleObservationProcess_Vec_Encode_nobuffer import SimpleObservationProcess_Vec_Encode_nobuffer #SimpleObservationProcess_Vec_Encode_nobuffer has no performance benefit, removed
+
 
 class SimpleObservationProcessDispatcher(BaseModel):
     """
@@ -26,11 +23,11 @@ class SimpleObservationProcessDispatcher(BaseModel):
     @param incobs_state: incident-observed state, listed in obs_col.
     @param prevobs_state: previously-observed state, listed in obs_col.
     @param stochastic: whether the process is stochastic or deterministic.
-    @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R']. 
+    @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R'].
     @param observation_compartments: the observation compartments used in epidemics. e.g. ['U', 'P', 'I'], U=unobserved, P=previously-observed, I=incident-observed
     """
 
-    structure: Literal["Pandas", "Numpy_Vec_Encode"] #"Numpy_Vec_Encode_nobuffer" was used for SimpleObservationProcess_Vec_Encode_nobuffer
+    structure: Literal["Pandas", "Numpy_Vec_Encode"]  # "Numpy_Vec_Encode_nobuffer" was used for SimpleObservationProcess_Vec_Encode_nobuffer
     source_col: str
     source_state: str
     source_col_all_categories: list[str]
@@ -43,11 +40,11 @@ class SimpleObservationProcessDispatcher(BaseModel):
     infstate_compartments: list[str]
     obs_col_all_categories: list[str]
 
-    #Dispatcher
+    # Dispatcher
     _dispatcher: SimpleObservationProcess_Pandas | SimpleObservationProcess_Vec_Encode = PrivateAttr(default=None)
 
-    def model_post_init(self, _): #initialize dispatcher based on data structures
-        if self.structure == 'Pandas':
+    def model_post_init(self, _):  # initialize dispatcher based on data structures
+        if self.structure == "Pandas":
             self._dispatcher = SimpleObservationProcess_Pandas(
                 source_col=self.source_col,
                 source_state=self.source_state,
@@ -56,13 +53,13 @@ class SimpleObservationProcessDispatcher(BaseModel):
                 unobs_state=self.unobs_state,
                 incobs_state=self.incobs_state,
                 prevobs_state=self.prevobs_state,
-                stochastic=self.stochastic
+                stochastic=self.stochastic,
             )
-        elif self.structure == 'Numpy_Vec_Encode':
+        elif self.structure == "Numpy_Vec_Encode":
             self._dispatcher = SimpleObservationProcess_Vec_Encode(
                 source_col=self.source_col,
                 source_state=self.source_state,
-                source_col_all_categories = self.source_col_all_categories,
+                source_col_all_categories=self.source_col_all_categories,
                 obs_col=self.obs_col,
                 rate=self.rate,
                 unobs_state=self.unobs_state,
@@ -70,25 +67,23 @@ class SimpleObservationProcessDispatcher(BaseModel):
                 prevobs_state=self.prevobs_state,
                 stochastic=self.stochastic,
                 infstate_compartments=self.infstate_compartments,
-                obs_col_all_categories=self.obs_col_all_categories
+                obs_col_all_categories=self.obs_col_all_categories,
             )
         else:
             raise ValueError(f"Unknown structure: {self.structure}")
-    
-    def get_deltas(self, current_state: pd.DataFrame | np.ndarray, col_idx_map: dict[str, int] | None = None, result_buffer: np.ndarray | None = None,  dt: int | float = 1.0, stochastic: bool | None = None) -> pd.DataFrame | np.ndarray:
+
+    def get_deltas(
+        self, current_state: pd.DataFrame | np.ndarray, col_idx_map: dict[str, int] | None = None, result_buffer: np.ndarray | None = None, dt: float = 1.0, stochastic: bool | None = None
+    ) -> pd.DataFrame | np.ndarray:
         """
         @param current_state: a dataframe or numpy array (at the moment) representing the current epidemic state.
         @param col_idx_map: mapping of input data columns and their column index. Default is None so Pandas version's get_deltas() can invoke dispather's get_deltas().
         @param result_buffer: takes pre-allocated numpy array and saves changing amount of current_state. Default is None so Pandas version's get_deltas() can invoke dispather's get_deltas().
         @param dt: size of the timestep.
         """
-        if self.structure == 'Pandas':
-            return cast(SimpleObservationProcess_Pandas, self._dispatcher).get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
-        elif self.structure == 'Numpy_Vec_Encode':
-            assert col_idx_map is not None
-            assert result_buffer is not None
-            return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)
-        elif self.structure == 'Numpy_Vec_Encode_nobuffer':
+        if self.structure == "Pandas":
+            return cast("SimpleObservationProcess_Pandas", self._dispatcher).get_deltas(current_state=current_state, dt=dt, stochastic=stochastic)
+        if self.structure == "Numpy_Vec_Encode" or self.structure == "Numpy_Vec_Encode_nobuffer":
             assert col_idx_map is not None
             assert result_buffer is not None
             return self._dispatcher.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer, dt=dt, stochastic=stochastic)

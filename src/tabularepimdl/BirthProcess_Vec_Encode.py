@@ -8,6 +8,7 @@ from tabularepimdl.Rule import Rule
 
 logger = logging.getLogger(__name__)
 
+
 class BirthProcess_Vec_Encode(Rule, BaseModel):
     """
     Represents a birth process where people are borne based
@@ -22,17 +23,16 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
 
     # Pydantic Configuration
     model_config = ConfigDict(arbitrary_types_allowed=True)
-      
-    rate: float = Field(ge=0, description = "birth rate at per time step (where N*rate births occur).")
+
+    rate: float = Field(ge=0, description="birth rate at per time step (where N*rate births occur).")
     column_to_sort: str = Field(description="specify which input field is used to sort the dataset in ascending order.")
-    stochastic: bool = Field(default=False, description = "whether the transition is stochastic or deterministic.")
-    infstate_compartments: UniqueNonEmptyStrList = Field(description = "the infection compartments used in epidemics.")
+    stochastic: bool = Field(default=False, description="whether the transition is stochastic or deterministic.")
+    infstate_compartments: UniqueNonEmptyStrList = Field(description="the infection compartments used in epidemics.")
 
-    _start_state_sig: np.ndarray = PrivateAttr(default_factory=lambda: np.array([])) #initial state configuration for new births.
-    _start_state_saved: bool = PrivateAttr(default=False) #to identify if a valid value has been assigned to _start_state_sig
+    _start_state_sig: np.ndarray = PrivateAttr(default_factory=lambda: np.array([]))  # initial state configuration for new births.
+    _start_state_saved: bool = PrivateAttr(default=False)  # to identify if a valid value has been assigned to _start_state_sig
 
-    
-    #set up a property to return all the required compartments used in infstate column
+    # set up a property to return all the required compartments used in infstate column
     @property
     def infstate_all(self) -> list[str]:
         """
@@ -42,7 +42,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             A list of strings of all the required infection compartments.
         """
         return self.infstate_compartments
-    
+
     @property
     def start_state_sig(self) -> np.ndarray:
         """
@@ -55,11 +55,8 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             ValueError: If the `_start_state_sig` is empty.
         """
         if self._start_state_sig.size == 0:
-            raise ValueError("No start state data is available due to no input current state data is provided. "
-                             "Please provide a non-empty current state data to the get_deltas() of the rule first."
-                             )
-        else:
-            return self._start_state_sig
+            raise ValueError("No start state data is available due to no input current state data is provided. Please provide a non-empty current state data to the get_deltas() of the rule first.")
+        return self._start_state_sig
 
     @property
     def expansion_factor(self) -> int:
@@ -68,7 +65,6 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         """
         return len(self.infstate_compartments)
 
-
     def _encode_categorical_states(self, data_domains) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
@@ -76,20 +72,18 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         Notes:
             BirthProcess_Vec_Encode rule does not have input states to be encoded.
         """
-        pass
 
-        
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
         Compute the population birth deltas for the current state at a given time step.
-        
+
         Args:
             current_state (np.ndarray): A structured array representing the current epidemic state. Must include a column `'N'`, which indicates the population count.
             col_idx_map (dict): Mapping of column names to their index positions.
             result_buffer (np.ndarray): A pre-allocated array that will be populated with the computed deltas. This array is modified in-place and returned.
             dt (float): The size of the time step. Defaults to 1.0.
             stochastic (bool, optional): Whether to apply stochastic modeling. If `None`, the class-level `self.stochastic` attribute is used.
-        
+
         Returns:
             np.ndarray: A NumPy structured array containing the population birth deltas.
 
@@ -99,21 +93,21 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         Notes:
             This rule *derives* a newborn's state signature from the input data itself: on its first call it
             sorts current_state by `column_to_sort` and remembers the first row's non-N values, then reuses
-            that saved signature (with a freshly computed N) on every subsequent call.       
+            that saved signature (with a freshly computed N) on every subsequent call.
         """
-        N: float #sum of population
-        
-        required_columns = "N" #check if column N presents in current_state
+        N: float  # sum of population
+
+        required_columns = "N"  # check if column N presents in current_state
         if required_columns not in col_idx_map:
             raise ValueError(f"Missing required columns in current_state: {required_columns}.")
-        
+
         if stochastic is None:
             stochastic = self.stochastic
 
-        if current_state.size == 0: #check if the input array is empty
+        if current_state.size == 0:  # check if the input array is empty
             logger.debug("input array data size is zero, return empty array.")
             return np.empty((0, current_state.shape[1]))
-        
+
         n_idx = col_idx_map["N"]
         N = np.sum(current_state[:, n_idx])
         # Compute transition rate
@@ -122,37 +116,34 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         birth_value = N * rate_const
 
         if stochastic:
-            changed_N = np.random.poisson(birth_value)  #get a random single outcome value by poisson distribution
+            changed_N = np.random.poisson(birth_value)  # get a random single outcome value by poisson distribution
         else:
             changed_N = birth_value
-        
+
         if not self._start_state_saved:
-            sort_column_index = col_idx_map[self.column_to_sort] #obtain the designated column index (e.g. AgeCat)
+            sort_column_index = col_idx_map[self.column_to_sort]  # obtain the designated column index (e.g. AgeCat)
 
-            sort_indices = np.argsort(current_state[:, sort_column_index], axis=0) # sorts along first axis (row by row)
+            sort_indices = np.argsort(current_state[:, sort_column_index], axis=0)  # sorts along first axis (row by row)
 
-            current_state = current_state[sort_indices] #sort the input array by designated column (e.g. AgeCat)
+            current_state = current_state[sort_indices]  # sort the input array by designated column (e.g. AgeCat)
 
-            self._start_state_sig = current_state[0:1] #obtain a 2D array with one row [0:1]
-            self._start_state_saved = True #once start state data is assigned, flip the flag to True
+            self._start_state_sig = current_state[0:1]  # obtain a 2D array with one row [0:1]
+            self._start_state_saved = True  # once start state data is assigned, flip the flag to True
         else:
-            pass #start state has had values saved, use it directly in the following code.
-    
+            pass  # start state has had values saved, use it directly in the following code.
 
         count = len(self._start_state_sig)
-        result_buffer[count-1] = self._start_state_sig
+        result_buffer[count - 1] = self._start_state_sig
         result_buffer[:count, n_idx] = changed_N
 
         return result_buffer[:count, :]
-        
+
     def to_dict(self) -> dict:
         """
         Save the rule's attributes and their associated values to a dictionary.
-        
+
         Returns:
             Rule attributes in a dictionary.
         """
-        rc = {
-            'tabularepimdl.BirthProcess_Vec_Encode': self.model_dump()
-        }
-        return rc 
+        rc = {"tabularepimdl.BirthProcess_Vec_Encode": self.model_dump()}
+        return rc

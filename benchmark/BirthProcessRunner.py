@@ -21,31 +21,46 @@ class BirthProcessRunner(BaseModel):
     @param infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R'].
     return: the time and memory usage of the rule with different data sizes, structures and iterations.
     """
-    data_sizes: list[int] #inital value can be 15
+
+    data_sizes: list[int]  # inital value can be 15
     structures: list[str]
     iterations: list[int]
     rate: float
     column_to_sort: str
-    #start_state_sig: dict | pd.DataFrame #not needed in runner since a dict is given below
+    # start_state_sig: dict | pd.DataFrame #not needed in runner since a dict is given below
     stochastic: bool = False
     col_idx_map: dict[str, int] = Field(default_factory=dict)
     infstate_compartments: list[str] = Field(default_factory=list)
-    
-    
-    time_mem_results: list[dict] = []
-    _age_all_categories: list[str] = ["0 to 4", "5 to 9", "10 to 14", "15 to 19", "20 to 24", "25 to 29", "30 to 34", \
-                                       "35 to 39", "40 to 44", "45 to 49", "50 to 54", "55 to 59", "60 to 64", "65 to 69", "70+"]
-    #_infstate_comp_map: dict[str, int] = PrivateAttr(default_factory=dict)
 
-    #def model_post_init(self, _):
+    time_mem_results: list[dict] = []
+    _age_all_categories: list[str] = [
+        "0 to 4",
+        "5 to 9",
+        "10 to 14",
+        "15 to 19",
+        "20 to 24",
+        "25 to 29",
+        "30 to 34",
+        "35 to 39",
+        "40 to 44",
+        "45 to 49",
+        "50 to 54",
+        "55 to 59",
+        "60 to 64",
+        "65 to 69",
+        "70+",
+    ]
+    # _infstate_comp_map: dict[str, int] = PrivateAttr(default_factory=dict)
+
+    # def model_post_init(self, _):
     #    self._infstate_comp_map = {comp: i for i, comp in enumerate(sorted(self.infstate_compartments))}
 
     def encode_column_sorted(self, compartment_list, df_col):
-        #print('comp list:', compartment_list)
-        unique_vals = list(sorted(set(compartment_list)))  # Sorted to ensure consistent index, set needs to be inside sorted because the order in a set is not guranteed
-        #print('unique values:', unique_vals)
+        # print('comp list:', compartment_list)
+        unique_vals = sorted(set(compartment_list))  # Sorted to ensure consistent index, set needs to be inside sorted because the order in a set is not guranteed
+        # print('unique values:', unique_vals)
         mapping = {val: idx for idx, val in enumerate(unique_vals)}
-        #print('mapping\n', mapping) #debug
+        # print('mapping\n', mapping) #debug
         return df_col.map(mapping)
 
     def run(self) -> list[dict]:
@@ -54,76 +69,66 @@ class BirthProcessRunner(BaseModel):
         Tracks each combination's time and memory usage.
         """
         for size in self.data_sizes:
-            start_age=0
-            end_age=70
-            age_step= (end_age-start_age)/(size-1)
+            start_age = 0
+            end_age = 70
+            age_step = (end_age - start_age) / (size - 1)
 
-            age_struct_pop = pd.DataFrame({
-                'InfState' : pd.Categorical(["S"]*size, categories=["I","R","S"]),
-                'AgeCat': [f"{int(i)} to {int(i+ (age_step-1))}" for i in np.arange(start_age, end_age, age_step)]+[f"{end_age}+"],
-                'N' : [10, 20, 30, 40, 50, 60,  70, 80, 90, 100, 101, 102, 103, 104, 105],
-                'T': 0
-            })
+            age_struct_pop = pd.DataFrame(
+                {
+                    "InfState": pd.Categorical(["S"] * size, categories=["I", "R", "S"]),
+                    "AgeCat": [f"{int(i)} to {int(i + (age_step - 1))}" for i in np.arange(start_age, end_age, age_step)] + [f"{end_age}+"],
+                    "N": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 101, 102, 103, 104, 105],
+                    "T": 0,
+                }
+            )
 
-            age_struct_pop = age_struct_pop.sample(frac=1, random_state=3).reset_index(drop=True) #row-level random shuffle
-            #print('shuffled age_struct_pop\n', age_struct_pop)
-            
-            start_state_sig_dict = {
-                'InfState': 'S',
-                'AgeCat': '0 to 4',
-                'N': 10,
-                'T': 0
-            }
-            #print('age structure\n', age_struct_pop)
-            struct_last_deltas = {} #each structure's last computed deltas for this size, for cross-structure comparison
+            age_struct_pop = age_struct_pop.sample(frac=1, random_state=3).reset_index(drop=True)  # row-level random shuffle
+            # print('shuffled age_struct_pop\n', age_struct_pop)
+
+            start_state_sig_dict = {"InfState": "S", "AgeCat": "0 to 4", "N": 10, "T": 0}
+            # print('age structure\n', age_struct_pop)
+            struct_last_deltas = {}  # each structure's last computed deltas for this size, for cross-structure comparison
             for struct in self.structures:
                 for iters in self.iterations:
                     print(f"\nRunning {struct} | size={size} | iterations={iters}")
-                    if struct == 'Pandas': #provide dataframe to Pandas
+                    if struct == "Pandas":  # provide dataframe to Pandas
                         data = age_struct_pop
-                    elif struct == 'Numpy_Encode': #provide true Numpy array to Numpy_Encode
-                        InfState_encode = self.encode_column_sorted(self.infstate_compartments, age_struct_pop['InfState'])
-                        Age_encode = self.encode_column_sorted(self._age_all_categories, age_struct_pop['AgeCat'])
-                        age_array = np.column_stack((InfState_encode, Age_encode, age_struct_pop['N'], age_struct_pop['T']))
-                        age_array = age_array.astype(np.float64) #this makes all columns a float number, it will later cause float indexing error for Numba, but WAIFW rule will convert group_col category back to integers.
-                        #print('current_state array\n', age_array)
-                        n_rows = age_array.shape[0] #detect the number of rows and columns in input array
+                    elif struct == "Numpy_Encode":  # provide true Numpy array to Numpy_Encode
+                        InfState_encode = self.encode_column_sorted(self.infstate_compartments, age_struct_pop["InfState"])
+                        Age_encode = self.encode_column_sorted(self._age_all_categories, age_struct_pop["AgeCat"])
+                        age_array = np.column_stack((InfState_encode, Age_encode, age_struct_pop["N"], age_struct_pop["T"]))
+                        age_array = age_array.astype(
+                            np.float64
+                        )  # this makes all columns a float number, it will later cause float indexing error for Numba, but WAIFW rule will convert group_col category back to integers.
+                        # print('current_state array\n', age_array)
+                        n_rows = age_array.shape[0]  # detect the number of rows and columns in input array
                         n_cols = age_array.shape[1]
-                        result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
+                        result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64)  # preallocate a result array
                     dispatcher = BirthProcessDispatcher(
                         structure=struct,
                         rate=self.rate,
                         column_to_sort=self.column_to_sort,
-                        start_state_sig = start_state_sig_dict,
+                        start_state_sig=start_state_sig_dict,
                         stochastic=self.stochastic,
-                        infstate_compartments=self.infstate_compartments
+                        infstate_compartments=self.infstate_compartments,
                     )
-                    #print('dispatcher created ok\n')
-                    if struct == 'Pandas':
-                        deltas, time_sec, peak_mb = measure(
-                            struct,
-                            partial(dispatcher.get_deltas, current_state=data, stochastic=self.stochastic),
-                            iters, self.col_idx_map,
-                        )
-                    elif struct == 'Numpy_Encode':
+                    # print('dispatcher created ok\n')
+                    if struct == "Pandas":
+                        deltas, time_sec, peak_mb = measure(struct, partial(dispatcher.get_deltas, current_state=data, stochastic=self.stochastic), iters, self.col_idx_map)
+                    elif struct == "Numpy_Encode":
                         deltas, time_sec, peak_mb = measure(
                             struct,
                             partial(dispatcher.get_deltas, current_state=age_array, col_idx_map=self.col_idx_map, result_buffer=result_preallocation, stochastic=self.stochastic),
-                            iters, self.col_idx_map,
+                            iters,
+                            self.col_idx_map,
                         )
 
-                    #concatenate each iteration's result
-                    self.time_mem_results.append({
-                        'structure': struct,
-                        'size': size,
-                        'iterations': iters,
-                        'time_sec': time_sec,
-                        'peak_memory_MB': peak_mb
-                    })
+                    # concatenate each iteration's result
+                    self.time_mem_results.append({"structure": struct, "size": size, "iterations": iters, "time_sec": time_sec, "peak_memory_MB": peak_mb})
 
-                    #print('time_mem_result\n', self.time_mem_results) #debug
+                    # print('time_mem_result\n', self.time_mem_results) #debug
 
-                struct_last_deltas[struct] = deltas #keep this structure's last deltas from this size's runs
+                struct_last_deltas[struct] = deltas  # keep this structure's last deltas from this size's runs
 
             compare_structure_deltas(struct_last_deltas, self.col_idx_map, rule_name="BirthProcess", stochastic=self.stochastic)
         return self.time_mem_results

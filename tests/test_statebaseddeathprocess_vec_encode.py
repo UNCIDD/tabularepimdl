@@ -5,6 +5,7 @@ Note this rule's API is narrower than the pandas StateBasedDeathProcess.
 These aren't the same feature, so this test is built around the NumPy version's actual (narrower)
 semantics rather than trying to force equivalence with the pandas multi-column test.
 """
+
 from unittest import mock
 
 import numpy as np
@@ -18,15 +19,18 @@ COLUMN_STATES = ["I1", "R1", "R2", "S1", "S2"]
 I1, R1, R2, S1, S2 = 0, 1, 2, 3, 4
 infstate_compartments = ["S", "I", "R"]
 
+
 @pytest.fixture
 def dummy_state():
-    return np.array([
-        [I1, 10.0],
-        [R1, 20.0],  # target
-        [R2, 30.0],
-        [S1, 40.0],
-        [S2, 50.0],  # target
-    ])
+    return np.array(
+        [
+            [I1, 10.0],
+            [R1, 20.0],  # target
+            [R2, 30.0],
+            [S1, 40.0],
+            [S2, 50.0],  # target
+        ]
+    )
 
 
 @pytest.fixture
@@ -36,10 +40,7 @@ def result_buffer():
 
 @pytest.fixture
 def statebased_deathprocess():
-    return StateBasedDeathProcess_Vec_Encode(
-        column="InfState", column_states=COLUMN_STATES, target_states=["S2", "R1"], rate=0.05,
-        infstate_compartments=infstate_compartments,
-    )
+    return StateBasedDeathProcess_Vec_Encode(column="InfState", column_states=COLUMN_STATES, target_states=["S2", "R1"], rate=0.05, infstate_compartments=infstate_compartments)
 
 
 def test_initialization(statebased_deathprocess):
@@ -57,20 +58,14 @@ def test_get_deltas_deterministic(statebased_deathprocess, dummy_state, result_b
     deltas = statebased_deathprocess.get_deltas(current_state=dummy_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0)
 
     rate_const = 1 - np.exp(-1.0 * 0.05)
-    expected = np.array([
-        [R1, -20 * rate_const],
-        [S2, -50 * rate_const],
-    ])
+    expected = np.array([[R1, -20 * rate_const], [S2, -50 * rate_const]])
     np.testing.assert_allclose(deltas, expected)
 
 
 def test_get_deltas_stochastic(statebased_deathprocess, dummy_state, result_buffer):
     with mock.patch("numpy.random.binomial", return_value=15):
         deltas = statebased_deathprocess.get_deltas(current_state=dummy_state, col_idx_map=COL_IDX_MAP, result_buffer=result_buffer, dt=1.0, stochastic=True)
-        expected = np.array([
-            [R1, -15.0],
-            [S2, -15.0],
-        ])
+        expected = np.array([[R1, -15.0], [S2, -15.0]])
         np.testing.assert_allclose(deltas, expected)
 
 
