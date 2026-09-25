@@ -5,7 +5,12 @@ All notable changes to `tabularepimdl` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] - 2026-xx-yy
+
+### Added
+
+- YAML file duplicte key check when the model engine loads a YAML file which contains rules for the engine ([[#154](https://github.com/UNCIDD/tabularepimdl/issues/154)])
+- Add YAML file loading feature to the model engine that gives users ability to build an engine directly from a YAML configuration.
 
 ## [0.3.0] - 2026-08-27
 
