@@ -34,12 +34,6 @@ def validate_yaml_path(filename: str | Path) -> Path:
         YAMLFileExtensionError:
             If the file extension is not .yaml or .yml.
     """
-    if not isinstance(filename, (str, Path)):
-        raise TypeError(
-            f"filename must be a string or pathlib.Path, "
-            f"received {type(filename).__name__}"
-        )
-    
     path = Path(filename).expanduser()
 
     if not path.exists():
