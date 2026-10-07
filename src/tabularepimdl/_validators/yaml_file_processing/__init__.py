@@ -16,6 +16,7 @@ from .path_validator import validate_yaml_path
 from .yaml_parser import parse_yaml
 from .yaml_reader import read_yaml_file
 from .yaml_structure import validate_yaml_structure
+from .load_yaml import load_yaml
 
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     "validate_model",
     "validate_yaml_path",
     "validate_yaml_structure",
+    "load_yaml",
 ]
