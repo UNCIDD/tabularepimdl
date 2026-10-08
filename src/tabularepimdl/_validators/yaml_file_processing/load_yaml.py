@@ -15,6 +15,9 @@ def load_yaml(filename: str | Path) -> Any:
     """
     Load and structurally validate a YAML file.
 
+    Args:
+        filename: Path to the file, provided as a string or pathlib.Path object.
+
     Validates:
         1. filename argument
         2. path
