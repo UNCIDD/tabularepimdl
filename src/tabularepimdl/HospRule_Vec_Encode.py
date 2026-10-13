@@ -124,7 +124,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.strain_cols_all_categories) * len(self.infstate_compartments), len(self.infstate_compartments))
 
-    def _encode_categorical_states(self, data_domains) -> None:
+    def _encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
 

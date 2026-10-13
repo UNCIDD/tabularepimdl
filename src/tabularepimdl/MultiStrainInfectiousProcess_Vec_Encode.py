@@ -137,7 +137,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.columns_all_categories), len(self.infstate_compartments))
 
-    def _encode_categorical_states(self, data_domains) -> None:
+    def _encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
 
