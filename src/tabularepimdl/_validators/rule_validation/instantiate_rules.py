@@ -65,7 +65,7 @@ def _validate_definition(tepi_rule: type[Rule], definition: dict) -> None:
         rule_fields_mapping = tepi_rule.model_fields  # get all field items from Pydantic-integrated model
         logger.debug("tepi rule fields mapping: %s", rule_fields_mapping)
 
-        rule_required_fields = {name for name, field in rule_fields_mapping.items() if field.is_required}  # get required fields defined in a rule class
+        rule_required_fields = {name for name, field in rule_fields_mapping.items() if field.is_required()}  # get required fields defined in a rule class
         logger.debug("rule required fields: %s", rule_required_fields)  # e.g. {'column', 'from_st', 'to_st', 'rate'}
 
         rule_all_fields = set(rule_fields_mapping.keys())  # get all field names defined in a rule class
