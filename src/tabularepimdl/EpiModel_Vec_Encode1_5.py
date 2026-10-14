@@ -154,7 +154,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                     raise TypeError(f"Invalid type at input rules[{i}][{j}]: expected an epidemic Rule, received {subitem} with type {type(subitem).__name__}.")
                 normalized_list.append(item)
             else:
-                raise TypeError(f"Element {subitem} at input rules[{i}] must be an epidemic Rule or a list of epidemic Rules. Received {type(item).__name__}.")
+                raise TypeError(f"Element {item} at input rules[{i}] must be an epidemic Rule or a list of epidemic Rules. Received {type(item).__name__}.")
         
         return normalized_list
 
