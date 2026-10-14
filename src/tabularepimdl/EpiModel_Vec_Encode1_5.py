@@ -29,7 +29,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         full_epi_array: A numpy array contains full epidemic history.
         rules: A list of epidemic rules that represents the epidemic process. Must be a flat list or a list of lists. E.g. [[B], [SI, ST], [W]]
         stoch_policy: Whether the entire epidemic process is rule based or centralized with either deterministic or stochastic.
-        compartment_col: A placeholder (not being used in model engine). A string indicating the column name that is used for saving infection compartments.
+
 
     Notes:
         Maintain a _delta_buffer
@@ -47,7 +47,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     full_epi_array: np.ndarray = Field(default_factory=lambda: np.array([]))
     rules: list[list[Rule]]
     stoch_policy: str = "rule_based"
-    # compartment_col: str = 'InfState' #model engine does not need this attribute
+
 
     # columns listed in the input data, separating column N and T from other columns
     _agg_cols: set[str] = PrivateAttr(default_factory=lambda: {"N", "T"})
@@ -409,14 +409,6 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             2. The column order in the input pandas DataFrame.
             3. A dictionary of mapping of column names to their orders.
         """
-        # self._infstate_all_comps = sorted(self._domains[self.compartment_col]) #keep a variable to save column InfState's compartment values
-        # self._num_comps = len(self._infstate_all_comps) #keep a variable to save the number of compartments in column InfState
-
-        # create compartment and its associated index mapping, and reverse the mapping
-        # used for converting column's string values to numbers
-        # self._infstate_comp_map = {comp: i for i, comp in enumerate(infstate_all_comps)}
-        # self._inverse_infstate_comp_map = {i: comp for comp, i in self._infstate_comp_map.items()}
-
         # build encoding maps and inverse encoding maps for each grouping column's domain values including column infstate
         for col in self._grouping_cols:
             logger.debug("col: %s", col)
@@ -434,8 +426,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
         # all columns indicies are included in _col_idx_map, extract invidual ones for separate use
         # Locate each column's index of init_state, used in array column operation.
-        # self._infstate_idx = self._col_idx_map[self.compartment_col] #unused/unneeded attribute
-        self._n_idx = self._col_idx_map["N"]  # the code has to know/use a few fixed column names in order to get column indicies
+        self._n_idx = self._col_idx_map["N"]  # the engine has to know/use column names N, T in order to get column indicies
         self._t_idx = self._col_idx_map["T"]
         self._grouping_col_idx = [self._col_idx_map[c] for c in self._grouping_cols]
         logger.debug("_n_idx: %s _t_idx: %s _grouping_col_idx: %s", self._n_idx, self._t_idx, self._grouping_col_idx)
@@ -481,12 +472,6 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             return np.column_stack(encoded_columns).astype(np.float64)
         return np.empty((0, len(self._init_state_col_order)), dtype=np.float64)
 
-        # pre-allocation of result array -- to be checked/verified ##=== MOVE pre-allocation into do_timestep()===##
-        # n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
-        # n_cols = self.current_state_array.shape[1]
-        # self._current_result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
-        logger.debug("initial preallocation buffer\n %s", self._current_result_preallocation)
-        # return self.current_state_array #return current_state_array only
 
     def _save_initial_current_state_array(self) -> None:
         """
@@ -660,10 +645,6 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                 new_size = max(int(buffer_required_rows), self._delta_buffer.shape[0] * 2)
                 self._delta_buffer = np.empty((new_size, self.current_state_array.shape[1]), dtype=np.float64)
                 logger.debug("new delta buffer triggered. Size: %s", self._delta_buffer.shape)
-
-            # if num_current >= self._delta_buffer.shape[0] - num_current: #if current state array size is larger than the remaining buffer size -- superseded by the dynamic buffer check above
-            #    new_size = max(num_current + (num_current * max_expansion), self._delta_buffer.shape[0] * 2) #increase the delta buffer size
-            #    self._delta_buffer = np.empty((new_size, self.current_state_array.shape[1]), dtype=np.float64)
 
             # 2. Put current state at the VERY START of the buffer
             # This avoids needing np.vstack later.
