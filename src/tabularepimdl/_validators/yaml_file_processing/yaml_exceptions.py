@@ -81,11 +81,3 @@ class DuplicateYAMLKeyError(YAMLParseError):
 # ---------------------------------------------------------------------------
 class YAMLStructureError(EpiModelValidationError):
     """Raised when valid YAML has an unexpected structure."""
-
-
-# ---------------------------------------------------------------------------
-# EpiModel/domain errors
-# --------------------------------------------------------------------------
-#this class may not be used
-class EpiModelDataError(EpiModelValidationError):
-    """Raised when valid YAML does not satisfy the EpiModel schema."""
