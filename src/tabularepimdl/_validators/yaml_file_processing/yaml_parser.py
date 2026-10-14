@@ -83,10 +83,7 @@ def _construct_mapping(
         line = key_node.start_mark.line + 1
         column = key_node.start_mark.column + 1
 
-        # ---------------------------------------------------------------
         # Duplicate-key check
-        # ---------------------------------------------------------------
-
         if key in mapping:
             original_line, original_column = key_locations[key]
 
@@ -102,10 +99,7 @@ def _construct_mapping(
 
         key_locations[key] = (line, column)
 
-        # ---------------------------------------------------------------
         # Construct the value while keeping track of the YAML path.
-        # ---------------------------------------------------------------
-
         loader._path_stack.append(str(key))
 
         try:
@@ -133,17 +127,8 @@ def _construct_sequence(
     sequence: list[Any] = []
 
     for index, child_node in enumerate(node.value):
-
-        # -----------------------------------------------------------
         # Add the list index to the current YAML path.
-        #
-        # Example:
-        #
-        # rules
-        #   ↓
-        # rules[2]
-        # -----------------------------------------------------------
-
+        # Example: rules --> rules[2]
         loader._path_stack.append(index)
 
         try:
