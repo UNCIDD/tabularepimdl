@@ -50,9 +50,9 @@ def validate_yaml_structure(data: Any) -> dict[str, Any]:
             f"Found: {actual_keys!r}"
         )
     
-    # For now that key must be 'rules'
+    # For now the top-level key in YAML file must be 'rules'
     missing_keys = REQUIRED_TOP_LEVEL_KEYS - data.keys()
-
+    
     if missing_keys:
         raise ValueError(
             f"Missing required top-level keys: {sorted(missing_keys)}. "
