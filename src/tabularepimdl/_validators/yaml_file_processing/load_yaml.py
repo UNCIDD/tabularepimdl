@@ -4,7 +4,6 @@ from typing import Any
 from tabularepimdl._validators.yaml_file_processing import (
     parse_yaml,
     read_yaml_file,
-    validate_model,
     validate_yaml_path,
     validate_yaml_structure,
 )
