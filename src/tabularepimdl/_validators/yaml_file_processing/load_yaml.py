@@ -1,3 +1,5 @@
+import logging
+
 from pathlib import Path
 from typing import Any
 
@@ -8,7 +10,7 @@ from tabularepimdl._validators.yaml_file_processing import (
     validate_yaml_structure,
 )
 
-
+logger = logging.getLogger(__name__)
     
 def load_yaml(filename: str | Path) -> Any:
     """
@@ -40,7 +42,7 @@ def load_yaml(filename: str | Path) -> Any:
     """
     # 1–5. Validate and normalize path
     path = validate_yaml_path(filename)
-    print('path:', path)
+    logger.debug('yaml file path:', path)
 
     # 6–7. Read YAML file
     content = read_yaml_file(path)
@@ -48,7 +50,7 @@ def load_yaml(filename: str | Path) -> Any:
 
     # 8–9. Parse YAML and detect duplicate keys
     parsed_data = parse_yaml(content, filename=str(path))
-    print('parsed data\n', parsed_data)
+    logger.debug('parsed yaml data\n', parsed_data)
 
     # 10–13. Validate YAML structure
     dict_data = validate_yaml_structure(parsed_data)
