@@ -1,67 +1,128 @@
 """
 Unit test for Rule.py. Pytest package is used.
-The Rule class defines a class that represents a transition rule.
+The Rule class defines a class that represents a dummy rule.
 The unit tests ensure that the class behaves as expected.
 """
 
-from pathlib import Path
-
+import numpy as np
 import pytest
-import yaml
+from tabularepimdl.Rule import Rule
 
-from my_module import MyRule
-
-
-@pytest.fixture
-def rule_yaml_setUp():
-    """
-    Load a yaml file from the tests directory (independent of the current working directory).
-    Returns: content from the loaded yaml file.
-    """
-    # Load the YAML file
-    yaml_path = Path(__file__).parent / "yaml_input.yml"
-    with open(yaml_path) as file:
-        rule_yaml = yaml.safe_load(file)
-    return rule_yaml
-
+from my_module import DummyRule
 
 @pytest.fixture
-def myrule(rule_yaml_setUp):
-    """
-    Initialize the Rule object by using from_yaml classmethod with loaded yaml content.
-    Returns: Initialized Rule object/instance.
-    """
-    rule = MyRule.from_yaml(rule_yaml_setUp)
+def rule():
+    rule = DummyRule()
     return rule
 
-
-def test_from_yaml(myrule):
+def test_rule_can_be_instantiated(rule):
     """
-    Test the from_yaml() defined in Rule module.
-    Args: myrule object.
+    Check the subclass satisfies the abstract interface and exposes the expected properties.
     """
-    assert not myrule.stochastic
-    assert myrule.rate == 0.1
-    assert myrule.column == "InfState"
-    assert myrule.from_st == "S"
-    assert myrule.to_st == "I"
+    assert isinstance(rule, Rule)
+    assert rule.stochastic is False
+    assert rule.expansion_factor == 3
 
 
-def test_to_dict(myrule):
+def test_abstract_rule_cannot_be_instantiated():
     """
-    Test the to_dict() defined in SimpleTransition_Vec_Encode, reached via Rule.from_yaml()'s dispatch.
-    Args: myrule object.
+    Rule contains abstract methods, Python should raise TypeError 
+    when users attempt to instantiate it directly.
     """
-    expected_dict = {
-        "tabularepimdl.SimpleTransition_Vec_Encode": {
-            "column": "InfState",
-            "from_st": "S",
-            "to_st": "I",
-            "rate": 0.1,
+    with pytest.raises(TypeError):
+        Rule()
+
+
+class IncompleteRule(Rule):
+    """A subclasss missing an abstract method"""
+    def get_deltas(self, current_state, col_idx_map, result_buffer, dt=1.0, stochastic=None):
+        return result_buffer
+
+
+def test_incomplete_subclass_cannot_be_instantiated():
+    """
+    A subclass missing an abstract method cannot be instantiated since it does not implement to_dict().
+    """
+    with pytest.raises(TypeError):
+        IncompleteRule()
+
+
+def test_get_deltas_returns_expected_values(rule):
+    """Verify that the method calculates the expected deltas for the dummy rule."""
+    current_state = np.array([[100.0, 10.0], [200.0, 20.0],])
+
+    col_idx_map = {"N": 0, "InfState": 1,}
+
+    result_buffer = np.zeros_like(current_state)
+
+    original_buffer_id = id(result_buffer)
+
+    result = rule.get_deltas(
+        current_state=current_state,
+        col_idx_map=col_idx_map,
+        result_buffer=result_buffer,
+        dt=2.0
+    )
+
+    expected = np.array([[-200.0, 0.0], [-400.0, 0.0],])
+    
+    assert result is result_buffer
+    assert id(result) == original_buffer_id
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_get_deltas_raises_when_N_missing(rule):
+    """Check for a missing N entry in the column map"""
+    current_state = np.array([[100.0, 10.0]])
+    col_idx_map = {"InfState": 0}
+    result_buffer = np.zeros_like(current_state)
+
+    with pytest.raises(
+        ValueError,
+        match="Missing required column 'N'",
+    ):
+        rule.get_deltas(current_state=current_state, col_idx_map=col_idx_map, result_buffer=result_buffer,)
+
+
+class LegacyRule(Rule):
+    """Define a legacy-style subclass that implements only the abstract methods."""
+    def get_deltas(self, current_state, col_idx_map, result_buffer, dt=1.0, stochastic=None,):
+        return result_buffer
+
+    def to_dict(self):
+        return {"LegacyRule": {}}
+
+
+def test_expansion_factor_not_implemented():
+    """Base class intentionally raises NotImplementedError if a subclass does not override this property."""
+    rule = LegacyRule()
+
+    with pytest.raises(
+        NotImplementedError,
+        match="LegacyRule does not implement expansion_factor",
+    ):
+        _ = rule.expansion_factor
+
+
+def test_encode_categorical_states_note_implemented():
+    rule = LegacyRule()
+
+    with pytest.raises(
+        NotImplementedError,
+        match="does not implement _encode_categorical_states",
+    ):
+        rule._encode_categorical_states(data_domains={})
+
+
+def test_to_dict(rule):
+    """
+    Tests the to_dict() returns the expected dictionary.
+    """
+    result = rule.to_dict()
+
+    assert isinstance(result, dict)
+    assert result == {
+        "DummyRule": {
             "stochastic": False,
-            "column_categories": ["placeholder"],
-            "infstate_compartments": ["S", "I", "R"],
         }
     }
-    returned_dict = myrule.to_dict()
-    assert returned_dict == expected_dict
