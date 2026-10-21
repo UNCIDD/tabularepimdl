@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 import numpy as np
 import pandas as pd
@@ -11,8 +11,8 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, validate_call
 
 from tabularepimdl.Rule import Rule
-from tabularepimdl._validators.yaml_file_processing import load_yaml
-from tabularepimdl._validators.rule_validation import instantiate_rules
+from tabularepimdl._validators.yaml_file_processing.yaml_load import load_yaml
+from tabularepimdl._validators.rule_validation.instantiate_rules import instantiate_rules
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     current_state_array: np.ndarray = Field(default_factory=lambda: np.array([]))
     full_epi_array: np.ndarray = Field(default_factory=lambda: np.array([]))
     rules: list[list[Rule]]
-    stoch_policy: str = "rule_based"
+    stoch_policy: Literal["rule_based", "deterministic", "stochastic"] = "rule_based"
 
 
     # columns listed in the input data, separating column N and T from other columns
@@ -179,7 +179,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         processed_rules = instantiate_rules(rules_section=rules_dict['rules']) #instantiated rules are returned
         logger.debug('processed rules parameters are\n %s', processed_rules)
 
-        logger.warning('Model engine containing only the estabilished rules is created.')
+        logger.info('Model engine containing only the estabilished rules is created.')
         return cls(rules=processed_rules)
 
         
@@ -437,7 +437,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         """
         for ruleset in self.rules:
             for rule in ruleset:
-                rule._encode_categorical_states(data_domains=self._grouping_col_map)
+                rule.encode_categorical_states(data_domains=self._grouping_col_map)
 
     def _convert_input_data_to_arrays(self, input_data: pd.DataFrame) -> np.ndarray:  # might be benificial to add array args to the method and return current_state and full_epi
         """
@@ -560,10 +560,15 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             A Numpy array containing the current state plus the new data.
 
         Raises:
+            RuntimeError: If the init_state is None.
             TypeError: If the added new data is not in pandas DataFrame type.
             ValueError: If the added new data has different number of columns than that of the original input data.
             ValueError: If the added new data has different column names than that of the original input data.
         """
+        # check if init_state is None
+        if self.init_state is None:
+            raise RuntimeError("No initial state data is provided, please provide initial state data.")
+
         # verify if the input data is a dataframe
         if not isinstance(new_data, pd.DataFrame):
             raise TypeError(f"Expected a DataFrame, recieved {type(new_data).__name__} instead.")
@@ -624,6 +629,9 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             Does not return a value. The updated state is available afterward via
             `current_state_array` / `current_state()`, and the appended history via `full_epi()`.
         """
+        if self.init_state is None:
+            raise RuntimeError("No initial state data is provided, please provide initial state data.")
+
         for ruleset in self.rules:
             logger.debug("1. vec current ruleset: %s", ruleset)
             logger.debug("vec current state\n %s", self.current_state_array)
