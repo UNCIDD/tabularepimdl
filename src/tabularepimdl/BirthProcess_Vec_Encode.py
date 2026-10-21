@@ -65,7 +65,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         """
         return len(self.infstate_compartments)
 
-    def _encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
+    def encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
 

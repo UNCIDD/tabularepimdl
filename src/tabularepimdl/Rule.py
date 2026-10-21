@@ -52,7 +52,7 @@ class Rule(ABC):
         raise NotImplementedError(f"{type(self).__name__} does not implement expansion_factor.")
 
 
-    def _encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
+    def encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode this rule's own
         column state values. Called by the model engine once per column domain update; not
@@ -66,9 +66,9 @@ class Rule(ABC):
             data_domains: mapping of column name to that column's category-to-code mapping.
 
         Raises:
-            NotImplementedError: when users access the _encode_categorical_states on a class instance that hasn't overridden this method.
+            NotImplementedError: when users access the encode_categorical_states on a class instance that hasn't overridden this method.
         """
-        raise NotImplementedError(f"{type(self).__name__} does not implement _encode_categorical_states() method.")
+        raise NotImplementedError(f"{type(self).__name__} does not implement encode_categorical_states() method.")
 
 
     @abstractmethod
