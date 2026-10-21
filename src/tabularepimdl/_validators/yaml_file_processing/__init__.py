@@ -14,12 +14,10 @@ from .path_validator import validate_yaml_path
 from .yaml_parser import parse_yaml
 from .yaml_reader import read_yaml_file
 from .yaml_structure import validate_yaml_structure
-from .yaml_load import load_yaml
 
 
 __all__ = [
     "DuplicateYAMLKeyError",
-    "EpiModelDataError",
     "EpiModelValidationError",
     "YAMLFileError",
     "YAMLFileExtensionError",
@@ -32,5 +30,4 @@ __all__ = [
     "read_yaml_file",
     "validate_yaml_path",
     "validate_yaml_structure",
-    "load_yaml",
 ]
