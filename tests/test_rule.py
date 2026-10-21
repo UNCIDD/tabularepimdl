@@ -109,9 +109,9 @@ def test_encode_categorical_states_note_implemented():
 
     with pytest.raises(
         NotImplementedError,
-        match="does not implement _encode_categorical_states",
+        match="does not implement encode_categorical_states",
     ):
-        rule._encode_categorical_states(data_domains={})
+        rule.encode_categorical_states(data_domains={})
 
 
 def test_to_dict(rule):
