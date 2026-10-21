@@ -1,13 +1,8 @@
-from typing import Any
 
 import pytest
 
+from tabularepimdl._validators.yaml_file_processing.yaml_exceptions import DuplicateYAMLKeyError, YAMLParseError
 from tabularepimdl._validators.yaml_file_processing.yaml_parser import parse_yaml
-from tabularepimdl._validators.yaml_file_processing.yaml_exceptions import (
-    DuplicateYAMLKeyError,
-    YAMLParseError,
-)
-
 
 
 # 1. Successful YAML parsing

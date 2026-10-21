@@ -3,11 +3,8 @@ from unittest.mock import patch
 
 import pytest
 
+from tabularepimdl._validators.yaml_file_processing.yaml_exceptions import YAMLFileReadError
 from tabularepimdl._validators.yaml_file_processing.yaml_reader import read_yaml_file
-
-from tabularepimdl._validators.yaml_file_processing.yaml_exceptions import (
-    YAMLFileReadError,
-)
 
 
 def test_read_yaml_file_success(tmp_path: Path) -> None:

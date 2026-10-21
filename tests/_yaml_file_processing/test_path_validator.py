@@ -3,12 +3,7 @@ from pathlib import Path
 import pytest
 
 from tabularepimdl._validators.yaml_file_processing.path_validator import validate_yaml_path
-
-from tabularepimdl._validators.yaml_file_processing.yaml_exceptions import (
-    YAMLFileExtensionError,
-    YAMLFileNotFoundError,
-    YAMLFileTypeError,
-)
+from tabularepimdl._validators.yaml_file_processing.yaml_exceptions import YAMLFileExtensionError, YAMLFileNotFoundError, YAMLFileTypeError
 
 
 def test_valid_yaml_file_returns_path(tmp_path):

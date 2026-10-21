@@ -1,10 +1,7 @@
 import pytest
 
+from tabularepimdl._validators.yaml_file_processing.yaml_exceptions import YAMLStructureError
 from tabularepimdl._validators.yaml_file_processing.yaml_structure import validate_yaml_structure
-
-from tabularepimdl._validators.yaml_file_processing.yaml_exceptions import (
-    YAMLStructureError,
-)
 
 
 # Valid input tests

@@ -1,10 +1,6 @@
 from pathlib import Path
 
-from .yaml_exceptions import (
-    YAMLFileExtensionError,
-    YAMLFileNotFoundError,
-    YAMLFileTypeError,
-)
+from .yaml_exceptions import YAMLFileExtensionError, YAMLFileNotFoundError, YAMLFileTypeError
 
 SUPPORTED_YAML_EXTENSIONS = {".yaml", ".yml"}
 

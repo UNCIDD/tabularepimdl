@@ -1,9 +1,6 @@
 import pytest
 
-from tabularepimdl._validators.yaml_file_processing.yaml_exceptions import (
-    YAMLParseError,
-    DuplicateYAMLKeyError,
-)
+from tabularepimdl._validators.yaml_file_processing.yaml_exceptions import DuplicateYAMLKeyError, YAMLParseError
 
 
 def test_duplicate_yaml_key_stores_attributes():

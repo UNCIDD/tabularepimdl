@@ -1,6 +1,6 @@
-from tabularepimdl.Rule import Rule
-
 import numpy as np
+
+from tabularepimdl.Rule import Rule
 
 
 class DummyRule(Rule):

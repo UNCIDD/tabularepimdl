@@ -4,7 +4,6 @@ from typing import Any
 
 from .yaml_exceptions import YAMLStructureError
 
-
 REQUIRED_TOP_LEVEL_KEYS = {"rules"}
 
 

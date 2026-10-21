@@ -2,17 +2,16 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any, Literal, Self
 
 import numpy as np
 import pandas as pd
-import yaml
-from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, validate_call
 
-from tabularepimdl.Rule import Rule
-from tabularepimdl._validators.yaml_file_processing.yaml_load import load_yaml
 from tabularepimdl._validators.rule_validation.instantiate_rules import instantiate_rules
+from tabularepimdl._validators.yaml_file_processing.yaml_load import load_yaml
+from tabularepimdl.Rule import Rule
 
 logger = logging.getLogger(__name__)
 

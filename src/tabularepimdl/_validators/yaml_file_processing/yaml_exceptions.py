@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 class EpiModelValidationError(Exception):
     """Base exception for tabularepimdl input/validation errors."""
 
