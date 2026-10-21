@@ -27,12 +27,12 @@ class DuplicateKeyLoader(yaml.SafeLoader):
         filename: str = "<string>",
     ) -> None:
         self.filename = filename
-        self._path_stack: list[str] = []
+        self._path_stack: list[str | int] = []
 
         super().__init__(stream)
 
 
-def _format_path(path_parts: list[str]) -> str:
+def _format_path(path_parts: list[str | int]) -> str:
     """
     Convert YAML path components into a readable path.
 

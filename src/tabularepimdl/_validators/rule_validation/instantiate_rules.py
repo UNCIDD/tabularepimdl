@@ -1,15 +1,17 @@
 import importlib
 import logging
-
 from typing import Any, TypeAlias
+
+from pydantic import BaseModel
+
 from tabularepimdl.Rule import Rule
 
 logger = logging.getLogger(__name__)
 
 
 RuleDict: TypeAlias = dict[str, dict[str, Any]]
-RuleGroup: TypeAlias = list[RuleDict]
-RulesSection: TypeAlias = RuleDict | list[RuleDict | RuleGroup]
+RulesSection: TypeAlias = RuleDict | list["RulesSection"]
+InstantiatedRules: TypeAlias = Rule | list["InstantiatedRules"]
 
 
 def from_dict(rule_dict: dict) -> Rule:
@@ -39,12 +41,15 @@ def from_dict(rule_dict: dict) -> Rule:
     if not isinstance(rule_cls, type) or not issubclass(rule_cls, Rule):
         raise TypeError(f"{key} is not a Rule subclass")
 
+    if not issubclass(rule_cls, BaseModel):
+        raise TypeError(f"{key} is not a Pydantic-based Rule and cannot be loaded from YAML")
+
     yaml_para_definition = rule_dict[key]  # obtain the parameter values from yaml's data
     _validate_definition(rule_cls, yaml_para_definition)  # validate parameter types and names first
 
     return rule_cls(**rule_dict[key])  # key's dict-type values are passed to class rule_cls, then the class is instantiated and returned
 
-def _validate_definition(tepi_rule: type[Rule], definition: dict) -> None:
+def _validate_definition(tepi_rule: type[BaseModel], definition: dict) -> None:
         """
         Process an epidemic rule's class definition from a YAML file
         and validate its definition keys against the same Pydantic-integrated model's fields.
@@ -85,7 +90,7 @@ def _validate_definition(tepi_rule: type[Rule], definition: dict) -> None:
             raise ValueError(f"Unexpected parameters in YAML file for {tepi_rule.__name__}: {extra_fields}")
 
 
-def instantiate_rules(rules_section: RulesSection) -> list[list[Rule]]:
+def instantiate_rules(rules_section: RulesSection) -> InstantiatedRules:
     """
     Recursively process the 'rules' section and return instantiated rules by invoking from_dict.
 

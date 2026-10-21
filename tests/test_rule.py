@@ -6,9 +6,10 @@ The unit tests ensure that the class behaves as expected.
 
 import numpy as np
 import pytest
-from tabularepimdl.Rule import Rule
 
 from my_module import DummyRule
+from tabularepimdl.Rule import Rule
+
 
 @pytest.fixture
 def rule():
@@ -30,7 +31,7 @@ def test_abstract_rule_cannot_be_instantiated():
     when users attempt to instantiate it directly.
     """
     with pytest.raises(TypeError):
-        Rule()
+        Rule()  # type: ignore[abstract]
 
 
 class IncompleteRule(Rule):
@@ -44,7 +45,7 @@ def test_incomplete_subclass_cannot_be_instantiated():
     A subclass missing an abstract method cannot be instantiated since it does not implement to_dict().
     """
     with pytest.raises(TypeError):
-        IncompleteRule()
+        IncompleteRule()  # type: ignore[abstract]
 
 
 def test_get_deltas_returns_expected_values(rule):
