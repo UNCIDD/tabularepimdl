@@ -1,20 +1,21 @@
+from __future__ import annotations
+
 import logging
 from collections.abc import Iterable
-from typing import Any
+from pathlib import Path
+from typing import Any, Literal, Self
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, validate_call
 
+from tabularepimdl._validators.rule_validation.instantiate_rules import instantiate_rules
+from tabularepimdl._validators.yaml_file_processing.yaml_load import load_yaml
 from tabularepimdl.Rule import Rule
 
 logger = logging.getLogger(__name__)
 
 
-# Vec_Encode_1_5 is derived from Vec_Encode_1_3,
-# it uses rule input state-based pre-allocated buffer which sits outside timestep()
-# it adjusts buffer size dynamically based on the current state data size and individual rule's input states
-# it implements fast grouping with better performance than numpy unique method.
 class EpiModel_Vec_Encode_1_5(BaseModel):
     """
     Class that that applies a list of rules to a changing current state through
@@ -23,19 +24,11 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     Args:
         init_state: A pandas DataFrame with the initial epidemic fields such as infection state, grouping state, population size and time.
                     It must have at minimum columns `'T'` and `'N'`.
-
-    Example:
-        Location	Age     InfState    N   T
-    0	       A  adult	           S  100  20
-    1	       A  adult	           I    5	0
-    2	       A  child            R   50	0
-    3	       B  adult            S   80	0
-
         current_state_array: A numpy array represents the current epidemic state.
         full_epi_array: A numpy array contains full epidemic history.
         rules: A list of epidemic rules that represents the epidemic process. Must be a flat list or a list of lists. E.g. [[B], [SI, ST], [W]]
         stoch_policy: Whether the entire epidemic process is rule based or centralized with either deterministic or stochastic.
-        compartment_col: A placeholder (not being used in model engine). A string indicating the column name that is used for saving infection compartments.
+
 
     Notes:
         Maintain a _delta_buffer
@@ -46,14 +39,14 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     """
 
     # Pydantic Configuration
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, validate_assignment=True,)
 
-    init_state: pd.DataFrame = Field(default_factory=pd.DataFrame)
+    init_state: pd.DataFrame | None = None
     current_state_array: np.ndarray = Field(default_factory=lambda: np.array([]))
     full_epi_array: np.ndarray = Field(default_factory=lambda: np.array([]))
     rules: list[list[Rule]]
-    stoch_policy: str = "rule_based"
-    # compartment_col: str = 'InfState' #model engine does not need this attribute
+    stoch_policy: Literal["rule_based", "deterministic", "stochastic"] = "rule_based"
+
 
     # columns listed in the input data, separating column N and T from other columns
     _agg_cols: set[str] = PrivateAttr(default_factory=lambda: {"N", "T"})
@@ -66,11 +59,6 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     _infstate_all_comps: list[str] = PrivateAttr(default_factory=list)  # e.g. ['S', 'I', 'R']
     _num_comps: int = PrivateAttr(default=None)  # e.g. 3
 
-    # encoding map and inverse encoding map for infstate comp, not needed, keep them here for now
-    # these two variables are not set in the class since _grouping_col_map and _inverse_grouping_col_map do the same function
-    # _infstate_comp_map: Dict[str, int] = PrivateAttr(default_factory=dict) #e.g. {'S': 0, 'I': 1, 'R': 2}
-    # _inverse_infstate_comp_map: Dict[int, str] = PrivateAttr(default_factory=dict) #e.g. {0: 'S', 1: 'I', 2: 'R'}
-
     # encoding maps and inverse encoding maps for each grouping column
     _grouping_col_map: dict[str, dict[str, int]] = PrivateAttr(default_factory=dict)  # e.g. { 'InfState': {'I': 0, 'S': 1}, 'Age': {'adult': 0, 'child': 1} }
     _inverse_grouping_col_map: dict[str, dict[int, str]] = PrivateAttr(default_factory=dict)  # e.g. { 'InfState': {0: 'I', 1: 'S'}, 'Age': {0: 'adult', 1: 'child'} }
@@ -80,18 +68,14 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     _col_idx_map: dict[str, int] = PrivateAttr(default_factory=dict)  # e.g. {'InfState' : 0, 'N': 1, 'T': 2}
 
     # column index value of InfState, N, T and all grouping columns including InfState
-    # _infstate_idx: int = PrivateAttr(default=None) #e.g. _infstate_idx=0 #model engine does not need this attribute
     _n_idx: int = PrivateAttr(default=None)  # e.g. _n_idx=1
     _t_idx: int = PrivateAttr(default=None)  # e.g. _t_idx=2
     _grouping_col_idx: list[int] = PrivateAttr(default_factory=list)  # e.g. infstate, x, y, z = [0, 3, 4, 5]
 
-    # current result array pr-eallocation
-    _current_result_preallocation: np.ndarray = PrivateAttr(default_factory=lambda: np.array([]))
-
     # full epi list to contain full epi array
     _full_epi_list: list[np.ndarray] = PrivateAttr(default_factory=list)
 
-    # initial current_state_array, used to save the converted initial current_state_array
+    # initial current_state_array, used to save the initial current_state_array
     _initial_current_state_array: np.ndarray = PrivateAttr(default_factory=lambda: np.array([]))
 
     # new data flag, used for identifying if the added new data to current state has value changed or remained
@@ -99,15 +83,18 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     _previous_data_copy: pd.DataFrame = PrivateAttr(default_factory=pd.DataFrame)  # a dataframe for saving previous new data
     _new_data_array: np.ndarray = PrivateAttr(default_factory=lambda: np.array([]))  # an array for saving the converted added dataframe and avoid NameError
 
-    # reusable delta buffer
-    _delta_buffer: np.ndarray = PrivateAttr(default_factory=lambda: np.array([]))  # originally as _current_result_preallocation
-    _delta_capacity: int = PrivateAttr(default=0)  # this may not be needed
+    # reusable delta buffer for the simulation timestep process
+    _delta_buffer: np.ndarray = PrivateAttr(default_factory=lambda: np.array([]))  # used for memory preallocation and saving intermediate data
     _max_expansion_factor: int = PrivateAttr(default=0)  # the maximum number of rows all rules can return per input row
 
     @field_validator("init_state", mode="before")
     @classmethod
-    def validate_init_state(cls, initial_state) -> pd.DataFrame:
+    def validate_init_state(cls, initial_state: pd.DataFrame | None) -> pd.DataFrame | None:
         """Ensure input data is pandas DataFrame type with required minimum columns"""
+        # Allow None for init_state
+        if initial_state is None:
+            return None
+        
         # Type check
         if not isinstance(initial_state, pd.DataFrame):  # check if init_state is a dataFrame
             raise TypeError(f"Expected a DataFrame, received {type(initial_state).__name__} instead.")
@@ -166,11 +153,36 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                     raise TypeError(f"Invalid type at input rules[{i}][{j}]: expected an epidemic Rule, received {subitem} with type {type(subitem).__name__}.")
                 normalized_list.append(item)
             else:
-                raise TypeError(f"Element {subitem} at input rules[{i}] must be an epidemic Rule or a list of epidemic Rules. Received {type(item).__name__}.")
-
+                raise TypeError(f"Element {item} at input rules[{i}] must be an epidemic Rule or a list of epidemic Rules. Received {type(item).__name__}.")
+        
         return normalized_list
 
-    def model_post_init(self, _):
+
+    @classmethod
+    @validate_call
+    def from_yaml(cls, filename: str | Path) -> Self:
+        """
+        Configure the model engine using a YAML file containing rules only.
+
+        Args:
+            filename: Path to the file, provided as a string or pathlib.Path object.
+
+        Returns:
+            A class object containing only the established rules. No input data is provided.
+
+        Notes:
+            This method is a placeholder for future development of model-level YAML configuration loading.
+        """
+        rules_dict = load_yaml(filename=filename)
+
+        processed_rules = instantiate_rules(rules_section=rules_dict['rules']) #instantiated rules are returned
+        logger.debug('processed rules parameters are\n %s', processed_rules)
+
+        logger.info('Model engine containing only the estabilished rules is created.')
+        return cls(rules=processed_rules)
+
+        
+    def model_post_init(self, _) -> None:
         """
         Prepare the model engine with the following steps:
         1. shuffle init_state column order
@@ -179,7 +191,16 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         4. set up model's internal attributes
         5. initialize current_state_arrays
         6. initialize full_epi_array.
+
+        Log Warnings: 
+            If no data is provided to the model, warn users that init_state is None
+            and model initialization will be deferred.
         """
+        if self.init_state is None:
+            logger.warning("No initial state data provided. The model engine is initialized "
+                           "in rules-only mode with the configured rules.")
+            return
+
         # self.init_state.columns = self._init_state_column_names_upper_case(input_data=self.init_state) #convert all column names of init_state to lowercase, this will cause many string handling changes in rules, not implement it for now
         self.init_state = self._input_data_column_order_shuffle(input_data=self.init_state)  # shuffle init_state column order
         logger.debug("shuffle init state\n %s", self.init_state)
@@ -201,6 +222,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     # def _init_state_column_names_upper_case(self, input_data: pd.DataFrame): #new addtion, 12/4, this requires all individual rules to convert their values to upper case, not efficient
     #    """Convert all column names of init_state to lowercase."""
     #    return input_data.columns.str.upper()
+    
 
     def _initialize_preallocated_buffer(self) -> None:
         logger.debug("initial _delta buffer\n %s", self._delta_buffer)
@@ -386,14 +408,6 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             2. The column order in the input pandas DataFrame.
             3. A dictionary of mapping of column names to their orders.
         """
-        # self._infstate_all_comps = sorted(self._domains[self.compartment_col]) #keep a variable to save column InfState's compartment values
-        # self._num_comps = len(self._infstate_all_comps) #keep a variable to save the number of compartments in column InfState
-
-        # create compartment and its associated index mapping, and reverse the mapping
-        # used for converting column's string values to numbers
-        # self._infstate_comp_map = {comp: i for i, comp in enumerate(infstate_all_comps)}
-        # self._inverse_infstate_comp_map = {i: comp for comp, i in self._infstate_comp_map.items()}
-
         # build encoding maps and inverse encoding maps for each grouping column's domain values including column infstate
         for col in self._grouping_cols:
             logger.debug("col: %s", col)
@@ -411,8 +425,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
         # all columns indicies are included in _col_idx_map, extract invidual ones for separate use
         # Locate each column's index of init_state, used in array column operation.
-        # self._infstate_idx = self._col_idx_map[self.compartment_col] #unused/unneeded attribute
-        self._n_idx = self._col_idx_map["N"]  # the code has to know/use a few fixed column names in order to get column indicies
+        self._n_idx = self._col_idx_map["N"]  # the engine has to know/use column names N, T in order to get column indicies
         self._t_idx = self._col_idx_map["T"]
         self._grouping_col_idx = [self._col_idx_map[c] for c in self._grouping_cols]
         logger.debug("_n_idx: %s _t_idx: %s _grouping_col_idx: %s", self._n_idx, self._t_idx, self._grouping_col_idx)
@@ -423,7 +436,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         """
         for ruleset in self.rules:
             for rule in ruleset:
-                rule._encode_categorical_states(data_domains=self._grouping_col_map)
+                rule.encode_categorical_states(data_domains=self._grouping_col_map)
 
     def _convert_input_data_to_arrays(self, input_data: pd.DataFrame) -> np.ndarray:  # might be benificial to add array args to the method and return current_state and full_epi
         """
@@ -458,12 +471,6 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             return np.column_stack(encoded_columns).astype(np.float64)
         return np.empty((0, len(self._init_state_col_order)), dtype=np.float64)
 
-        # pre-allocation of result array -- to be checked/verified ##=== MOVE pre-allocation into do_timestep()===##
-        # n_rows = self.current_state_array.shape[0] #detect the number of rows and columns in current_state_array
-        # n_cols = self.current_state_array.shape[1]
-        # self._current_result_preallocation = np.empty((n_rows * 2, n_cols), dtype=np.float64) #preallocate a result array
-        logger.debug("initial preallocation buffer\n %s", self._current_result_preallocation)
-        # return self.current_state_array #return current_state_array only
 
     def _save_initial_current_state_array(self) -> None:
         """
@@ -552,10 +559,15 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             A Numpy array containing the current state plus the new data.
 
         Raises:
+            RuntimeError: If the init_state is None.
             TypeError: If the added new data is not in pandas DataFrame type.
             ValueError: If the added new data has different number of columns than that of the original input data.
             ValueError: If the added new data has different column names than that of the original input data.
         """
+        # check if init_state is None
+        if self.init_state is None:
+            raise RuntimeError("No initial state data is provided, please provide initial state data.")
+
         # verify if the input data is a dataframe
         if not isinstance(new_data, pd.DataFrame):
             raise TypeError(f"Expected a DataFrame, recieved {type(new_data).__name__} instead.")
@@ -616,6 +628,9 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             Does not return a value. The updated state is available afterward via
             `current_state_array` / `current_state()`, and the appended history via `full_epi()`.
         """
+        if self.init_state is None:
+            raise RuntimeError("No initial state data is provided, please provide initial state data.")
+
         for ruleset in self.rules:
             logger.debug("1. vec current ruleset: %s", ruleset)
             logger.debug("vec current state\n %s", self.current_state_array)
@@ -638,20 +653,16 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                 self._delta_buffer = np.empty((new_size, self.current_state_array.shape[1]), dtype=np.float64)
                 logger.debug("new delta buffer triggered. Size: %s", self._delta_buffer.shape)
 
-            # if num_current >= self._delta_buffer.shape[0] - num_current: #if current state array size is larger than the remaining buffer size -- superseded by the dynamic buffer check above
-            #    new_size = max(num_current + (num_current * max_expansion), self._delta_buffer.shape[0] * 2) #increase the delta buffer size
-            #    self._delta_buffer = np.empty((new_size, self.current_state_array.shape[1]), dtype=np.float64)
-
             # 2. Put current state at the VERY START of the buffer
             # This avoids needing np.vstack later.
             self._delta_buffer[:num_current, :] = self.current_state_array
             write_cursor = num_current
             logger.debug("num current: %s", num_current)
-            logger.debug("start new ruleset, write_curose: %s", write_cursor)
+            logger.debug("start new ruleset, write_curor: %s", write_cursor)
             logger.debug("remaining space in delta buffer: %s", self._delta_buffer.shape[0] - num_current)
             for rule in ruleset:
                 logger.debug("2. current rule: %s", rule)
-                logger.debug("in rule Before loop preallocation buffer\n %s", self._current_result_preallocation)
+                logger.debug("in rule Before loop preallocation buffer\n %s", self._delta_buffer)
                 # Allocate non-overlapping slice
                 logger.debug("write_cursor now is: %s", write_cursor)
                 # rule_needed_buffer_length = current_state_array_row_size * rule.combination_of_input_states() #set upper limit for buff_slice
@@ -665,7 +676,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                         current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=buff_slice, dt=dt, stochastic=(self.stoch_policy == "stochastic")
                     )
                 logger.debug("rule detlas\n %s", rule_deltas)
-                logger.debug("in rule After loop preallocation buffer\n %s", self._current_result_preallocation)
+                logger.debug("in rule After loop preallocation buffer\n %s", self._delta_buffer)
                 if rule_deltas is not None and rule_deltas.shape[0] > 0:  # add non-None rule_deltas to the list
                     rows_written = rule_deltas.shape[0]  # get the number of rows from rule returned deltas
                     logger.debug("rows_written: %s", rows_written)
