@@ -13,37 +13,36 @@ RulesSection: TypeAlias = RuleDict | list[RuleDict | RuleGroup]
 
 
 def from_dict(rule_dict: dict) -> Rule:
-        """
-        Load a rule from its full dictionary definition.
+    """
+    Load a rule from its full dictionary definition.
 
-        Args:
-            rule_dict: a dictionary (key-value pair) defining the rule class(es) read from a YAML file.
+    Args:
+        rule_dict: a dictionary (key-value pair) defining the rule class(es) read from a YAML file.
 
-        Returns:
-            An instantiated rule class object with parameter values initialized.
-        """
-        key = next(iter(rule_dict))
+    Returns:
+        An instantiated rule class object with parameter values initialized.
+    """
+    key = next(iter(rule_dict))
         
-        if "." not in key:
-            raise ValueError(f"Expected format 'pacakge_name.class_name', received {key!r}")
+    if "." not in key:
+        raise ValueError(f"Expected format 'package_name.class_name', received {key!r}")
         
-        mod_nm, cls_nm = key.rsplit(".", 1)
-        logger.debug("mod_nm is %s, cls_nm is %s: ", mod_nm, cls_nm)
+    mod_nm, cls_nm = key.rsplit(".", 1)
+    logger.debug("mod_nm is %s, cls_nm is %s: ", mod_nm, cls_nm)
 
-        if mod_nm != "tabularepimdl":  # Ensure the correct tabularepimdl module is imported
-            raise ValueError(f"Expected pacakge name 'tabularepimdl', received {mod_nm}")
+    if mod_nm != "tabularepimdl":  # Ensure the correct tabularepimdl module is imported
+        raise ValueError(f"Expected package name 'tabularepimdl', received {mod_nm}")
             
-        mod = importlib.import_module(mod_nm)
-        rule_cls = getattr(mod, cls_nm)  # rule_cls is expected to be a class defined in tabularepimdl
+    mod = importlib.import_module(mod_nm)
+    rule_cls = getattr(mod, cls_nm)  # rule_cls is expected to be a class defined in tabularepimdl
 
-        if not isinstance(rule_cls, type) or not issubclass(rule_cls, Rule):
-            raise TypeError(f"{key} is not a Rule subclass")
+    if not isinstance(rule_cls, type) or not issubclass(rule_cls, Rule):
+        raise TypeError(f"{key} is not a Rule subclass")
 
-        yaml_para_definition = rule_dict[key]  # obtain the parameter values from yaml's data
-        _validate_definition(rule_cls, yaml_para_definition)  # validate parameter types and names first
+    yaml_para_definition = rule_dict[key]  # obtain the parameter values from yaml's data
+    _validate_definition(rule_cls, yaml_para_definition)  # validate parameter types and names first
 
-        return from_yaml_def(rule_cls, rule_dict[key])  # key's dict-type values are passed to class rule_cls, then the class is instantiated and returned
-
+    return rule_cls(**rule_dict[key])  # key's dict-type values are passed to class rule_cls, then the class is instantiated and returned
 
 def _validate_definition(tepi_rule: type[Rule], definition: dict) -> None:
         """
@@ -84,20 +83,6 @@ def _validate_definition(tepi_rule: type[Rule], definition: dict) -> None:
             raise ValueError(f"YAML file missed required fields for {tepi_rule.__name__}: {missing_fields}")
         if extra_fields:
             raise ValueError(f"Unexpected parameters in YAML file for {tepi_rule.__name__}: {extra_fields}")
-
-
-def from_yaml_def(rule_cls: type[Rule], definition: dict) -> Rule:
-        """
-        Instantiate the specified Rule subclass using parameters from YAML.
-
-        Args:
-            rule_cls: The concrete rule class to instantiate.
-            definition: Dictionary containing the rule's parameters.
-
-        Returns:
-            An instantiated rule class object with parameter values.
-        """
-        return rule_cls(**definition)
 
 
 def instantiate_rules(rules_section: RulesSection) -> list[list[Rule]]:
