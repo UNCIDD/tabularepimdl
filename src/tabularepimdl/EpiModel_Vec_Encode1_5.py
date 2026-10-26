@@ -204,6 +204,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         # self.init_state.columns = self._init_state_column_names_upper_case(input_data=self.init_state) #convert all column names of init_state to lowercase, this will cause many string handling changes in rules, not implement it for now
         self.init_state = self._input_data_column_order_shuffle(input_data=self.init_state)  # shuffle init_state column order
         logger.debug("shuffle init state\n %s", self.init_state)
+        self._grouping_cols = self._initialize_grouping_cols(input_data=self.init_state) # prepare the list grouping columns for data
         self.init_state = self._input_data_column_values_grouping(input_data=self.init_state)  # grouping init_state column values
         logger.debug("after grouping init state\n %s \n %s", self.init_state, self.init_state.dtypes)
 
@@ -267,7 +268,13 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         # Reorder the DataFrame init_state
         return input_data[new_col_order]
 
-    def _input_data_column_values_grouping(self, input_data: pd.DataFrame):
+
+    def _initialize_grouping_cols(self, input_data: pd.DataFrame) -> None:
+        """Initialize the list of column names used for grouping data."""
+        self._grouping_cols = [col for col in input_data.columns if col not in self._agg_cols]
+
+
+    def _input_data_column_values_grouping(self, input_data: pd.DataFrame) -> pd.DataFrame:
         """
         Group each column of init_state and aggregate column N and T in case the input raw data has duplicate rows.
 
@@ -278,7 +285,6 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             A pandas DataFrame with column values grouped.
         """
         # collect column names for aggregating columns and rest grouping columns
-        self._grouping_cols = [c for c in input_data.columns if c not in self._agg_cols]
         logger.debug("grouping col: %s", self._grouping_cols)
         logger.debug("before grouping init state\n %s", self.init_state)
         # grouping column values, only the categories that are actually present in the data will be included in the groups.
