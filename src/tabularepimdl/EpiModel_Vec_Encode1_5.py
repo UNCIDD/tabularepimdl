@@ -576,15 +576,18 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         if len(new_data.columns) != len(self.init_state.columns):  # init_state is used within this method directly as the method only takes parameter new_data input
             raise ValueError(f"Expected {len(self.init_state.columns)} columns in new_data, received {len(new_data.columns)}.")
 
-        # verify if the new data has the exact column names as init_state
-        cols_new = set(new_data.columns.str.lower())
-        cols_init = set(self.init_state.columns.str.lower())
+        # verify if the new data has the exact column names as init_state (case-sensitive)
+        cols_new = set(new_data.columns)
+        cols_init = set(self.init_state.columns)
 
         if cols_new != cols_init:
             missing_in_new = cols_init - cols_new
             extra_in_new = cols_new - cols_init
 
-            raise ValueError(f"Column name mismatch (case-insensitive) between new data and initial state.\nMissing in new data: {sorted(missing_in_new)}.\nExtra in new data: {sorted(extra_in_new)}.")
+            raise ValueError("Column name mismatch (case-sensitive) between "
+                             "new data and initial state.\n"
+                             f"Missing in new data: {sorted(missing_in_new, key=str)}.\n"
+                             f"Extra in new data: {sorted(extra_in_new, key=str)}.")
 
         # verify that each grouping column in new data contains only existing domain categories
         for col in self._grouping_cols:
