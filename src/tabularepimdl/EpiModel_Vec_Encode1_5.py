@@ -278,7 +278,6 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             A pandas DataFrame with column values grouped.
         """
         # collect column names for aggregating columns and rest grouping columns
-        self._agg_cols = {"N", "T"}
         self._grouping_cols = [c for c in input_data.columns if c not in self._agg_cols]
         logger.debug("grouping col: %s", self._grouping_cols)
         logger.debug("before grouping init state\n %s", self.init_state)
