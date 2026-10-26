@@ -45,7 +45,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     current_state_array: np.ndarray = Field(default_factory=lambda: np.array([]))
     full_epi_array: np.ndarray = Field(default_factory=lambda: np.array([]))
     rules: list[list[Rule]]
-    stoch_policy: Literal["rule_based", "deterministic", "stochastic"] = "rule_based"
+    stoch_policy: Literal["rule_based", "stochastic"] = "rule_based"
 
 
     # columns listed in the input data, separating column N and T from other columns
@@ -586,6 +586,21 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
             raise ValueError(f"Column name mismatch (case-insensitive) between new data and initial state.\nMissing in new data: {sorted(missing_in_new)}.\nExtra in new data: {sorted(extra_in_new)}.")
 
+        # verify that each grouping column in new data contains only existing domain categories
+        for col in self._grouping_cols:
+            new_domain_categories = set(new_data[col].dropna().unique())
+            existing_domain_categories = self._domains[col]
+
+            extra_domain_categories = new_domain_categories - existing_domain_categories
+
+            if extra_domain_categories:
+                raise ValueError(
+                    f"Invalid categories in column '{col}' in new data. "
+                    f"Unknown categories: {sorted(extra_domain_categories, key=str)}. "
+                    f"Expected categories to be a subset of "
+                    f"{sorted(existing_domain_categories, key=str)}."
+                )
+
         # check if the current new data is the same as the previous new data copy.
         # If no, then update the previous new data copy. If yes, flip the new_data_flag to False.
         if not self._previous_data_copy.equals(new_data):
@@ -675,7 +690,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                     rule_deltas = rule.get_deltas(
                         current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=buff_slice, dt=dt, stochastic=(self.stoch_policy == "stochastic")
                     )
-                logger.debug("rule detlas\n %s", rule_deltas)
+                logger.debug("rule deltas\n %s", rule_deltas)
                 logger.debug("in rule After loop preallocation buffer\n %s", self._delta_buffer)
                 if rule_deltas is not None and rule_deltas.shape[0] > 0:  # add non-None rule_deltas to the list
                     rows_written = rule_deltas.shape[0]  # get the number of rows from rule returned deltas
@@ -683,9 +698,14 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                     write_cursor = write_cursor + rows_written  # move write_cursor to next location
                     logger.debug("write_cursor will be: %s", write_cursor)
                     logger.debug("rule deltas\n %s", self._delta_buffer[write_cursor - rows_written : write_cursor])
+                else:
+                    write_cursor = write_cursor + 1 # if rule_deltas is empty, write_cursor increases by 1 to consume one row in _delta_buffer
+                    logger.debug("rule_detlas is None. write_cursor will be: %s", write_cursor)
+                    self._delta_buffer[num_current:write_cursor, self._n_idx] = 0 #the consumed row's N value should be 0 given rule_deltas is empty
+                    
                 # if rule is not ruleset[-1]: #debug
                 logger.debug("---next rule---")
-                logger.debug("finished current ruleset, moving to next ruleset")
+            logger.debug("finished current ruleset, moving to next ruleset")
 
             # If no rules produced deltas, skip grouping and move to next ruleset
             if write_cursor == num_current:
@@ -725,6 +745,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             new_state[:, self._grouping_col_idx] = unique_groups
             new_state[:, self._n_idx] = sum_N
             new_state[:, self._t_idx] = max_T_col
+            logger.debug("new_state is:\n %s", new_state)
 
             # remove all rows where column N has a value of 0
             logger.debug("current array id: %s", id(self.current_state_array))
@@ -734,7 +755,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
             # if ruleset is not self.rules[-1]: #debug
             logger.debug("-------next ruleset--------")
-            logger.debug("all rulesets done, for loop ends")
+        logger.debug("all rulesets done, for loop ends")
 
         self.current_state_array[:, self._t_idx] = self.current_state_array[:, self._t_idx] + dt  # memory location not change
         logger.debug("add dt, engine vec1_5 final current_state_array:\n %s", self.current_state_array)
