@@ -5,7 +5,25 @@ All notable changes to `tabularepimdl` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] - 2026-xx-yy
+
+### Added
+
+- YAML file duplicate key check when the model engine loads a YAML file which contains rules for the engine ([[#154](https://github.com/UNCIDD/tabularepimdl/issues/154)])
+- Added YAML file loading feature to the model engine that gives users ability to build an engine directly from a YAML configuration.
+- Added support for initializing the model engine in rules-only mode by loading rules from a YAML file without providing initial state data (`init_state=None`).
+- Added a notification when the model engine is initialized with `init_state=None` to indicate that it is operating in rules-only mode.
+- Added rules instantiation process that works with the dictionary processing.
+
+### Changed
+
+- Moved dictionary (translated from YAML) processing and rule attributes/fields validation out of the base `Rule` class into a standalone helper module.
+
+
+### Removed
+
+- Removed `from_yaml` and `from_dict` from `Rule.py`.
+- Removed redundant helper function `from_yaml_def()` from `instantiate_rules.py`.
 
 ## [0.3.0] - 2026-08-27
 

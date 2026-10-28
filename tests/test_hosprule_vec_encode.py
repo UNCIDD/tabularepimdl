@@ -88,7 +88,7 @@ def test_encode_categorical_states_by_engine(hosp_rule):
     the wrong attribute for the hospitalization status lookup).
     """
     data_domains = {"Strain1": {"S": 2, "I": 0, "R": 1}, "Strain2": {"S": 2, "I": 0, "R": 1}, "Hosp1": {"U": 1, "H": 0}, "Hosp2": {"U": 1, "H": 0}}
-    hosp_rule._encode_categorical_states(data_domains)
+    hosp_rule.encode_categorical_states(data_domains)
     assert hosp_rule._infect_status_code == 0
     assert hosp_rule._recover_status_code == 1
     assert hosp_rule._hosp_status_code == 0
