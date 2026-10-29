@@ -87,6 +87,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     _delta_buffer: np.ndarray = PrivateAttr(default_factory=lambda: np.array([]))  # used for memory preallocation and saving intermediate data
     _max_expansion_factor: int = PrivateAttr(default=0)  # the maximum number of rows all rules can return per input row
 
+
     @field_validator("init_state", mode="before")
     @classmethod
     def validate_init_state(cls, initial_state: pd.DataFrame | None) -> pd.DataFrame | None:
@@ -117,6 +118,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             raise ValueError(f"Non-string column names found: {non_string_col_names}. Please check the input data and use meaningful string column names.")
 
         return initial_state
+
 
     # rules list validation
     @field_validator("rules", mode="before")
@@ -223,7 +225,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     # def _init_state_column_names_upper_case(self, input_data: pd.DataFrame): #new addtion, 12/4, this requires all individual rules to convert their values to upper case, not efficient
     #    """Convert all column names of init_state to lowercase."""
     #    return input_data.columns.str.upper()
-    
+
 
     def _initialize_preallocated_buffer(self) -> None:
         logger.debug("initial _delta buffer\n %s", self._delta_buffer)
@@ -243,6 +245,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
         self._delta_buffer = np.empty((buffer_initial_rows, buffer_cols), dtype=np.float64)  # preallocate a result array
         logger.debug("1_5 created _delta buffer\n %s \n %s", self._delta_buffer, self._delta_buffer.shape)
+
 
     def _input_data_column_order_shuffle(self, input_data: pd.DataFrame):
         """
@@ -269,9 +272,19 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         return input_data[new_col_order]
 
 
-    def _initialize_grouping_cols(self, input_data: pd.DataFrame) -> None:
-        """Initialize the list of column names used for grouping data."""
-        self._grouping_cols = [col for col in input_data.columns if col not in self._agg_cols]
+    def _initialize_grouping_cols(self, input_data: pd.DataFrame) -> list[str]:
+        """
+        Identify the columns used for grouping, excluding aggregation columns.
+
+        Args:
+            input_data: The DataFrame whose columns are used to determine the
+            grouping columns.
+
+        Returns:
+            A list of column names in `input_data` that are not designated
+            as aggregation columns (`self._agg_cols`).
+        """
+        return [col for col in input_data.columns if col not in self._agg_cols]
 
 
     def _input_data_column_values_grouping(self, input_data: pd.DataFrame) -> pd.DataFrame:
@@ -289,6 +302,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         logger.debug("before grouping init state\n %s", self.init_state)
         # grouping column values, only the categories that are actually present in the data will be included in the groups.
         return input_data.groupby(self._grouping_cols, observed=True).agg({"N": "sum", "T": "max"}).reset_index()
+
 
     def _match_domain_key(self, col_name: str) -> str | None:
         """
@@ -309,6 +323,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             if key.lower() == col_name_lower:
                 return key
         return None
+
 
     def _update_col_domain_values_from_rules(self, input_data: pd.DataFrame) -> None:
         """
@@ -401,6 +416,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
         logger.debug("final domains per column: %s", self._domains)
 
+
     def _setup_internal_attributes(self, input_data: pd.DataFrame):
         """
         Set up internal private attributes with values from init_state and rule list.
@@ -435,6 +451,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         self._grouping_col_idx = [self._col_idx_map[c] for c in self._grouping_cols]
         logger.debug("_n_idx: %s _t_idx: %s _grouping_col_idx: %s", self._n_idx, self._t_idx, self._grouping_col_idx)
 
+
     def _encode_rule_level_categorical_states(self) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode each rule's own column state values.
@@ -442,6 +459,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         for ruleset in self.rules:
             for rule in ruleset:
                 rule.encode_categorical_states(data_domains=self._grouping_col_map)
+
 
     def _convert_input_data_to_arrays(self, input_data: pd.DataFrame) -> np.ndarray:  # might be benificial to add array args to the method and return current_state and full_epi
         """
@@ -483,6 +501,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         """
         self._initial_current_state_array = self.current_state_array.copy()
 
+
     def _initalize_full_epi_array(self) -> np.ndarray:
         """
         Initialize full_epi_array with initial current_state_array.
@@ -493,6 +512,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         self._full_epi_list = [self._initial_current_state_array]  # make current_state_array the 1st elment in full_epi_array
         self.full_epi_array = np.vstack(self._full_epi_list)
         return self.full_epi_array
+
 
     def _covnert_list_of_arrays_to_df(self, list_of_arr: list[np.ndarray]) -> pd.DataFrame:
         """
@@ -514,6 +534,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             df_reconstructed[col] = df_reconstructed[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
         return df_reconstructed
 
+
     def current_state(self) -> pd.DataFrame:
         """
         Convert current_state_array from array to pandas dataframe with original input data column names.
@@ -528,6 +549,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         for col in self._inverse_grouping_col_map:  # convert grouping col's numeric values to domain values (not including N and T)
             df_constructed_current_state[col] = df_constructed_current_state[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
         return df_constructed_current_state
+
 
     def full_epi(self) -> pd.DataFrame:
         """
@@ -545,6 +567,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             df_reconstructed_full_epi[col] = df_reconstructed_full_epi[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
         return df_reconstructed_full_epi
 
+
     def Reset(self):
         """
         Reset the values of current_state_array and full_epi_array to be the init_state values.
@@ -552,6 +575,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         """
         self.current_state_array = self._initial_current_state_array.copy()
         self._initalize_full_epi_array()
+
 
     def add_new_data_to_current_state(self, new_data: pd.DataFrame) -> np.ndarray:
         """
@@ -638,6 +662,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             pass
 
         return self.current_state_array
+
 
     def do_timestep(self, dt: float = 1.0) -> None:
         """
