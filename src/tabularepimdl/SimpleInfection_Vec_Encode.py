@@ -12,15 +12,15 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
     in a given state in that same column with a probability.
 
     Attributes:
-        beta: the transmission parameter.
-        column: name of the column this rule applies to.
-        s_st: the state for susceptibles, assumed to be S.
-        i_st: the state for infectious, assumed to be I.
-        inf_to: the state infectious folks go to, assumed to be I.
-        freq_dep: whether this model is a frequency dependent model.
-        stochastic: whether the process is stochastic or deterministic.
-        column_categories: all the categories the column should have.
-        infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R'].
+        beta (float): the transmission parameter.
+        column (str): name of the column this rule applies to.
+        s_st (str): the state for susceptibles, assumed to be S.
+        i_st (str): the state for infectious, assumed to be I.
+        inf_to (str): the state infectious folks go to, assumed to be I.
+        freq_dep (bool): whether this model is a frequency dependent model.
+        stochastic (bool): whether the process is stochastic or deterministic.
+        column_categories (list): all the categories the attribute column should have.
+        infstate_compartments (list): the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R'].
     """
 
     beta: float = Field(ge=0, description="the transmission parameter.")
@@ -40,12 +40,10 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
 
     _check_domain_membership = domain_membership_validator(attribute_fields=("s_st", "i_st", "inf_to"), domain_fields=("column_categories", "infstate_compartments"))
 
-    def model_post_init(self, _):
+
+    def model_post_init(self, _) -> None:
         """
         Encode the input states based on each column's attribute values.
-
-        Returns:
-            Numerical values of encoded infection states.
 
         Notes:
             Retain rule-level state encoding to support users who test rules individually.
@@ -61,8 +59,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
                 self._s_code = col_cat_to_int.get(self.s_st)
                 self._i_code = col_cat_to_int.get(self.i_st)
                 self._inf_to_code = col_cat_to_int.get(self.i_st)
-        else:
-            pass
+
 
     # set up a property to return all the required compartments used in infstate column
     @property
@@ -75,6 +72,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         """
         return self.infstate_compartments
 
+
     # set up a property to return all the required categories used in general column
     @property
     def column_all(self) -> list[str]:
@@ -86,14 +84,19 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         """
         return self.column_categories
 
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.infstate_compartments), len(self.column_categories))
 
+
     def encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+
+        Args:
+            data_domains: mapping of column name to that column's category-to-code mapping.
         """
         mapping = data_domains[self.column]
         self._s_code = mapping[self.s_st]
@@ -101,6 +104,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         self._inf_to_code = mapping[self.inf_to]
 
         self._state_encoding_by_engine = True
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -123,7 +127,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
 
         required_columns = "N"  # check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
+            raise ValueError(f"Missing required columns (case-sensitive) in current_state: {required_columns}.")
 
         if stochastic is None:
             stochastic = self.stochastic
@@ -177,6 +181,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
         result_buffer[count : 2 * count, n_idx] = -changed_N  # update column N with inversed changed_N
         return result_buffer[: 2 * count, :]
 
+
     def __str__(self) -> str:
         """
         String representatoin of the rule's infection state and rate.
@@ -185,6 +190,7 @@ class SimpleInfection_Vec_Encode(Rule, BaseModel):
             A string output displays the rule's infection state and rate.
         """
         return f"SimpleInfection_Vec_Encode: {self.s_st} --> {self.inf_to} at rate {self.beta}."
+
 
     def to_dict(self) -> dict:
         """

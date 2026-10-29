@@ -12,12 +12,13 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
     The EnvironmentalTransmission implements the same logic and functionality as the SimpleTransition rule.
 
     Attributes:
-        beta: transmission rate.
-        inf_col: the column designating infection state.
-        s_st: the state for susceptibles, assumed to be S
-        inf_to: the state infectious population move to, assumed to be I.
-        stochastic: whether the process is stochastic or deterministic.
-        infstate_compartments: the infection compartments used in epidemics.
+        beta (float): transmission rate.
+        inf_col (str): the column designating infection state.
+        s_st (str): the state for susceptibles, assumed to be S
+        inf_to (str): the state infectious population move to, assumed to be I.
+        stochastic (bool): whether the process is stochastic or deterministic.
+        inf_col_categories (list): all the categories the attribute inf_col should have.
+        infstate_compartments (list): the infection compartments used in epidemics.
     """
 
     beta: float = Field(ge=0, description="transmission rate.")
@@ -34,12 +35,10 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
 
     _check_domain_membership = domain_membership_validator(attribute_fields=("s_st", "inf_to"), domain_fields=("inf_col_categories", "infstate_compartments"))
 
-    def model_post_init(self, _):
+
+    def model_post_init(self, _) -> None:
         """
         Encode the input states based on the infection column's attribute values.
-
-        Returns:
-            Numerical values of encoded infection states.
 
         Notes:
             Retain rule-level state encoding to support users who test rules individually.
@@ -53,8 +52,7 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
                 col_cat_to_int = {s: i for i, s in enumerate(sorted(self.inf_col_categories))}  # encode column strings to integers {'0 to 4': 0, '5 to 9': 1}
                 self._s_code = col_cat_to_int.get(self.s_st)
                 self._inf_to_code = col_cat_to_int.get(self.inf_to)
-        else:
-            pass
+
 
     # set up a property to return all the required compartments used in infstate column
     @property
@@ -67,6 +65,7 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
         """
         return self.infstate_compartments
 
+
     # set up a property to return all the required categories used in general column
     @property
     def inf_col_all(self) -> list[str]:
@@ -78,20 +77,26 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
         """
         return self.inf_col_categories
 
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.infstate_compartments), len(self.inf_col_categories))
 
+
     def encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+
+        Args:
+            data_domains: mapping of column name to that column's category-to-code mapping.
         """
         mapping = data_domains[self.inf_col]
         self._s_code = mapping[self.s_st]
         self._inf_to_code = mapping[self.inf_to]
 
         self._state_encoding_by_engine = True
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -112,7 +117,7 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
         """
         required_columns = "N"  # check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
+            raise ValueError(f"Missing required columns (case-sensitive) in current_state: {required_columns}.")
 
         if stochastic is None:
             stochastic = self.stochastic
@@ -147,6 +152,7 @@ class EnvironmentalTransmission_Vec_Encode(Rule, BaseModel):
         result_buffer[count : 2 * count, n_idx] = -changed_N  # update column N with inversed changed_N
 
         return result_buffer[: 2 * count, :]
+
 
     def to_dict(self) -> dict:
         """

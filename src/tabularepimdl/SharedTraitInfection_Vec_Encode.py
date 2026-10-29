@@ -11,16 +11,16 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
     Rule that does transmission based on if a trait is shared across different populations.
 
     Attributes:
-        inf_col: the infection state column for this infectious process.
-        in_beta: transmission rate if trait shared.
-        out_beta: transmission rrate if trait not shared.
-        trait_col: the trait column shared by different populations.
-        trait_col_all_categories: all the categories the trait column should have.
-        s_st: the state for susceptibles, assumed to be S.
-        i_st: the state for infectious, assumed to be I.
-        inf_to: the state susceptible populations go to, assumed to be I.
-        stochastic: whether the process is stochastic or deterministic.
-        infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
+        inf_col (str): the infection state column for this infectious process.
+        in_beta (float): transmission rate if trait shared.
+        out_beta (float): transmission rrate if trait not shared.
+        trait_col (str): the trait column shared by different populations.
+        trait_col_all_categories (list): all the categories the trait column should have.
+        s_st (str): the state for susceptibles, assumed to be S.
+        i_st (str): the state for infectious, assumed to be I.
+        inf_to (str): the state susceptible populations go to, assumed to be I.
+        stochastic (bool): whether the process is stochastic or deterministic.
+        infstate_compartments (list): the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
     """
 
     inf_col: str = Field(description="the infection state column for this infectious process.")
@@ -42,12 +42,9 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
 
     _check_domain_membership = domain_membership_validator(attribute_fields=("s_st", "i_st", "inf_to"), domain_fields=("trait_col_all_categories", "infstate_compartments"))
 
-    def model_post_init(self, _):
+    def model_post_init(self, _) -> None:
         """
         Encode the input states based on each column's attribute values.
-
-        Returns:
-            Numerical values of encoded infection states, recover states and hosp states.
 
         Notes:
             Retain rule-level state encoding to support users who test rules individually.
@@ -60,8 +57,7 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
 
             self.trait_col_all_categories = sorted(self.trait_col_all_categories)  # sort the trait_col's all categories
             self._trait_col_all_categories_code = [i for i, v in enumerate(self.trait_col_all_categories)]  # encode each category, keeping numbers only
-        else:
-            pass
+
 
     # set up a property to return all the required compartments used in infstate column
     @property
@@ -74,6 +70,7 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         """
         return self.infstate_compartments
 
+
     # set up a property to return all the required categories used in trait_col
     @property
     def trait_col_all(self) -> list[str | int]:
@@ -85,14 +82,19 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         """
         return self.trait_col_all_categories
 
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.trait_col_all_categories), len(self.infstate_compartments))
 
+
     def encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+
+        Args:
+            data_domains: mapping of column name to that column's category-to-code mapping.
 
         Notes:
             trait_col values (i.e. trait_col_all_categories) are already encoded by the model engine. So get_deltas()
@@ -124,7 +126,7 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         """
         required_columns = "N"  # check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
+            raise ValueError(f"Missing required columns (case-sensitive) in current_state: {required_columns}.")
 
         if stochastic is None:
             stochastic = self.stochastic
@@ -175,6 +177,7 @@ class SharedTraitInfection_Vec_Encode(Rule, BaseModel):
         result = filtered_result_buffer[filtered_result_buffer[:, n_idx] != 0]  # remove rows with N=0
 
         return result
+
 
     def to_dict(self) -> dict:
         """

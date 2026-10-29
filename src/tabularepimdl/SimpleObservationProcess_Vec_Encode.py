@@ -12,17 +12,17 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
     observed to move into another state at some constant rate.
 
     Attributes:
-        source_col: the column containing source_state for the observation process.
-        source_state: the state individuals start, listed in source_col.
-        source_col_all_categories: all the categories used in source column.
-        obs_col: the column that contains each group of individuals' observed state.
-        rate: the number of people move from a particular state into another state per unit time.
-        unobs_state: un-observed state, listed in obs_col.
-        incobs_state: incident-observed state, listed in obs_col.
-        prevobs_state: previously-observed state, listed in obs_col.
-        stochastic: whether the process is stochastic or deterministic.
-        infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
-        obs_col_all_categories: all the observation categories used in epidemics. e.g. ['U', 'P', 'I'], U=unobserved, P=previously-observed, I=incident-observed
+        source_col (str): the column containing source_state for the observation process.
+        source_state (str): the state individuals start, listed in source_col.
+        source_col_all_categories (list): all the categories used in source column.
+        obs_col (str): the column that contains each group of individuals' observed state.
+        rate (float): the number of people move from a particular state into another state per unit time.
+        unobs_state (str): un-observed state, listed in obs_col.
+        incobs_state (str): incident-observed state, listed in obs_col.
+        prevobs_state (str): previously-observed state, listed in obs_col.
+        stochastic (bool): whether the process is stochastic or deterministic.
+        infstate_compartments (list): the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
+        obs_col_all_categories (list): all the observation categories used in epidemics. e.g. ['U', 'P', 'I'], U=unobserved, P=previously-observed, I=incident-observed
     """
 
     source_col: str = Field(description="the column containing source_state for the observation process.")
@@ -49,12 +49,10 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         attribute_fields=("source_state", "unobs_state", "incobs_state", "prevobs_state"), domain_fields=("source_col_all_categories", "obs_col_all_categories", "infstate_compartments")
     )
 
-    def model_post_init(self, _):
+
+    def model_post_init(self, _) -> None:
         """
         Encode the input states based on each column's attribute values.
-
-        Returns:
-            Numerical values of encoded infection states and observation states.
 
         Notes:
             Retain rule-level state encoding to support users who test rules individually.
@@ -71,8 +69,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
             self._unobs_code = observation_to_int.get(self.unobs_state)
             self._incobs_code = observation_to_int.get(self.incobs_state)
             self._prevobs_code = observation_to_int.get(self.prevobs_state)
-        else:
-            pass
+
 
     # set up a property to return all the required compartments used in infstate column
     @property
@@ -85,6 +82,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         """
         return self.infstate_compartments
 
+
     # set up a property to return all the required categories used in obs_col
     @property
     def obs_col_all(self) -> list[str]:
@@ -95,6 +93,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
             A list of strings of all the required categories the `obs_col` uses.
         """
         return self.obs_col_all_categories
+
 
     # set up a property to return all the required categories used in source_col
     @property
@@ -107,14 +106,19 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         """
         return self.source_col_all_categories
 
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input row."""
         return max(len(self.infstate_compartments) * len(self.obs_col_all_categories), len(self.source_col_all_categories) * len(self.obs_col_all_categories))
 
+
     def encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+
+        Args:
+            data_domains: mapping of column name to that column's category-to-code mapping.
         """
         mapping_source_col = data_domains[self.source_col]
         self._source_state_code = mapping_source_col[self.source_state]
@@ -125,6 +129,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         self._prevobs_code = mapping_obs_col[self.prevobs_state]
 
         self._state_encoding_by_engine = True
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -145,7 +150,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
         """
         required_columns = "N"  # check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
+            raise ValueError(f"Missing required columns (case-sensitive) in current_state: {required_columns}.")
 
         if stochastic is None:
             stochastic = self.stochastic
@@ -203,6 +208,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
 
         return result_buffer[: 2 * count_out_Unobs + 2 * count_out_Incobs, :]
 
+
     def __str__(self) -> str:
         """
         String representatoin of the rule's name.
@@ -211,6 +217,7 @@ class SimpleObservationProcess_Vec_Encode(Rule, BaseModel):
             A string output displays the rule name.
         """
         return "SimpleObservationProcess_Vec_Encode."
+
 
     def to_dict(self) -> dict:
         """

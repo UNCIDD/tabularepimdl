@@ -15,10 +15,10 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
     on a birth rate based on the full poplation size.
 
     Attributes:
-        rate: Birth rate per timestep (N * rate births).
-        column_to_sort: Specify which input field is used to sort the dataset in ascending order.
-        stochastic: Whether the transition is stochastic.
-        infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
+        rate (float): Birth rate per timestep (N * rate births).
+        column_to_sort (str): Specify which input field is used to sort the dataset in ascending order.
+        stochastic (bool): Whether the transition is stochastic.
+        infstate_compartments (list): the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
     """
 
     # Pydantic Configuration
@@ -32,6 +32,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
     _start_state_sig: np.ndarray = PrivateAttr(default_factory=lambda: np.array([]))  # initial state configuration for new births.
     _start_state_saved: bool = PrivateAttr(default=False)  # to identify if a valid value has been assigned to _start_state_sig
 
+
     # set up a property to return all the required compartments used in infstate column
     @property
     def infstate_all(self) -> list[str]:
@@ -42,6 +43,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             A list of strings of all the required infection compartments.
         """
         return self.infstate_compartments
+
 
     @property
     def start_state_sig(self) -> np.ndarray:
@@ -58,6 +60,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
             raise ValueError("No start state data is available due to no input current state data is provided. Please provide a non-empty current state data to the get_deltas() of the rule first.")
         return self._start_state_sig
 
+
     @property
     def expansion_factor(self) -> int:
         """
@@ -65,13 +68,18 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         """
         return len(self.infstate_compartments)
 
+
     def encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
 
+        Args:
+            data_domains: mapping of column name to that column's category-to-code mapping.
+
         Notes:
             BirthProcess_Vec_Encode rule does not have input states to be encoded.
         """
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -99,7 +107,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
 
         required_columns = "N"  # check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
+            raise ValueError(f"Missing required columns (case-sensitive) in current_state: {required_columns}.")
 
         if stochastic is None:
             stochastic = self.stochastic
@@ -137,6 +145,7 @@ class BirthProcess_Vec_Encode(Rule, BaseModel):
         result_buffer[:count, n_idx] = changed_N
 
         return result_buffer[:count, :]
+
 
     def to_dict(self) -> dict:
         """

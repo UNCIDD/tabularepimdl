@@ -5,6 +5,7 @@ from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
 from tabularepimdl.Rule import Rule
 
+from typing import Self
 
 class HospRule_Vec_Encode(Rule, BaseModel):
     """
@@ -13,17 +14,17 @@ class HospRule_Vec_Encode(Rule, BaseModel):
     We will additionally track which strain you were hospitalized with. Only tracking total hospitalizations.
 
     Attributes:
-        strain_cols: the strain columns with infection states.
-        hosp_cols: hospitalization columns with hospitalized states.
-        strain_cols_all_categories: all the infection categories used in strain_cols.
-        hosp_cols_all_categories: all the hospitalization categories used in hosp_cols.
-        infect_status: the state for infectious.
-        recover_status: the state for recovery.
-        hosp_status: the state for hospitalization.
-        prim_hrate: chance of being hospitalized from a primary infection.
-        sec_hrate: chance of being hospitalized from a secondary infection.
-        stochastic: whether the process is stochastic or deterministic.
-        infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S'].
+        strain_cols (list): the strain columns with infection states.
+        hosp_cols (list): hospitalization columns with hospitalized states.
+        strain_cols_all_categories (list): all the infection categories used in strain_cols.
+        hosp_cols_all_categories (list): all the hospitalization categories used in hosp_cols.
+        infect_status (str): the state for infectious.
+        recover_status (str): the state for recovery.
+        hosp_status (str): the state for hospitalization.
+        prim_hrate (float): chance of being hospitalized from a primary infection.
+        sec_hrate (float): chance of being hospitalized from a secondary infection.
+        stochastic (bool): whether the process is stochastic or deterministic.
+        infstate_compartments (list): the infection compartments used in epidemics. e.g. ['I', 'R', 'S'].
     """
 
     """ Presume that hosp cols is of the same length as the strain cols, and they have corresponding indices. """
@@ -59,21 +60,19 @@ class HospRule_Vec_Encode(Rule, BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_number_of_elements_(self):
+    def validate_number_of_elements_(self) -> Self:
         """Ensure then number of elements in strain_cols and hosp_cols are the same."""
         if len(self.strain_cols) != len(self.hosp_cols):
             raise ValueError(f"Expecte the same number of elements in strain_cols and hosp_cols received {len(self.strain_cols)} strain_cols and {len(self.hosp_cols)} hosp_cols.")
         return self
 
-    def model_post_init(self, _):
+
+    def model_post_init(self, _) -> None:
         """
         Encode the input states based on each column's attribute values.
 
-        Returns:
-            Numerical values of encoded infection states, recover states and hosp states.
-
         Notes:
-            - Retain rule-level state encoding to support users who test rules individually.
+            Retain rule-level state encoding to support users who test rules individually.
         """
         if not self._state_encoding_by_engine:
             self._strain_columns_all_categories_code = {v: i for i, v in enumerate(sorted(self.strain_cols_all_categories))}  # encode each category
@@ -83,8 +82,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
             self._infect_status_code = self._strain_columns_all_categories_code.get(self.infect_status)
             self._recover_status_code = self._strain_columns_all_categories_code.get(self.recover_status)
             self._hosp_status_code = self._hosp_columns_all_categories_code.get(self.hosp_status)
-        else:
-            pass
+
 
     # set up a property to return all the required compartments used in infstate column
     @property
@@ -97,6 +95,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         """
         return self.infstate_compartments
 
+
     # set up a property to return all the required categories used in strain_cols
     @property
     def strain_cols_all(self) -> list[str]:
@@ -107,6 +106,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
             A list of strings of all the required categories the `strain_cols` uses.
         """
         return self.strain_cols_all_categories
+
 
     # set up a property to return all the required categories used in hosp_cols
     @property
@@ -119,14 +119,19 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         """
         return self.hosp_cols_all_categories
 
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.strain_cols_all_categories) * len(self.infstate_compartments), len(self.infstate_compartments))
 
+
     def encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+
+        Args:
+            data_domains: mapping of column name to that column's category-to-code mapping.
 
         Notes:
             All strain_cols (and separately all hosp_cols) are presumed to share the same domain of
@@ -140,6 +145,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         self._hosp_status_code = mapping_hosp_col[self.hosp_status]
 
         self._state_encoding_by_engine = True
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -160,7 +166,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         """
         required_columns = "N"  # check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
+            raise ValueError(f"Missing required columns (case-sensitive) in current_state: {required_columns}.")
 
         if stochastic is None:
             stochastic = self.stochastic
@@ -217,6 +223,7 @@ class HospRule_Vec_Encode(Rule, BaseModel):
         hosp_block[np.arange(count), hosp_map_strain] = self._hosp_status_code
 
         return result_buffer[: 2 * count, :]
+
 
     def to_dict(self) -> dict:
         """
