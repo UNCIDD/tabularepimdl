@@ -1,3 +1,5 @@
+from typing import Self
+
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, ValidationInfo, field_validator, model_validator
 
@@ -5,7 +7,6 @@ from tabularepimdl._types.constrained_types import UniqueNonEmptyStrList
 from tabularepimdl._validators.rule_domain_membership_validator import domain_membership_validator
 from tabularepimdl.Rule import Rule
 
-from typing import Self
 
 class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
     """
