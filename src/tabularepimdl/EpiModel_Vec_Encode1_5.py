@@ -27,7 +27,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         current_state_array: A numpy array represents the current epidemic state.
         full_epi_array: A numpy array contains full epidemic history.
         rules: A list of epidemic rules that represents the epidemic process. Must be a flat list or a list of lists. E.g. [[B], [SI, ST], [W]]
-        stoch_policy: Whether the entire epidemic process is rule based or centralized with either deterministic or stochastic.
+        stoch_policy: Whether the entire epidemic process is rule based or centralized with stochastic.
 
 
     Notes:
@@ -180,7 +180,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         processed_rules = instantiate_rules(rules_section=rules_dict['rules']) #instantiated rules are returned
         logger.debug('processed rules parameters are\n %s', processed_rules)
 
-        logger.info('Model engine containing only the estabilished rules is created.')
+        logger.info('Model engine containing only the established rules is created.')
         return cls(rules=processed_rules)
 
         
@@ -731,11 +731,6 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                     write_cursor = write_cursor + rows_written  # move write_cursor to next location
                     logger.debug("write_cursor will be: %s", write_cursor)
                     logger.debug("rule deltas\n %s", self._delta_buffer[write_cursor - rows_written : write_cursor])
-                else:
-                    write_cursor = write_cursor + 1 # if rule_deltas is empty, write_cursor increases by 1 to consume one row in _delta_buffer
-                    logger.debug("rule_detlas is None. write_cursor will be: %s", write_cursor)
-                    self._delta_buffer[num_current:write_cursor, self._n_idx] = 0 #the consumed row's N value should be 0 given rule_deltas is empty
-                    
                 # if rule is not ruleset[-1]: #debug
                 logger.debug("---next rule---")
             logger.debug("finished current ruleset, moving to next ruleset")
@@ -790,7 +785,9 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             logger.debug("-------next ruleset--------")
         logger.debug("all rulesets done, for loop ends")
 
-        self.current_state_array[:, self._t_idx] = self.current_state_array[:, self._t_idx] + dt  # memory location not change
+        # When no ruleset produced deltas, current_state_array is still the array stored in the history by the previous step. Copy it before adding dt so earlier history entries are not modified in place.
+        self.current_state_array = self.current_state_array.copy()
+        self.current_state_array[:, self._t_idx] = self.current_state_array[:, self._t_idx] + dt
         logger.debug("add dt, engine vec1_5 final current_state_array:\n %s", self.current_state_array)
 
         # append the updated current state to the epidemic history no matter if there is deltas generated, history should capture all timesteps
