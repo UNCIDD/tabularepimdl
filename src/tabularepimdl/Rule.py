@@ -76,7 +76,7 @@ class Rule(ABC):
         """
         Return a dictionary object appropriate for inclusion in a yaml definition of an epidemic.
         Should be a dictionary with the class name (in form module.classname)
-        being the outer key containing information needed for the class to run `from_yaml`
+        being the outer key containing information needed.
 
         Returns:
             A dictionary representation of this object appropriate to read in by model engine method `from_yaml`.
