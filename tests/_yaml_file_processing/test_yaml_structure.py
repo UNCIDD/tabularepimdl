@@ -77,9 +77,9 @@ def test_incorrect_number_of_top_level_keys_raises_error(data):
         {"config": []},         # Wrong key and value type
     ],
 )
-def test_missing_rules_key_raises_value_error(data):
+def test_missing_rules_key_raises_structure_error(data):
     """Reject a single-key dictionary without the required 'rules' key."""
-    with pytest.raises(ValueError,
+    with pytest.raises(YAMLStructureError,
                        match="Missing required top-level keys",
     ):
         validate_yaml_structure(data)
