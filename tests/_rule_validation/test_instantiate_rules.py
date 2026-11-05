@@ -193,3 +193,8 @@ def test_nesting_deeper_than_two_levels_raises():
     """Pass a rule that has more than two nesting levels, verify that the appropriate error is raised."""
     with pytest.raises(RuleDefinitionError, match="Too much nesting"):
         instantiate_rules([[[_transition()]]])
+
+def test_rule_definition_error_is_an_epimodel_validation_error():
+    """Applications can catch EpiModelValidationError for both YAML-file and rule-definition problems."""
+    with pytest.raises(EpiModelValidationError):
+        instantiate_rules([[[_transition()]]])
