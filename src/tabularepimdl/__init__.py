@@ -1,5 +1,8 @@
 import logging
 
+from ._validators.rule_validation import instantiate_rules
+from ._validators.yaml_file_processing.yaml_load import load_yaml
+
 # The pandas-structured rules/engine (BirthProcess, EpiModel, etc.) that used to be exported here
 # have moved to legacy/pandas_reference/. They were kept only as an internal reference baseline
 # to validate the NumPy-structured rules/engine
@@ -32,6 +35,8 @@ __all__ = [
     "StateBasedDeathProcess_Vec_Encode",
     "WAIFWTransmission_Vec_Encode_Bincount",
     "configure_logging",
+    "instantiate_rules",
+    "load_yaml",
 ]
 
 __version__ = "0.3.0"
