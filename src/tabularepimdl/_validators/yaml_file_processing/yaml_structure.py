@@ -53,7 +53,7 @@ def validate_yaml_structure(data: Any) -> dict[str, Any]:
     missing_keys = REQUIRED_TOP_LEVEL_KEYS - data.keys()
     
     if missing_keys:
-        raise ValueError(
+        raise YAMLStructureError(
             f"Missing required top-level keys: {sorted(missing_keys)}. "
             f"Allowed top-level keys are {sorted(REQUIRED_TOP_LEVEL_KEYS)}, "
             f"but found {sorted(data.keys())}."

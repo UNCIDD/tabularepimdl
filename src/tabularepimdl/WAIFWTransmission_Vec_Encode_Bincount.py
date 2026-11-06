@@ -13,18 +13,18 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
     Use np.bincount to generate inf_array.
 
     Attributes:
-        waifw_martrix: the waifw transmission rate matrix, a square matrix is required.
-        inf_col: the infection state column for this infectious process.
-        group_col: the group where infection is applied, different group values are specified in this column.
+        waifw_martrix (np.ndarray): the waifw transmission rate matrix, a square matrix is required.
+        inf_col (str): the infection state column for this infectious process.
+        group_col (str): the group where infection is applied, different group values are specified in this column.
         The number of possible unique values in the column should match the waifw matrix size, and the unique
         values should have an order (i.e., the group_col should be a categorical datatype).
-        group_col_all_categories: all the categories the group column should have.
-        s_st: the state for susceptibles, assumed to be S.
-        i_st: the state for infectious, assumed to be I.
-        inf_to: the state susceptible population go to, assumed to be I.
-        stochastic: whether the process is stochastic or deterministic.
-        freq_dep (optional): whether this model is a frequency dependent model.
-        infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
+        group_col_all_categories (list): all the categories the group column should have.
+        s_st (str): the state for susceptibles, assumed to be S.
+        i_st (str): the state for infectious, assumed to be I.
+        inf_to (str): the state susceptible population go to, assumed to be I.
+        stochastic (bool): whether the process is stochastic or deterministic.
+        freq_dep (bool, optional): whether this model is a frequency dependent model.
+        infstate_compartments (list): the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
     """
 
     # Pydantic Configuration
@@ -48,9 +48,10 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
 
     _check_domain_membership = domain_membership_validator(attribute_fields=("s_st", "i_st", "inf_to"), domain_fields=("infstate_compartments",))
 
+
     @field_validator("waifw_matrix", mode="before")  # validate array type and its element sign
     @classmethod
-    def validate_waifw_matrix(cls, matrix_parameters, field: ValidationInfo):
+    def validate_waifw_matrix(cls, matrix_parameters, field: ValidationInfo) -> np.ndarray:
         """Ensure the input matrix is a 2-diemnsional array with sqaure shape and all elements are non-negative values."""
         # 1. check list or array type.
         if isinstance(matrix_parameters, list):  # convert list to array
@@ -82,12 +83,10 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
 
         return matrix_parameters.T  # transpose the input matrix
 
-    def model_post_init(self, _):
+
+    def model_post_init(self, _) -> None:
         """
         Encode the input states based on each column's attribute values.
-
-        Returns:
-            Numerical values of encoded infection states.
 
         Notes:
             Retain rule-level state encoding to support users who test rules individually.
@@ -100,8 +99,7 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
 
             self.group_col_all_categories = sorted(self.group_col_all_categories)  # sort the group_col's all categories
             self._group_col_all_categories_code = [i for i, v in enumerate(self.group_col_all_categories)]  # placeholder
-        else:
-            pass
+
 
     # set up a property to return all the required compartments used in infstate column
     @property
@@ -114,6 +112,7 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         """
         return self.infstate_compartments
 
+
     # set up a property to return all the required categories used in group_col
     @property
     def group_col_all(self) -> list[str | int]:
@@ -125,14 +124,19 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         """
         return self.group_col_all_categories
 
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return len(self.group_col_all_categories) * len(self.infstate_compartments)
 
+
     def encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+
+        Args:
+            data_domains: mapping of column name to that column's category-to-code mapping.
         """
         mapping = data_domains[self.inf_col]
         self._s_code = mapping[self.s_st]
@@ -140,6 +144,7 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         self._inf_to_code = mapping[self.inf_to]
 
         self._state_encoding_by_engine = True
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -160,7 +165,7 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         """
         required_columns = "N"  # check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
+            raise ValueError(f"Missing required columns (case-sensitive) in current_state: {required_columns}.")
 
         if stochastic is None:
             stochastic = self.stochastic
@@ -227,6 +232,7 @@ class WAIFWTransmission_Vec_Encode_Bincount(Rule, BaseModel):
         result = filtered_result_buffer[filtered_result_buffer[:, n_idx] != 0]  # remove rows with N=0
 
         return result
+
 
     def to_dict(self) -> dict:
         """

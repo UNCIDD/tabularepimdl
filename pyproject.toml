@@ -35,19 +35,27 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
+# Used by the CI "pytest" job. matplotlib and seaborn are needed by the performance/plotting tests.
 test = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "pytest-mock>=3.14",
-    "matplotlib",
-    "seaborn",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "pytest-mock>=3.17.0",
+    "matplotlib>=3.11.1",
+    "seaborn>=0.13.2",
 ]
+
+# Used by the CI "ruff" and "mypy" jobs.
+lint = [
+    "ruff>=0.16.5",
+    "mypy>=2.3.1",
+]
+
+# Everything for local development.
 dev = [
-    "mypy>=1.7",
-    "ruff>=0.4",
+    {include-group = "test"},
+    {include-group = "lint"},
     "ipykernel>=6.29.5",
-    "matplotlib>=3.10.3",
 ]
 
 [project.urls]

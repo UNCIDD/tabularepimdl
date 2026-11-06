@@ -1,3 +1,5 @@
+from typing import Self
+
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, ValidationInfo, field_validator, model_validator
 
@@ -13,17 +15,17 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
     Does not allow co-infections.
 
     Attributes:
-        betas: a beta for each strain.
-        columns: the strain columns for infection state. The number of strains should be the same length and order as betas.
-        columns_all_categories: all the infection state categories the strain columns should have.
-        cross_protect: a N(strain)*N(strain) matrix of cross protections.
-        s_st: the state for susceptibles, assumed to be S.
-        i_st: the state for infectious, assumed to be I.
-        r_st: the state for immune/recovered, assumed to be R.
-        inf_to: the state infectious folks go to, assumed to be I.
-        stochastic: whether the process is stochastic or deterministic.
-        freq_dep: whether this model is a frequency dependent model.
-        infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
+        betas (np.ndarray): a beta for each strain.
+        columns (list): the strain columns for infection state. The number of strains should be the same length and order as betas.
+        columns_all_categories (list): all the infection state categories the strain columns should have.
+        cross_protect (np.ndarray): a N(strain)*N(strain) matrix of cross protections.
+        s_st (str): the state for susceptibles, assumed to be S.
+        i_st (str): the state for infectious, assumed to be I.
+        r_st (str): the state for immune/recovered, assumed to be R.
+        inf_to (str): the state infectious folks go to, assumed to be I.
+        stochastic (bool): whether the process is stochastic or deterministic.
+        freq_dep (bool): whether this model is a frequency dependent model.
+        infstate_compartments (list): the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -50,9 +52,10 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
 
     _check_domain_membership = domain_membership_validator(attribute_fields=("s_st", "i_st", "r_st", "inf_to"), domain_fields=("columns_all_categories", "infstate_compartments"))
 
+
     @field_validator("betas", "cross_protect", mode="before")  # validate array type and its element sign
     @classmethod
-    def validate_numpy_array(cls, array_parameters, field: ValidationInfo):
+    def validate_numpy_array(cls, array_parameters, field: ValidationInfo) -> np.ndarray:
         """Ensure the input is a NumPy array and all elements are non-negative values."""
         # 1. check list or array type.
         if isinstance(array_parameters, list):  # convert list to array
@@ -76,8 +79,9 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
 
         return array_parameters
 
+
     @model_validator(mode="after")  # after all fields are validated, check cross fields relationship
-    def check_dimensions(self):
+    def check_dimensions(self) -> Self:
         """Ensure betas and cross_protect have matching dimensions."""
         if len(self.columns) != len(self.betas):
             raise ValueError(f"The number of 'columns' ({len(self.columns)}) must match the number of 'betas' ({len(self.betas)}).")
@@ -87,16 +91,13 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
 
         return self
 
-    def model_post_init(self, _):
+
+    def model_post_init(self, _) -> None:
         """
         Encode the input states based on each column's attribute values.
-
-        Returns:
-            Numerical values of encoded infection states, recover states and hosp states.
-
+        
         Notes:
-            - Retain rule-level state encoding to support users who test rules individually.
-
+            Retain rule-level state encoding to support users who test rules individually.
         """
         if not self._state_encoding_by_engine:
             self.columns_all_categories = sorted(self.columns_all_categories)  # sort the columns' all categories
@@ -107,8 +108,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
             self._i_code = self._columns_all_categories_code.get(self.i_st)
             self._r_code = self._columns_all_categories_code.get(self.r_st)
             self._inf_to_code = self._columns_all_categories_code.get(self.inf_to)
-        else:
-            pass
+
 
     # set up a property to return all the required categories used in columns
     @property
@@ -121,6 +121,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         """
         return self.columns_all_categories
 
+
     # set up a property to return all the required compartments used in infstate column
     @property
     def infstate_all(self) -> list[str]:
@@ -132,14 +133,19 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         """
         return self.infstate_compartments
 
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.columns_all_categories), len(self.infstate_compartments))
 
+
     def encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+
+        Args:
+            data_domains: mapping of column name to that column's category-to-code mapping.
 
         Notes:
             All strain_cols are presumed to share the same domain of category values,
@@ -153,6 +159,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         self._inf_to_code = mapping[self.inf_to]
 
         self._state_encoding_by_engine = True
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -173,7 +180,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
         """
         required_columns = "N"  # check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
+            raise ValueError(f"Missing required columns (case-sensitive) in current_state: {required_columns}.")
 
         if stochastic is None:
             stochastic = self.stochastic
@@ -256,6 +263,7 @@ class MultiStrainInfectiousProcess_Vec_Encode(Rule, BaseModel):
                 result_buffer[count_start:count_end, :] = tmp_arr
 
         return result_buffer[:count_end, :]  # include all rows with 0 for now
+
 
     def to_dict(self) -> dict:
         """

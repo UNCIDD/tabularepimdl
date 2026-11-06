@@ -11,12 +11,12 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
     Rule that represents a death process that takes people out of a state defined by one or more columns at some rate.
 
     Attributes:
-        column: single column that we will check states against. Changing columns to column based on the AgingPopulation example.
-        column_states: all the states of the single column. All the state values are required as input, otherwise the encoding logic cannot assign the correct mapping.
-        target_states: targeted states of single column.
-        rate: the rate at whihc people will die from.
-        stochastic: whether the process is stochastic or deterministic.
-        infstate_compartments: the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
+        column (str): single column that we will check states against. Changing columns to column based on the AgingPopulation example.
+        column_states (list): all the states of the single column. All the state values are required as input, otherwise the encoding logic cannot assign the correct mapping.
+        target_states (list): targeted states of single column.
+        rate (float): the rate at whihc people will die from.
+        stochastic (bool): whether the process is stochastic or deterministic.
+        infstate_compartments (list): the infection compartments used in epidemics. e.g. ['I', 'R', 'S']
 
     Notes:
         this rule's API is narrower than the pandas StateBasedDeathProcess: the pandas version pairs
@@ -38,12 +38,10 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
 
     _check_domain_membership = domain_membership_validator(attribute_fields=("target_states",), domain_fields=("column_states",))
 
-    def model_post_init(self, _):
+
+    def model_post_init(self, _) -> None:
         """
         Encode the input states based on each column's attribute values.
-
-        Returns:
-            Numerical values of encoded column states.
 
         Notes:
             Retain rule-level state encoding to support users who test rules individually.
@@ -52,8 +50,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
             states_sorted = sorted(self.column_states)
             colstate_to_int = {s: i for i, s in enumerate(states_sorted)}  # for the single column mapping
             self._states_code = [colstate_to_int[state] for state in states_sorted if state in self.target_states]  # encoded column states
-        else:
-            pass
+
 
     # set up a property to return all the required compartments used in infstate column
     @property
@@ -66,6 +63,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         """
         return self.infstate_compartments
 
+
     # set up a property to return all the required states used in general column
     @property
     def column_all(self) -> list[str]:
@@ -77,19 +75,25 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         """
         return self.column_states
 
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input rows."""
         return max(len(self.column_states) * len(self.infstate_compartments), len(self.target_states) * len(self.infstate_compartments))
 
+
     def encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+
+        Args:
+            data_domains: mapping of column name to that column's category-to-code mapping.
         """
         mapping = data_domains[self.column]
         self._states_code = [mapping[state] for state in self.target_states if state in mapping]
 
         self._state_encoding_by_engine = True
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -129,7 +133,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         """
         required_columns = "N"  # check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
+            raise ValueError(f"Missing required columns (case-sensitive) in current_state: {required_columns}.")
 
         if stochastic is None:
             stochastic = self.stochastic
@@ -158,6 +162,7 @@ class StateBasedDeathProcess_Vec_Encode(Rule, BaseModel):
         result_buffer[:count, n_idx] = changed_N  # update column N with changed_N (negative value)
 
         return result_buffer[:count, :]
+
 
     def to_dict(self) -> dict:
         """

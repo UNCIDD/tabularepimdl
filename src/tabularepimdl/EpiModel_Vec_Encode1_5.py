@@ -27,7 +27,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         current_state_array: A numpy array represents the current epidemic state.
         full_epi_array: A numpy array contains full epidemic history.
         rules: A list of epidemic rules that represents the epidemic process. Must be a flat list or a list of lists. E.g. [[B], [SI, ST], [W]]
-        stoch_policy: Whether the entire epidemic process is rule based or centralized with either deterministic or stochastic.
+        stoch_policy: Whether the entire epidemic process is rule based or centralized with stochastic.
 
 
     Notes:
@@ -45,7 +45,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     current_state_array: np.ndarray = Field(default_factory=lambda: np.array([]))
     full_epi_array: np.ndarray = Field(default_factory=lambda: np.array([]))
     rules: list[list[Rule]]
-    stoch_policy: Literal["rule_based", "deterministic", "stochastic"] = "rule_based"
+    stoch_policy: Literal["rule_based", "stochastic"] = "rule_based"
 
 
     # columns listed in the input data, separating column N and T from other columns
@@ -87,6 +87,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     _delta_buffer: np.ndarray = PrivateAttr(default_factory=lambda: np.array([]))  # used for memory preallocation and saving intermediate data
     _max_expansion_factor: int = PrivateAttr(default=0)  # the maximum number of rows all rules can return per input row
 
+
     @field_validator("init_state", mode="before")
     @classmethod
     def validate_init_state(cls, initial_state: pd.DataFrame | None) -> pd.DataFrame | None:
@@ -117,6 +118,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             raise ValueError(f"Non-string column names found: {non_string_col_names}. Please check the input data and use meaningful string column names.")
 
         return initial_state
+
 
     # rules list validation
     @field_validator("rules", mode="before")
@@ -178,7 +180,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         processed_rules = instantiate_rules(rules_section=rules_dict['rules']) #instantiated rules are returned
         logger.debug('processed rules parameters are\n %s', processed_rules)
 
-        logger.info('Model engine containing only the estabilished rules is created.')
+        logger.info('Model engine containing only the established rules is created.')
         return cls(rules=processed_rules)
 
         
@@ -204,6 +206,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         # self.init_state.columns = self._init_state_column_names_upper_case(input_data=self.init_state) #convert all column names of init_state to lowercase, this will cause many string handling changes in rules, not implement it for now
         self.init_state = self._input_data_column_order_shuffle(input_data=self.init_state)  # shuffle init_state column order
         logger.debug("shuffle init state\n %s", self.init_state)
+        self._grouping_cols = self._initialize_grouping_cols(input_data=self.init_state) # prepare the list grouping columns for data
         self.init_state = self._input_data_column_values_grouping(input_data=self.init_state)  # grouping init_state column values
         logger.debug("after grouping init state\n %s \n %s", self.init_state, self.init_state.dtypes)
 
@@ -222,7 +225,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
     # def _init_state_column_names_upper_case(self, input_data: pd.DataFrame): #new addtion, 12/4, this requires all individual rules to convert their values to upper case, not efficient
     #    """Convert all column names of init_state to lowercase."""
     #    return input_data.columns.str.upper()
-    
+
 
     def _initialize_preallocated_buffer(self) -> None:
         logger.debug("initial _delta buffer\n %s", self._delta_buffer)
@@ -242,6 +245,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
         self._delta_buffer = np.empty((buffer_initial_rows, buffer_cols), dtype=np.float64)  # preallocate a result array
         logger.debug("1_5 created _delta buffer\n %s \n %s", self._delta_buffer, self._delta_buffer.shape)
+
 
     def _input_data_column_order_shuffle(self, input_data: pd.DataFrame):
         """
@@ -267,7 +271,23 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         # Reorder the DataFrame init_state
         return input_data[new_col_order]
 
-    def _input_data_column_values_grouping(self, input_data: pd.DataFrame):
+
+    def _initialize_grouping_cols(self, input_data: pd.DataFrame) -> list[str]:
+        """
+        Identify the columns used for grouping, excluding aggregation columns.
+
+        Args:
+            input_data: The DataFrame whose columns are used to determine the
+            grouping columns.
+
+        Returns:
+            A list of column names in `input_data` that are not designated
+            as aggregation columns (`self._agg_cols`).
+        """
+        return [col for col in input_data.columns if col not in self._agg_cols]
+
+
+    def _input_data_column_values_grouping(self, input_data: pd.DataFrame) -> pd.DataFrame:
         """
         Group each column of init_state and aggregate column N and T in case the input raw data has duplicate rows.
 
@@ -278,12 +298,11 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             A pandas DataFrame with column values grouped.
         """
         # collect column names for aggregating columns and rest grouping columns
-        self._agg_cols = {"N", "T"}
-        self._grouping_cols = [c for c in input_data.columns if c not in self._agg_cols]
         logger.debug("grouping col: %s", self._grouping_cols)
         logger.debug("before grouping init state\n %s", self.init_state)
         # grouping column values, only the categories that are actually present in the data will be included in the groups.
         return input_data.groupby(self._grouping_cols, observed=True).agg({"N": "sum", "T": "max"}).reset_index()
+
 
     def _match_domain_key(self, col_name: str) -> str | None:
         """
@@ -304,6 +323,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             if key.lower() == col_name_lower:
                 return key
         return None
+
 
     def _update_col_domain_values_from_rules(self, input_data: pd.DataFrame) -> None:
         """
@@ -396,6 +416,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
         logger.debug("final domains per column: %s", self._domains)
 
+
     def _setup_internal_attributes(self, input_data: pd.DataFrame):
         """
         Set up internal private attributes with values from init_state and rule list.
@@ -430,6 +451,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         self._grouping_col_idx = [self._col_idx_map[c] for c in self._grouping_cols]
         logger.debug("_n_idx: %s _t_idx: %s _grouping_col_idx: %s", self._n_idx, self._t_idx, self._grouping_col_idx)
 
+
     def _encode_rule_level_categorical_states(self) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode each rule's own column state values.
@@ -437,6 +459,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         for ruleset in self.rules:
             for rule in ruleset:
                 rule.encode_categorical_states(data_domains=self._grouping_col_map)
+
 
     def _convert_input_data_to_arrays(self, input_data: pd.DataFrame) -> np.ndarray:  # might be benificial to add array args to the method and return current_state and full_epi
         """
@@ -478,6 +501,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         """
         self._initial_current_state_array = self.current_state_array.copy()
 
+
     def _initalize_full_epi_array(self) -> np.ndarray:
         """
         Initialize full_epi_array with initial current_state_array.
@@ -488,6 +512,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         self._full_epi_list = [self._initial_current_state_array]  # make current_state_array the 1st elment in full_epi_array
         self.full_epi_array = np.vstack(self._full_epi_list)
         return self.full_epi_array
+
 
     def _covnert_list_of_arrays_to_df(self, list_of_arr: list[np.ndarray]) -> pd.DataFrame:
         """
@@ -509,6 +534,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             df_reconstructed[col] = df_reconstructed[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
         return df_reconstructed
 
+
     def current_state(self) -> pd.DataFrame:
         """
         Convert current_state_array from array to pandas dataframe with original input data column names.
@@ -523,6 +549,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         for col in self._inverse_grouping_col_map:  # convert grouping col's numeric values to domain values (not including N and T)
             df_constructed_current_state[col] = df_constructed_current_state[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
         return df_constructed_current_state
+
 
     def full_epi(self) -> pd.DataFrame:
         """
@@ -540,6 +567,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             df_reconstructed_full_epi[col] = df_reconstructed_full_epi[col].astype(np.float64).map(self._inverse_grouping_col_map[col])
         return df_reconstructed_full_epi
 
+
     def Reset(self):
         """
         Reset the values of current_state_array and full_epi_array to be the init_state values.
@@ -547,6 +575,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
         """
         self.current_state_array = self._initial_current_state_array.copy()
         self._initalize_full_epi_array()
+
 
     def add_new_data_to_current_state(self, new_data: pd.DataFrame) -> np.ndarray:
         """
@@ -570,21 +599,39 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
         # verify if the input data is a dataframe
         if not isinstance(new_data, pd.DataFrame):
-            raise TypeError(f"Expected a DataFrame, recieved {type(new_data).__name__} instead.")
+            raise TypeError(f"Expected a DataFrame, received {type(new_data).__name__} instead.")
 
         # verify if the input data has the same number of columns as the init_state
         if len(new_data.columns) != len(self.init_state.columns):  # init_state is used within this method directly as the method only takes parameter new_data input
             raise ValueError(f"Expected {len(self.init_state.columns)} columns in new_data, received {len(new_data.columns)}.")
 
-        # verify if the new data has the exact column names as init_state
-        cols_new = set(new_data.columns.str.lower())
-        cols_init = set(self.init_state.columns.str.lower())
+        # verify if the new data has the exact column names as init_state (case-sensitive)
+        cols_new = set(new_data.columns)
+        cols_init = set(self.init_state.columns)
 
         if cols_new != cols_init:
             missing_in_new = cols_init - cols_new
             extra_in_new = cols_new - cols_init
 
-            raise ValueError(f"Column name mismatch (case-insensitive) between new data and initial state.\nMissing in new data: {sorted(missing_in_new)}.\nExtra in new data: {sorted(extra_in_new)}.")
+            raise ValueError("Column name mismatch (case-sensitive) between "
+                             "new data and initial state.\n"
+                             f"Missing in new data: {sorted(missing_in_new, key=str)}.\n"
+                             f"Extra in new data: {sorted(extra_in_new, key=str)}.")
+
+        # verify that each grouping column in new data contains only existing domain categories
+        for col in self._grouping_cols:
+            new_domain_categories = set(new_data[col].dropna().unique())
+            existing_domain_categories = self._domains[col]
+
+            extra_domain_categories = new_domain_categories - existing_domain_categories
+
+            if extra_domain_categories:
+                raise ValueError(
+                    f"Invalid categories in column '{col}' in new data. "
+                    f"Unknown categories: {sorted(extra_domain_categories, key=str)}. "
+                    f"Expected categories to be a subset of "
+                    f"{sorted(existing_domain_categories, key=str)}."
+                )
 
         # check if the current new data is the same as the previous new data copy.
         # If no, then update the previous new data copy. If yes, flip the new_data_flag to False.
@@ -615,6 +662,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             pass
 
         return self.current_state_array
+
 
     def do_timestep(self, dt: float = 1.0) -> None:
         """
@@ -675,7 +723,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                     rule_deltas = rule.get_deltas(
                         current_state=self.current_state_array, col_idx_map=self._col_idx_map, result_buffer=buff_slice, dt=dt, stochastic=(self.stoch_policy == "stochastic")
                     )
-                logger.debug("rule detlas\n %s", rule_deltas)
+                logger.debug("rule deltas\n %s", rule_deltas)
                 logger.debug("in rule After loop preallocation buffer\n %s", self._delta_buffer)
                 if rule_deltas is not None and rule_deltas.shape[0] > 0:  # add non-None rule_deltas to the list
                     rows_written = rule_deltas.shape[0]  # get the number of rows from rule returned deltas
@@ -685,7 +733,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
                     logger.debug("rule deltas\n %s", self._delta_buffer[write_cursor - rows_written : write_cursor])
                 # if rule is not ruleset[-1]: #debug
                 logger.debug("---next rule---")
-                logger.debug("finished current ruleset, moving to next ruleset")
+            logger.debug("finished current ruleset, moving to next ruleset")
 
             # If no rules produced deltas, skip grouping and move to next ruleset
             if write_cursor == num_current:
@@ -725,6 +773,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
             new_state[:, self._grouping_col_idx] = unique_groups
             new_state[:, self._n_idx] = sum_N
             new_state[:, self._t_idx] = max_T_col
+            logger.debug("new_state is:\n %s", new_state)
 
             # remove all rows where column N has a value of 0
             logger.debug("current array id: %s", id(self.current_state_array))
@@ -734,9 +783,11 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
             # if ruleset is not self.rules[-1]: #debug
             logger.debug("-------next ruleset--------")
-            logger.debug("all rulesets done, for loop ends")
+        logger.debug("all rulesets done, for loop ends")
 
-        self.current_state_array[:, self._t_idx] = self.current_state_array[:, self._t_idx] + dt  # memory location not change
+        # When no ruleset produced deltas, current_state_array is still the array stored in the history by the previous step. Copy it before adding dt so earlier history entries are not modified in place.
+        self.current_state_array = self.current_state_array.copy()
+        self.current_state_array[:, self._t_idx] = self.current_state_array[:, self._t_idx] + dt
         logger.debug("add dt, engine vec1_5 final current_state_array:\n %s", self.current_state_array)
 
         # append the updated current state to the epidemic history no matter if there is deltas generated, history should capture all timesteps

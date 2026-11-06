@@ -16,13 +16,13 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
     the from specified value, it creates transitions with the to specified value at the given rate.
 
     Attributes:
-        column: name of the column this rule applies to.
-        from_st: the state that column transitions from.
-        to_st: the state that column transitions to.
-        rate: transition rate per unit time.
-        stochastic: whether the process is stochastic or deterministic.
-        column_categories: all the categories the column should have if the column is not for infstate. E.g column_categories = ['0 to 4', '5 to 9', '10-14'].
-        infstate_compartments: the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R'].
+        column (str): name of the column this rule applies to.
+        from_st (str): the state that column transitions from.
+        to_st (str): the state that column transitions to.
+        rate (float): transition rate per unit time.
+        stochastic (bool): whether the process is stochastic or deterministic.
+        column_categories (list): all the categories the column should have if the column is not for infstate. E.g column_categories = ['0 to 4', '5 to 9', '10-14'].
+        infstate_compartments (list): the infection compartments used in epidemics. E.g.infstate_compartments = ['S', 'I', 'R'].
     """
 
     column: str = Field(description="name of the column this rule applies to.")
@@ -39,12 +39,9 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
 
     _check_domain_membership = domain_membership_validator(attribute_fields=("from_st", "to_st"), domain_fields=("column_categories", "infstate_compartments"))
 
-    def model_post_init(self, _):
+    def model_post_init(self, _) -> None:
         """
         Encode the input states based on each column's attribute values.
-
-        Returns:
-            Numerical values of encoded infection states.
 
         Notes:
             Retain rule-level state encoding to support users who test rules individually.
@@ -58,8 +55,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
                 col_cat_to_int = {s: i for i, s in enumerate(sorted(self.column_categories))}  # encode column strings to integers {'0 to 4': 0, '5 to 9': 1}
                 self._from_code = col_cat_to_int.get(self.from_st)
                 self._to_code = col_cat_to_int.get(self.to_st)
-        else:
-            pass
+
 
     # set up a property to return all the required compartments used in infstate column
     @property
@@ -72,6 +68,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         """
         return self.infstate_compartments
 
+
     # set up a property to return all the required categories used in general column
     @property
     def column_all(self) -> list[str]:
@@ -83,14 +80,19 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         """
         return self.column_categories
 
+
     @property
     def expansion_factor(self) -> int:
         """Maximum number of rows this rule can return per input row."""
         return max(len(self.infstate_compartments), len(self.column_categories))
 
+
     def encode_categorical_states(self, data_domains: dict[str, dict[str, int]]) -> None:
         """
         Use the fully updated data columns' domain mapping values to encode rule's own column state values.
+
+        Args:
+            data_domains: mapping of column name to that column's category-to-code mapping.
         """
         mapping = data_domains[self.column]
         self._from_code = mapping[self.from_st]
@@ -99,6 +101,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         self._state_encoding_by_engine = True
 
         logger.debug("engine encodes categorical states: %s %s %s", self._from_code, self._to_code, self._state_encoding_by_engine)
+
 
     def get_deltas(self, current_state: np.ndarray, col_idx_map: dict[str, int], result_buffer: np.ndarray, dt: float = 1.0, stochastic: bool | None = None) -> np.ndarray:
         """
@@ -119,7 +122,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         """
         required_columns = "N"  # check if column N presents in current_state
         if required_columns not in col_idx_map:
-            raise ValueError(f"Missing required columns in current_state: {required_columns}.")
+            raise ValueError(f"Missing required columns (case-sensitive) in current_state: {required_columns}.")
 
         if stochastic is None:
             stochastic = self.stochastic
@@ -161,6 +164,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
         result_buffer[count : 2 * count, n_idx] = -changed_N  # update column N with inversed changed_N
         return result_buffer[: 2 * count, :]
 
+
     def __str__(self) -> str:
         """
         String representatoin of the rule's transition state and rate.
@@ -169,6 +173,7 @@ class SimpleTransition_Vec_Encode(Rule, BaseModel):
             A string output displays the rule's transition state and rate.
         """
         return f"SimpleTransition_Vec_Encode: {self.from_st} --> {self.to_st} at rate {self.rate}"
+
 
     def to_dict(self) -> dict:
         """
