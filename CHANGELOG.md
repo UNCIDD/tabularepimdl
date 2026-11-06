@@ -14,11 +14,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added support for initializing the model engine in rules-only mode by loading rules from a YAML file without providing initial state data (`init_state=None`).
 - Added a notification when the model engine is initialized with `init_state=None` to indicate that it is operating in rules-only mode.
 - Added rules instantiation process that works with the dictionary processing.
+- Added validation for grouping column domain categories when adding new data, allowing subsets of existing domain categories while raising a ValueError for unknown or case-mismatched categories.
+- Added `RuleDefinitionError`.
+- Exposed `load_yaml` and `instantiate_rules` at package level, so they can be imported with `from tabularepimdl import load_yaml, instantiate_rules`.
 
 ### Changed
 
 - Moved dictionary (translated from YAML) processing and rule attributes/fields validation out of the base `Rule` class into a standalone helper module.
+- Enforced case-sensitive column name validation between new_data and init_state.
+- Separate grouping column initialization from data grouping and aggregation, so that users can reuse the established grouping columns to ensure consistent behavior when processing incoming data with different column orders.
+- Rename `_encode_categorical_states` to `encode_categorical_states` in `Rule.py`.
+- Rule definition problems now raise `RuleDefinitionError`, and a wrong top-level YAML key raises `YAMLStructureError`. Both derive from `EpiModelValidationError`.
+- `instantiate_rules` always returns a list of rule sets.
+- `stoch_policy` of the model engine is now validated and only accepts `"rule_based"` or `"stochastic"`; any other value raises a validation error instead of silently running without stochasticity.
+- `do_timestep()` and `add_new_data_to_current_state()` raise a `RuntimeError` when the model engine was created without `init_state` (rules-only mode).
 
+### Fixed
+
+- Prevent historical state arrays in `full_epi` from being overwritten when a rule produces no deltas, ensuring each timestep preserves its own state and time (T) values.
+- A second rule under the same YAML list item is no longer silently dropped, and over-nested or empty rule lists are rejected.
 
 ### Removed
 
