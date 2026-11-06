@@ -35,19 +35,21 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
-[project.optional-dependencies]
-test = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "pytest-mock>=3.14",
-    "matplotlib",
-    "seaborn",
-]
+[dependency-groups]
 dev = [
-    "mypy>=1.7",
-    "ruff>=0.4",
+    # Testing
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "pytest-mock>=3.17.0",
+
+    # Code quality
+    "ruff>=0.16.5",
+    "mypy>=2.3.1",
+
+    # Development and visualization
     "ipykernel>=6.29.5",
-    "matplotlib>=3.10.3",
+    "matplotlib>=3.11.1",
+    "seaborn>=0.13.2",
 ]
 
 [project.urls]
