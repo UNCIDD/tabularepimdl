@@ -36,20 +36,26 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = [
-    # Testing
+# Used by the CI "pytest" job. matplotlib and seaborn are needed by the performance/plotting tests.
+test = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "pytest-mock>=3.17.0",
-
-    # Code quality
-    "ruff>=0.16.5",
-    "mypy>=2.3.1",
-
-    # Development and visualization
-    "ipykernel>=6.29.5",
     "matplotlib>=3.11.1",
     "seaborn>=0.13.2",
+]
+
+# Used by the CI "ruff" and "mypy" jobs.
+lint = [
+    "ruff>=0.16.5",
+    "mypy>=2.3.1",
+]
+
+# Everything for local development.
+dev = [
+    {include-group = "test"},
+    {include-group = "lint"},
+    "ipykernel>=6.29.5",
 ]
 
 [project.urls]
