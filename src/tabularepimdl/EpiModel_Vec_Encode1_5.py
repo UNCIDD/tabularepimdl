@@ -599,7 +599,7 @@ class EpiModel_Vec_Encode_1_5(BaseModel):
 
         # verify if the input data is a dataframe
         if not isinstance(new_data, pd.DataFrame):
-            raise TypeError(f"Expected a DataFrame, recieved {type(new_data).__name__} instead.")
+            raise TypeError(f"Expected a DataFrame, received {type(new_data).__name__} instead.")
 
         # verify if the input data has the same number of columns as the init_state
         if len(new_data.columns) != len(self.init_state.columns):  # init_state is used within this method directly as the method only takes parameter new_data input
